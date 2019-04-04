@@ -1,0 +1,46 @@
+---
+title: "02_Seurat_workflow_setup"
+output: html_notebook
+---
+
+Load libraries
+```{r setup, include=FALSE}
+library(useful)
+library(Seurat)
+library(dplyr)
+library(Matrix)
+```
+
+Set the full path to the github directory 
+```{r}
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+```
+
+Load data
+```{r}
+# rm(list=ls())
+# raw.data <- read.csv(paste(dir,"Data_input/190128_datafinal.csv", sep=""), header=T, row.names = 1)
+# dim(raw.data)
+# head(colnames(raw.data))
+```
+
+Load metadata
+```{r}
+# rm(list=ls())
+# metadata <- read.csv(paste(dir,"Data_input/190128_metacells.csv", sep=""), row.names=1, header=T)
+# head(metadata)
+```
+
+Save both objects as RData object for quicker loading 
+```{r}
+# save(list=c("metadata","raw.data","dir"), file=paste(dir,"Data_input/Data_and_metadata.RData", sep=""))
+```
+
+Load RData object 
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file = paste(dir,"Data_input/Data_and_metadata.RData", sep=""))
+```
+
+
