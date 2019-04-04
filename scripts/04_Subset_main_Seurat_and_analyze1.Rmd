@@ -1,0 +1,288 @@
+---
+title: "04b_main_Seurat_and_analyze"
+output: html_notebook
+---
+
+Libraries
+```{r}
+library(Seurat)
+library(devtools)
+library(clustree)
+library(tidyverse)
+library(gridExtra)
+library(ggridges)
+library(ggplot2)
+```
+
+Clear environment and start analysis
+```{r}
+rm(list=ls())
+load(file = "/myVolume/R_objects/02_tiss_filtered_190128.RData")
+```
+
+Drop any samples with 5 or less cells
+```{r}
+tiss_filtered@meta.data$sample_name <- as.character(tiss_filtered@meta.data$sample_name)
+head(tiss_filtered@meta.data)
+table(tiss_filtered@meta.data$sample_name) # find samples with <= 10 cells
+sample_subset <- filter(tiss_filtered@meta.data, sample_name != "LT_S17" & sample_name != "LT_S24" & sample_name != "LT_S35" & sample_name != "LT_S38" & sample_name != "LT_S46" & sample_name != "LT_S22" & sample_name != "LT_S12")
+
+dim(tiss_filtered@meta.data)
+dim(sample_subset) # 35 cells are dropped from samples with >=10 cells
+cells_to_keep <- sample_subset$cell_id
+
+tiss_subset <- SubsetData(tiss_filtered, cells.use = cells_to_keep)
+tiss_subset
+```
+
+Normalize and scale the data
+```{r}
+tiss_subset <- NormalizeData(object = tiss_subset, scale.factor = 1e6)
+tiss_subset <- ScaleData(object = tiss_subset)
+```
+
+Find variable genes
+```{r}
+tiss_subset <- FindVariableGenes(object = tiss_subset, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+```
+
+Perform PCA
+```{r}
+tiss_subset <- RunPCA(object = tiss_subset, do.print = FALSE)
+tiss_subset <- ProjectPCA(object = tiss_subset, do.print = FALSE)
+```
+
+Visualize top genes in principal components
+```{r}
+PCHeatmap(object = tiss_subset, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+```
+
+Perform correlation of PCs and metadata fields
+```{r}
+#install.packages("corrplot")
+require(corrplot)
+pca.obj <- tiss_subset@dr$pca
+pc.coords <- pca.obj@cell.embeddings
+df1 <- tiss_subset@meta.data[,c("nGene","nReads","percent.ribo")]
+df2 <- pc.coords[,c(1:10)]
+cordf12 <- cor(df1,df2)
+# Make a correlation plot
+corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+```
+Also visaulize PC variance
+```{r}
+#comp.dev <-pca.obj@sdev
+PCElbowPlot(object = tiss_subset)
+```
+
+Choose the number of principal components to use.
+
+```{r}
+n.pcs = 20
+```
+
+Check clustering stability at given resolution 
+```{r}
+res.used <- seq(0.1,1,by=0.2)
+for(i in res.used){
+tiss_subset <- FindClusters(object = tiss_subset, reduction.type = "pca", dims.use = 1:n.pcs, 
+    resolution = i, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+}
+
+# rename best response column to best_reaction as to not confuse clustree with res
+colnames(tiss_subset@meta.data)
+colnames(tiss_subset@meta.data)[colnames(tiss_subset@meta.data) == 'best_response_status'] <- 'best_rxn_status'
+
+
+
+clus.tree.out <- clustree(tiss_subset) +
+    theme(legend.position = "bottom") + 
+  scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+ggsave(clus.tree.out, filename = "/myVolume/plot_out/04_cluster_res_clustree_output_all_190403.pdf", width = 15, height = 15)
+
+clus.tree.out
+```
+
+
+Set resolution and perform clustering
+```{r}
+res.used <- 0.5
+tiss_subset <- FindClusters(object = tiss_subset, reduction.type = "pca", dims.use = 1:n.pcs, 
+    resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+```
+
+Perform  tSNE
+```{r}
+tiss_subset <- RunTSNE(object = tiss_subset, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+```
+
+Visualize TSNE colroed by cluster
+```{r}
+pdf("/myVolume/plot_out/tSNE_main.pdf")
+TSNEPlot(object = tiss_subset, do.label = T)
+dev.off()
+```
+
+Cell cycle scoring
+```{r}
+tiss_subset <- CellCycleScoring(tiss_subset, s.genes= cc.genes$s.genes, g2m.genes = cc.genes$g2m.genes)
+TSNEPlot(object = tiss_subset, group.by="Phase")
+```
+
+Plot genes of interest on tsne 
+```{r}
+# Specific genes 
+genes_to_check_1 = c("PTPRC","CD3G","CD3E", "CD79A", "BLNK")
+genes_to_check_2 = c("CD68", "CSF1R", "MARCO", "CD207","PMEL", "MLANA")
+genes_to_check_3 = c("PECAM1", "CD34", "EPCAM","SFN", "PROK2", "NCF2")
+genes_to_check_4 = c("ACTA2", "MCAM", "MYLK", "FAP", "THY1")
+
+# All on Dotplot 
+# pdf("/myVolume/plot_out/tSNE_main.pdf")
+DotPlot(tiss_subset, c(genes_to_check_1,genes_to_check_2, genes_to_check_3, genes_to_check_4), x.lab.rot = T)
+# dev.off()
+```
+
+Calculate and plot average expression of broad cell type specific gene sets 
+```{r}
+cell.genes <- read.table("/myVolume/lists/broad_cell_markers.csv", header=T)
+cell.types  <- as.character(unique(cell.genes$cell))
+tsne.coor <- slot(tiss_subset@dr$tsne, "cell.embeddings")
+## 
+ggplot.list <- list()
+ggplot.list.2 <- list()
+# 
+rm(temp)
+for(i in 1:length(unique(cell.types))){
+genes <- as.character(cell.genes$gene[which(cell.genes$cell==cell.types[i])])
+gene.exp <- colMeans(as.matrix(tiss_subset@data[genes,]))[row.names(tsne.coor)]
+# Make ggplot friendly 
+temp <- as.data.frame(cbind(tsne.coor, as.data.frame(gene.exp)))
+# Plot with ggplot 
+ggplot.list[[i]] <- ggplot(temp, aes(tSNE_1, tSNE_2)) + 
+      geom_point(aes(colour = gene.exp)) + 
+      scale_colour_gradient(low = "grey95", high = "red") + 
+      labs(title = cell.types[i], subtitle = paste(genes, collapse = ", "))
+# Also make horizon plots 
+temp <- cbind(as.data.frame(gene.exp), as.data.frame(tiss_subset@meta.data$res.0.5))
+colnames(temp) <- c("gene", "cluster")
+# basic example
+ggplot.list.2[[i]] <- ggplot(temp, aes(x = gene, y = cluster, fill = cluster)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none") + 
+      labs(title = cell.types[i], subtitle = paste(genes, collapse = ", "))
+}
+# Plot all 
+n <- length(ggplot.list)
+nCol <- floor(sqrt(n))
+pdf("/myVolume/plot_out/TSNE_with_average_expression.pdf",15,15)
+do.call("grid.arrange", c(ggplot.list, ncol=nCol))
+dev.off()
+```
+
+Run wilcox test for cluster 19 vs rest to look for cluster identiy based on DE gene expression
+```{r}
+cluster_19_markers <- FindMarkers(object = tiss_subset, ident.1 = 19)
+table(tiss_subset@meta.data$biopsy_site, tiss_subset@ident)
+write.csv(cluster_19_markers, "/myVolume/data_out/190128_cluster19_tiss_subset.csv")
+clus19.markers  <- cluster_19_markers[c(1:20), ]
+clus19.markers$gene <- rownames(clus19.markers)
+genes_to_check <- clus19.markers$gene
+pdf("/myVolume/plot_out/clus19_top20.pdf")
+DoHeatmap(object = tiss_subset, genes.use = genes_to_check, slim.col.label = T, use.scaled = F, cex.row = 5)
+DotPlot(object = tiss_subset, genes.plot = genes_to_check, x.lab.rot = T)
+dev.off()
+```
+
+Annotate Immune vs Nonimmune clusters
+```{r}
+
+cluster.ids <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+immune_annotation <- c("immune","immune","non-immune", "non-immune", "non-immune", "immune", "non-immune", "immune", "non-immune", "immune", "immune", "non-immune", "immune", "immune", "immune", "non-immune", "immune", "non-immune", "immune", "non-immune", "non-immune", "immune","non-immune", "non-immune")
+
+tiss_subset@meta.data[,'immune_annotation'] <- plyr::mapvalues(x = tiss_subset@ident, from = cluster.ids, to = immune_annotation)
+
+table(tiss_subset@meta.data$immune_annotation)
+
+#add column 'main_seurat_cluster' to store cluster ids from this step.
+tiss_subset@meta.data$main_seurat_cluster <- tiss_subset@meta.data$res.0.5
+
+head(tiss_subset@meta.data)
+```
+
+
+Annotate General cluster types (Myeloid, Lymphocyte, Epithelial, Fibroblast, Mast Cell, Melanocyte, Endothelial, Bcell)
+```{r}
+
+cluster.ids <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+
+general_annotation <- c("Myeloid", "T Lymphocyte", "Fibroblast", "Epithelial", "Epithelial", "B Lymphocyte", "Endothelial", "Myeloid", "Epithelial", "T Lymphocyte", "T Lymphocyte", "Epithelial", "Neutrophil", "B Lymphocyte", "Myeloid", "Fibroblast", "Mast Cell", "Epithelial", "Myeloid", "Unknown", "Melanocyte", "T Lymphocyte", "Epithelial", "Epithelial")
+
+tiss_subset@meta.data[,'general_annotation'] <- plyr::mapvalues(x = tiss_subset@ident, from = cluster.ids, to = general_annotation)
+
+head(tiss_subset@meta.data)
+table(tiss_subset@meta.data$general_annotation, tiss_subset@meta.data$sample_name)
+table(tiss_subset@meta.data$general_annotation)
+```
+
+```{r}
+ggplot(tiss_subset@meta.data, aes('general_annotation')) + geom_bar(position='fill',aes(fill=general_annotation)) + xlab('total cells') + scale_y_continuous(labels = scales::percent)
+
+ggplot(tiss_subset@meta.data, aes('driver_gene')) + geom_bar(position='fill',aes(fill=driver_gene)) + xlab('total cells') + scale_y_continuous(labels = scales::percent)
+
+ggplot(tiss_subset@meta.data, aes('analysis')) + geom_bar(position='fill',aes(fill=analysis)) + xlab('total cells') + scale_y_continuous(labels = scales::percent)
+```
+
+make immune and nonimmune lists for lincoln to pull fastqs
+```{r}
+cells.use.immune <- row.names(tiss_subset@meta.data)[which(tiss_subset@meta.data$immune_annotation=='immune')]
+length(cells.use.immune)
+immune_subset <- SubsetData(tiss_subset, cells.use = cells.use.immune)
+immune_subset
+immune_cells <- rownames(immune_subset@meta.data)
+head(immune_cells)
+write.csv(immune_cells, file = "/myVolume/immune_cells_190128.csv")
+
+cells.use.nonimmune <- row.names(tiss_subset@meta.data)[which(tiss_subset@meta.data$immune_annotation=='non-immune')]
+length(cells.use.nonimmune)
+nonimmune_subset <- SubsetData(tiss_subset, cells.use = cells.use.nonimmune)
+nonimmune_subset
+nonimmune_cells <- rownames(nonimmune_subset@meta.data)
+head(nonimmune_cells)
+write.csv(nonimmune_cells, file = "/myVolume/nonimmune_cells_190128.csv")
+```
+
+```{r}
+#save raw data
+cells.pass.qc <- rownames(tiss_subset@meta.data)
+tiss.subset.raw.data <- as.matrix(x = tiss_subset@raw.data[, WhichCells(object = tiss_subset, cells.use = cells.pass.qc)])
+dim(tiss.subset.raw.data)
+write.csv(tiss.subset.raw.data, file = "/myVolume/data_out/04_tiss_subset_raw_data_190128.csv")
+#save meta data
+tiss.subset.meta.data <- tiss_subset@meta.data
+dim(tiss.subset.meta.data)
+write.csv(tiss.subset.meta.data, file = "/myVolume/data_out/04_tiss_subset_meta_data_190128.csv")
+```
+
+```{r}
+table_of_plates_included <- table(tiss_subset@meta.data$plate)
+write.csv(table_of_plates_included, file = "/myVolume/data_out/table_of_plates_included_190128.csv")
+
+table_of_cells_included <- rownames(tiss_subset@meta.data)
+write.csv(table_of_cells_included, file = "/myVolume/data_out/list_of_cells_included_190128.csv")
+```
+
+```{r}
+save(tiss_subset, file = "/myVolume/R_objects/04_main_seurat_subset_190128.RData")
+# load("/myVolume/R_objects/04_main_seurat_subset_190128.RData")
+```
+
+
+
+
+
+
+
+
