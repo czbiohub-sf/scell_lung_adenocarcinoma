@@ -33,6 +33,7 @@ head(main_tiss@meta.data)
 Save prefiltered Seurat object 
 ```{r}
 save(main_tiss, file=paste(dir,"Data_input/Main_Seurat_object_prefilter.RData", sep=""))
+# load(paste(dir,"Data_input/Main_Seurat_object_prefilter.RData", sep=""))
 ```
 
 Calculate percent ribosomal genes and add to metadata
