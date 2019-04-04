@@ -1,0 +1,70 @@
+---
+title: "02_Seurat_workflow_setup"
+output: html_notebook
+---
+
+Load libraries
+```{r setup, include=FALSE}
+library(useful)
+library(Seurat)
+library(dplyr)
+library(Matrix)
+```
+
+Load data
+```{r}
+rm(list=ls())
+load(file="/myVolume/cleaned_data/190128_datafinal.RData")
+load(file="/myVolume/cleaned_data/190128_metacells.Rdata")
+raw.data <- test
+head(raw.data)
+```
+
+Find ERCC's, compute the percent ERCC, and drop them from the raw data.
+```{r}
+erccs <- grep(pattern = "^ERCC-", x = rownames(x = raw.data), value = TRUE)
+percent.ercc <- Matrix::colSums(raw.data[erccs, ])/Matrix::colSums(raw.data)
+ercc.index <- grep(pattern = "^ERCC-", x = rownames(x = raw.data), value = FALSE)
+raw.data <- raw.data[-ercc.index,]
+dim(raw.data)
+head(meta.all.complete)
+```
+
+Create the Seurat object with all the data (unfiltered)
+```{r}
+data_190128 <- CreateSeuratObject(raw.data = raw.data)
+data_190128 <- AddMetaData(object = data_190128, metadata = meta.all.complete)
+data_190128 <- AddMetaData(object = data_190128, percent.ercc, col.name = "percent.ercc")
+colnames(data_190128@meta.data)[colnames(data_190128@meta.data) == 'nUMI'] <- 'nReads'
+head(data_190128@meta.data)
+save(data_190128, file = "/myVolume/R_objects/02_raw_Seurat_190128.RData")
+```
+
+```{r}
+fit <- lowess(data_190128@meta.data$nGene~data_190128@meta.data$nReads)
+plot(data_190128@meta.data$nReads,data_190128@meta.data$nGene, log="xy", xlim=c(1,1e+8), ylim=c(1,15000), xlab="", ylab="") ; par(new=T)
+plot(lowess(data_190128@meta.data$nGene~data_190128@meta.data$nReads), log="xy", xlim=c(1,1e+8), ylim=c(1,15000), type="l", col="red", xlab="nReads", ylab="Ngenes")
+length(which(data_190128@meta.data$nGene > 500))
+```
+
+Calculate percent ribosomal genes and add to metadata
+```{r}
+ribo.genes <- grep(pattern = "^RP[SL][[:digit:]]", x = rownames(x = data_190128@data), value = TRUE)
+percent.ribo <- Matrix::colSums(data_190128@raw.data[ribo.genes, ])/Matrix::colSums(data_190128@raw.data)
+data_190128 <- AddMetaData(object = data_190128, metadata = percent.ribo, col.name = "percent.ribo")
+head(data_190128@meta.data)
+```
+
+Filter cells so that remaining cells have nGenes >= 500 and nReads >= 50000
+```{r}
+data_190128_filtered <- FilterCells(object = data_190128, subset.names = c("nGene", "nReads"), low.thresholds = c(500, 50000))
+dim(data_190128_filtered@meta.data)
+data_190128
+data_190128_filtered
+```
+
+Save filter data object as tiss_filtered
+```{r}
+tiss_filtered <- data_190128_filtered
+save(tiss_filtered, file = "/myVolume/R_objects/02_tiss_filtered_190128.RData")
+```
