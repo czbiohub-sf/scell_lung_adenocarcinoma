@@ -12,40 +12,32 @@ Clear environment (optional) and load Seurat object containing Immune cells (fro
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+tiss_immune
 ```
 
-Table of immune/non-immune cells 
+Table of immune/non-immune cells (sanity check)
 ```{r}
-table(tiss_subset@meta.data$immune_annotation)
+table(tiss_immune@meta.data$immune_annotation)
 ```
 
-Subset Seurat object to cells annotated as immune 
-```{r}
-# Get cell names 
-cells.use <- row.names(tiss_subset@meta.data)[which(tiss_subset@meta.data$immune_annotation=="immune")]
-# Subset Seurat object 
-tiss_subset_immune <- SubsetData(tiss_subset, cells.use = cells.use)
-# How many immune cells ? 
-length(cells.use)
-```
 
 Import TCR metadata and merge with immune cell Seurat object 
-# Not Updated to the latest TCR output 
 ```{r}
 require(dplyr)
-tcr_output <- read.csv("/myVolume/sclung_adeno/TCR_analysis/filtered_TCRAB_summary/cell_data.csv")
+tcr_output <- read.csv(paste(dir,"metadata_input/TCR_cell_data.csv", sep=""))
 # Change cell_name to cell_ID 
-colnames(tcr_output)[grep("cell_name", colnames(tcr_output))] <- "cell_id"
+# colnames(tcr_output)[grep("cell_name", colnames(tcr_output))] <- "cell_id"
 # Join metadata with TCR metadata 
-meta_new <- left_join(x = tiss_subset_immune@meta.data, y = tcr_output, by = "cell_id")
-row.names(meta_new) <- row.names(tiss_subset_immune@meta.data)
+meta_new <- left_join(x = tiss_immune@meta.data, y = tcr_output, by = "cell_id")
+row.names(meta_new) <- row.names(tiss_immune@meta.data)
 # Add updated metadata (containing TCR info) to the Seurat obect 
-tiss_subset_immune@meta.data <- meta_new
+tiss_immune@meta.data <- meta_new
+table(tiss_immune@meta.data$clonal_group)
 ```
 
 Save immune cell workspace 
 ```{r}
-save(tiss_subset_immune, file = "/myVolume/sclung_adeno/R_objects/04_main_seurat_subset_190128_IMMUNE.RData")
+save(tiss_immune, file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
 ```
 
 Find variable genes
