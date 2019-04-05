@@ -1,0 +1,46 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+Combine immune annotations to one metadata field in the master Seurat object and save it 
+```{r}
+temp <- paste(tiss_subset@meta.data$immune_annotation ,tiss_subset@meta.data$immune_subtype_annotation, tiss_subset@meta.data$T_cell_subtype_annotation, tiss_subset@meta.data$MF_cell_subtype_annotation)
+table(temp)
+```
+```{r}
+# Replace NA with blanks 
+temp <- gsub(temp, pattern = "NA", replacement = "")
+table(temp)
+```
+```{r}
+# REplace double space
+temp <- gsub(temp, pattern = "  ", replacement = " ")
+table(temp)
+```
+```{r}
+# REplace space with _
+temp <- gsub(temp, pattern = " ", replacement = "/")
+table(temp)
+```
+```{r}
+# Replace the last "/"
+temp <- sub("/$", "", temp)
+table(temp)
+```
+```{r}
+# Replace the last "/"
+temp <- sub("/$", "", temp)
+table(temp)
+```
+```{r}
+# Add column epithelial_annotation_lvl_1 to tiss_subset
+tiss_subset@meta.data[,"Final_immune_annotation"] <- temp
+```
+
+Save immune cell workspace as well as updated main workspace 
+```{r}
+save(tiss_subset, file = "/myVolume/sclung_adeno/R_objects/04_main_seurat_subset_190128_immune_annotated.RData")
+save(tiss_subset_immune, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_IMMUNE.RData")
+save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_Tcells.RData")
+```

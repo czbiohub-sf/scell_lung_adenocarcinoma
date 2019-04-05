@@ -1,0 +1,248 @@
+© 2000-2018 QIAGEN. All rights reserved.
+
+Ingenuity Canonical Pathways	 -log(p-value)	Ratio	z-score	Molecules
+EIF2 Signaling	9.95E01	3.19E-01	-6.481	RPL11,RPL22,RPS27,RPS23,RPLP2,RPL39,RPL35A,RPS11,RPS7,EIF1,RPL13,RPS20,RPS13,RPL23A,RPL19,RPL21,RPL36,EIF1AY,RPL32,RPS8,RPL29,RPL12,RPL37A,RPL28,RPL10A,RPL9,RPL15,RPS6,RPS25,RPS15A,RPL6,RPL41,RPL13A,RPSA,RPL24,RPLP1,RPL36A,RPS3A,RPS18,RPL26,RPL7A,RPS4X,RPL7,RPS28,RPL27A,RPL14,RPL35,RPL18A,UBA52,RPS9,RPS5,RPS12,RPS3,RPL31,RPL18,RPS24,RPS19,RPL34,RPL30,RPS10,RPS21,RPS29,FAU,RPL27,RPS15,RPS16,RPS26,RPS27A,RPL5,RPL37,RPLP0,RPL38,RPS14
+Regulation of eIF4 and p70S6K Signaling	3.45E01	1.94E-01	NaN	RPS3A,RPS27,RPS18,RPS23,RPS11,RPS4X,RPS7,RPS28,EIF1,RPS20,RPS13,RPS9,RPS5,RPS12,RPS3,EIF1AY,RPS24,RPS19,RPS8,RPS10,RPS21,RPS29,FAU,RPS6,RPS15,RPS16,RPS26,RPS27A,RPS25,RPS15A,RPSA,RPS14
+mTOR Signaling	2.82E01	1.44E-01	NaN	RPS3A,RPS27,RPS18,RPS23,RPS11,RPS4X,RPS7,RPS28,RPS20,RPS13,RPS9,RPS5,RPS12,RPS3,RPS24,RPS19,RPS8,RPS10,RPS21,RPS29,FAU,RPS6,RPS15,RPS16,RPS26,RPS27A,RPS25,RPS15A,RPSA,RPS14
+Protein Ubiquitination Pathway	5.65E00	4.43E-02	NaN	B2M,IFNG,HSP90B1,PSME1,UBA52,HLA-B,PSME2,RPS27A,ELOB,UBE2S,BRCA1,DNAJA1
+Oxidative Phosphorylation	5.53E00	7.34E-02	-2.828	ATP5PF,ATP5MC2,COX6B1,COX7C,ATP5MG,UQCR11,ATP5F1E,NDUFB2
+Antigen Presentation Pathway	4.88E00	1.32E-01	NaN	HLA-G,B2M,IFNG,HLA-B,TAPBP
+Mitochondrial Dysfunction	4.11E00	4.68E-02	NaN	ATP5PF,ATP5MC2,COX6B1,COX7C,ATP5MG,UQCR11,ATP5F1E,NDUFB2
+Graft-versus-Host Disease Signaling	3.22E00	8.33E-02	NaN	HLA-G,IFNG,HLA-B,TNF
+Allograft Rejection Signaling	3.18E00	5.81E-02	NaN	HLA-G,B2M,IFNG,HLA-B,TNF
+Communication between Innate and Adaptive Immune Cells	2.96E00	5.21E-02	NaN	HLA-G,B2M,IFNG,HLA-B,TNF
+NER Pathway	2.82E00	4.85E-02	-1.342	POLD3,HIST1H4C,HMGN1,POLR2L,POLD2
+T Helper Cell Differentiation	2.54E00	5.48E-02	NaN	IFNG,HLA-B,RORC,TNF
+Role of MAPK Signaling in the Pathogenesis of Influenza	2.41E00	5.06E-02	NaN	IFNG,RARRES3,TNF,ATF2
+Role of PKR in Interferon Induction and Antiviral Response	2.36E00	7.32E-02	NaN	IFNG,TNF,ATF2
+DNA Double-Strand Break Repair by Homologous Recombination	2.26E00	1.43E-01	NaN	RAD51,BRCA1
+Crosstalk between Dendritic Cells and Natural Killer Cells	2.23E00	4.49E-02	NaN	HLA-G,IFNG,HLA-B,TNF
+Phagosome Maturation	2.15E00	3.38E-02	NaN	B2M,TUBA1B,PRDX1,HLA-B,TUBA1C
+Hereditary Breast Cancer Signaling	2.1E00	3.29E-02	NaN	RAD51,UBA52,RPS27A,BRCA1,POLR2L
+Sirtuin Signaling Pathway	2.01E00	2.4E-02	0.000	ATP5PF,TOMM40,TUBA1B,TUBA1C,TNF,NDUFB2,ATP5F1E
+Type I Diabetes Mellitus Signaling	1.9E00	3.6E-02	NaN	HLA-G,IFNG,HLA-B,TNF
+Polyamine Regulation in Colon Cancer	1.87E00	9.09E-02	NaN	PSME1,PSME2
+Differential Regulation of Cytokine Production in Intestinal Epithelial Cells by IL-17A and IL-17F	1.83E00	8.7E-02	NaN	IFNG,TNF
+S-methyl-5'-thioadenosine Degradation II	1.79E00	5E-01	NaN	MTAP
+Hypoxia Signaling in the Cardiovascular System	1.66E00	4.05E-02	NaN	HSP90B1,UBE2S,ATF2
+Toll-like Receptor Signaling	1.63E00	3.95E-02	NaN	UBA52,RPS27A,TNF
+Inosine-5'-phosphate Biosynthesis II	1.62E00	3.33E-01	NaN	PAICS
+Role of BRCA1 in DNA Damage Response	1.57E00	3.75E-02	NaN	RAD51,IFNG,BRCA1
+Cytotoxic T Lymphocyte-mediated Apoptosis of Target Cells	1.56E00	6.25E-02	NaN	B2M,HLA-B
+DNA Methylation and Transcriptional Repression Signaling	1.51E00	5.88E-02	NaN	HIST1H4C,MBD3
+Airway Inflammation in Asthma	1.5E00	2.5E-01	NaN	TNF
+Renal Cell Carcinoma Signaling	1.44E00	3.33E-02	NaN	UBA52,RPS27A,ELOB
+Altered T Cell and B Cell Signaling in Rheumatoid Arthritis	1.44E00	3.33E-02	NaN	IFNG,HLA-B,TNF
+OX40 Signaling Pathway	1.44E00	3.33E-02	NaN	HLA-G,B2M,HLA-B
+Th17 Activation Pathway	1.42E00	3.3E-02	NaN	IFNG,HSP90B1,RORC
+Systemic Lupus Erythematosus Signaling	1.37E00	2.12E-02	NaN	HLA-G,HLA-B,SNRPD2,TNF,SNRPG
+ATM Signaling	1.36E00	3.09E-02	NaN	RAD51,BRCA1,ATF2
+Cdc42 Signaling	1.33E00	2.4E-02	NaN	HLA-G,B2M,HLA-B,ATF2
+Role of Hypercytokinemia/hyperchemokinemia in the Pathogenesis of Influenza	1.33E00	4.65E-02	NaN	IFNG,TNF
+iNOS Signaling	1.29E00	4.44E-02	NaN	IFNG,CALM1 (includes others)
+FAT10 Cancer Signaling Pathway	1.27E00	4.35E-02	NaN	IFNG,TNF
+Autoimmune Thyroid Disease Signaling	1.22E00	4.08E-02	NaN	HLA-G,HLA-B
+Sertoli Cell-Sertoli Cell Junction Signaling	1.21E00	2.19E-02	NaN	TUBA1B,TUBA1C,TNF,ATF2
+Airway Pathology in Chronic Obstructive Pulmonary Disease	1.2E00	1.25E-01	NaN	TNF
+Tryptophan Degradation to 2-amino-3-carboxymuconate Semialdehyde	1.2E00	1.25E-01	NaN	AFMID
+Sucrose Degradation V (Mammalian)	1.15E00	1.11E-01	NaN	ALDOC
+Role of Cytokines in Mediating Communication between Immune Cells	1.15E00	3.7E-02	NaN	IFNG,TNF
+p38 MAPK Signaling	1.15E00	2.54E-02	NaN	HMGN1,TNF,ATF2
+Neuroprotective Role of THOP1 in Alzheimer's Disease	1.13E00	2.5E-02	NaN	HLA-G,IFNG,HLA-B
+Dendritic Cell Maturation	1.13E00	2.04E-02	-2.000	B2M,HLA-B,TNF,ATF2
+ILK Signaling	1.12E00	2.03E-02	-2.000	TMSB10/TMSB4X,TNF,ATF2,NACA
+Nur77 Signaling in T Lymphocytes	1.08E00	3.39E-02	NaN	CALM1 (includes others),HLA-B
+Atherosclerosis Signaling	1.07E00	2.34E-02	NaN	IFNG,RARRES3,TNF
+Purine Nucleotides De Novo Biosynthesis II	1.07E00	9.09E-02	NaN	PAICS
+Retinoic acid Mediated Apoptosis Signaling	1.05E00	3.23E-02	NaN	IFNG,ZC3HAV1
+Activation of IRF by Cytosolic Pattern Recognition Receptors	1.04E00	3.17E-02	NaN	TNF,ATF2
+Breast Cancer Regulation by Stathmin1	1.03E00	1.89E-02	NaN	STMN1,TUBA1B,CALM1 (includes others),TUBA1C
+PXR/RXR Activation	1.01E00	3.08E-02	NaN	GSTM1,TNF
+Calcium-induced T Lymphocyte Apoptosis	1E00	3.03E-02	NaN	CALM1 (includes others),HLA-B
+Glycogen Degradation II	1E00	7.69E-02	NaN	MTAP
+Cell Cycle: G1/S Checkpoint Regulation	9.91E-01	2.99E-02	NaN	RPL11,RPL5
+14-3-3-mediated Signaling	9.87E-01	2.16E-02	NaN	TUBA1B,TUBA1C,TNF
+Remodeling of Epithelial Adherens Junctions	9.71E-01	2.9E-02	NaN	TUBA1B,TUBA1C
+Aryl Hydrocarbon Receptor Signaling	9.67E-01	2.11E-02	NaN	GSTM1,HSP90B1,TNF
+Neuroinflammation Signaling Pathway	9.59E-01	1.6E-02	-2.236	B2M,IFNG,HLA-B,TNF,ATF2
+Caveolar-mediated Endocytosis Signaling	9.47E-01	2.82E-02	NaN	B2M,HLA-B
+Melatonin Signaling	9.39E-01	2.78E-02	NaN	CALM1 (includes others),RORC
+NAD biosynthesis II (from tryptophan)	9.39E-01	6.67E-02	NaN	AFMID
+Glycogen Degradation III	9.39E-01	6.67E-02	NaN	MTAP
+MSP-RON Signaling Pathway	9.21E-01	2.7E-02	NaN	IFNG,TNF
+Differential Regulation of Cytokine Production in Macrophages and T Helper Cells by IL-17A and IL-17F	8.66E-01	5.56E-02	NaN	TNF
+GADD45 Signaling	8.45E-01	5.26E-02	NaN	BRCA1
+DNA damage-induced 14-3-3σ Signaling	8.45E-01	5.26E-02	NaN	BRCA1
+Cardiomyocyte Differentiation via BMP Receptors	8.24E-01	5E-02	NaN	ATF2
+Endoplasmic Reticulum Stress Pathway	8.04E-01	4.76E-02	NaN	HSP90B1
+Role of Lipids/Lipid Rafts in the Pathogenesis of Influenza	7.7E-01	4.35E-02	NaN	IFNG
+Neuregulin Signaling	7.62E-01	2.15E-02	NaN	RPS6,HSP90B1
+Death Receptor Signaling	7.62E-01	2.15E-02	NaN	ZC3HAV1,TNF
+Role of JAK1, JAK2 and TYK2 in Interferon Signaling	7.52E-01	4.17E-02	NaN	IFNG
+Glutathione Redox Reactions I	7.52E-01	4.17E-02	NaN	GSTM1
+Germ Cell-Sertoli Cell Junction Signaling	7.47E-01	1.67E-02	NaN	TUBA1B,TUBA1C,TNF
+GABA Receptor Signaling	7.47E-01	2.11E-02	NaN	UBA52,RPS27A
+T Cell Exhaustion Signaling Pathway	7.38E-01	1.65E-02	NaN	HLA-G,IFNG,HLA-B
+IL-17A Signaling in Gastric Cells	7.35E-01	4E-02	NaN	TNF
+Tryptophan Degradation III (Eukaryotic)	7.35E-01	4E-02	NaN	AFMID
+Lipid Antigen Presentation by CD1	7.21E-01	3.85E-02	NaN	B2M
+Glycolysis I	7.21E-01	3.85E-02	NaN	ALDOC
+Gluconeogenesis I	7.21E-01	3.85E-02	NaN	ALDOC
+Apelin Liver Signaling Pathway	7.21E-01	3.85E-02	NaN	TNF
+CTLA4 Signaling in Cytotoxic T Lymphocytes	7.06E-01	1.98E-02	NaN	B2M,HLA-B
+PPAR Signaling	7.06E-01	1.98E-02	NaN	HSP90B1,TNF
+Prostate Cancer Signaling	6.95E-01	1.94E-02	NaN	HSP90B1,ATF2
+Role of NFAT in Regulation of the Immune Response	6.88E-01	1.55E-02	NaN	CALM1 (includes others),HLA-B,ATF2
+Cholecystokinin/Gastrin-mediated Signaling	6.7E-01	1.87E-02	NaN	TNF,ATF2
+TNFR2 Signaling	6.66E-01	3.33E-02	NaN	TNF
+Antioxidant Action of Vitamin C	6.58E-01	1.83E-02	NaN	RARRES3,TNF
+NRF2-mediated Oxidative Stress Response	6.5E-01	1.49E-02	NaN	GSTM1,PRDX1,DNAJA1
+VEGF Signaling	6.46E-01	1.8E-02	NaN	EIF1,EIF1AY
+4-1BB Signaling in T Lymphocytes	6.4E-01	3.12E-02	NaN	ATF2
+Glutathione-mediated Detoxification	6.4E-01	3.12E-02	NaN	GSTM1
+Circadian Rhythm Signaling	6.29E-01	3.03E-02	NaN	ATF2
+Nitric Oxide Signaling in the Cardiovascular System	6.23E-01	1.74E-02	NaN	CALM1 (includes others),HSP90B1
+Virus Entry via Endocytic Pathways	6.07E-01	1.69E-02	NaN	B2M,HLA-B
+Nucleotide Excision Repair Pathway	6.07E-01	2.86E-02	NaN	POLR2L
+B Cell Development	5.97E-01	2.78E-02	NaN	HLA-B
+Interferon Signaling	5.97E-01	2.78E-02	NaN	IFNG
+CREB Signaling in Neurons	5.83E-01	1.37E-02	NaN	CALM1 (includes others),POLR2L,ATF2
+iCOS-iCOSL Signaling in T Helper Cells	5.72E-01	1.6E-02	NaN	CALM1 (includes others),HLA-B
+Synaptic Long Term Potentiation	5.67E-01	1.59E-02	NaN	CALM1 (includes others),ATF2
+Sperm Motility	5.58E-01	1.56E-02	NaN	CALM1 (includes others),RARRES3
+Endocannabinoid Developing Neuron Pathway	5.58E-01	1.56E-02	NaN	BRCA1,ATF2
+Renin-Angiotensin Signaling	5.48E-01	1.54E-02	NaN	TNF,ATF2
+nNOS Signaling in Skeletal Muscle Cells	5.48E-01	2.44E-02	NaN	CALM1 (includes others)
+CD28 Signaling in T Helper Cells	5.3E-01	1.49E-02	NaN	CALM1 (includes others),HLA-B
+Role of Osteoblasts, Osteoclasts and Chondrocytes in Rheumatoid Arthritis	5.29E-01	1.28E-02	NaN	IFNG,CALM1 (includes others),TNF
+PI3K Signaling in B Lymphocytes	5.26E-01	1.48E-02	NaN	CALM1 (includes others),ATF2
+Androgen Signaling	5.21E-01	1.47E-02	NaN	CALM1 (includes others),POLR2L
+Th1 Pathway	5.17E-01	1.46E-02	NaN	IFNG,HLA-B
+Role of IL-17F in Allergic Inflammatory Airway Diseases	5.14E-01	2.22E-02	NaN	ATF2
+Glucocorticoid Receptor Signaling	5.11E-01	1.15E-02	NaN	IFNG,HSP90B1,TNF,POLR2L
+Role of Pattern Recognition Receptors in Recognition of Bacteria and Viruses	5.09E-01	1.44E-02	NaN	IFNG,TNF
+Role of Oct4 in Mammalian Embryonic Stem Cell Pluripotency	5.06E-01	2.17E-02	NaN	BRCA1
+HMGB1 Signaling	5E-01	1.42E-02	NaN	IFNG,TNF
+IL-9 Signaling	4.99E-01	2.13E-02	NaN	TNF
+nNOS Signaling in Neurons	4.99E-01	2.13E-02	NaN	CALM1 (includes others)
+Corticotropin Releasing Hormone Signaling	4.92E-01	1.4E-02	NaN	CALM1 (includes others),ATF2
+Cell Cycle: G2/M DNA Damage Checkpoint Regulation	4.84E-01	2.04E-02	NaN	BRCA1
+TNFR1 Signaling	4.76E-01	2E-02	NaN	TNF
+Assembly of RNA Polymerase II Complex	4.76E-01	2E-02	NaN	POLR2L
+IL-12 Signaling and Production in Macrophages	4.74E-01	1.35E-02	NaN	IFNG,TNF
+Epithelial Adherens Junction Signaling	4.7E-01	1.34E-02	NaN	TUBA1B,TUBA1C
+Ovarian Cancer Signaling	4.62E-01	1.32E-02	NaN	RAD51,BRCA1
+Th2 Pathway	4.58E-01	1.32E-02	NaN	IFNG,HLA-B
+Transcriptional Regulatory Network in Embryonic Stem Cells	4.5E-01	1.85E-02	NaN	HIST1H4C
+Unfolded protein response	4.38E-01	1.79E-02	NaN	HSP90B1
+Hepatic Cholestasis	4.31E-01	1.25E-02	NaN	IFNG,TNF
+Role of CHK Proteins in Cell Cycle Checkpoint Control	4.31E-01	1.75E-02	NaN	BRCA1
+Glutamate Receptor Signaling	4.31E-01	1.75E-02	NaN	CALM1 (includes others)
+Dopamine-DARPP32 Feedback in cAMP Signaling	4.2E-01	1.23E-02	NaN	CALM1 (includes others),ATF2
+Induction of Apoptosis by HIV1	4.08E-01	1.64E-02	NaN	TNF
+PCP pathway	4.08E-01	1.64E-02	NaN	ATF2
+Wnt/Ca+ pathway	4.02E-01	1.61E-02	NaN	ATF2
+GNRH Signaling	3.98E-01	1.18E-02	NaN	CALM1 (includes others),ATF2
+Phospholipases	3.97E-01	1.59E-02	NaN	RARRES3
+Wnt/β-catenin Signaling	3.91E-01	1.16E-02	NaN	UBA52,RPS27A
+Aldosterone Signaling in Epithelial Cells	3.86E-01	1.15E-02	NaN	HSP90B1,DNAJA1
+eNOS Signaling	3.86E-01	1.15E-02	NaN	CALM1 (includes others),HSP90B1
+Mitotic Roles of Polo-Like Kinase	3.82E-01	1.52E-02	NaN	HSP90B1
+Eicosanoid Signaling	3.73E-01	1.47E-02	NaN	RARRES3
+IL-10 Signaling	3.68E-01	1.45E-02	NaN	TNF
+ERK5 Signaling	3.68E-01	1.45E-02	NaN	ATF2
+Role of IL-17A in Arthritis	3.63E-01	1.43E-02	NaN	ATF2
+Xenobiotic Metabolism Signaling	3.61E-01	1E-02	NaN	GSTM1,HSP90B1,TNF
+Hepatic Fibrosis / Hepatic Stellate Cell Activation	3.52E-01	1.08E-02	NaN	IFNG,TNF
+Th1 and Th2 Activation Pathway	3.5E-01	1.07E-02	NaN	IFNG,HLA-B
+TREM1 Signaling	3.41E-01	1.33E-02	NaN	TNF
+Role of Wnt/GSK-3β Signaling in the Pathogenesis of Influenza	3.33E-01	1.3E-02	NaN	IFNG
+Chemokine Signaling	3.33E-01	1.3E-02	NaN	CALM1 (includes others)
+B Cell Receptor Signaling	3.32E-01	1.03E-02	NaN	CALM1 (includes others),ATF2
+VDR/RXR Activation	3.29E-01	1.28E-02	NaN	IFNG
+Production of Nitric Oxide and Reactive Oxygen Species in Macrophages	3.27E-01	1.02E-02	NaN	IFNG,TNF
+Role of PI3K/AKT Signaling in the Pathogenesis of Influenza	3.21E-01	1.25E-02	NaN	IFNG
+Apelin Adipocyte Signaling Pathway	3.21E-01	1.25E-02	NaN	GSTM1
+GM-CSF Signaling	3.17E-01	1.23E-02	NaN	RACK1
+Role of Macrophages, Fibroblasts and Endothelial Cells in Rheumatoid Arthritis	3.13E-01	9.29E-03	NaN	CALM1 (includes others),TNF,ATF2
+BMP signaling pathway	3.13E-01	1.22E-02	NaN	ATF2
+SPINK1 General Cancer Pathway	3.13E-01	1.22E-02	NaN	MT1F
+IL-15 Signaling	3.05E-01	1.19E-02	NaN	TNF
+Neurotrophin/TRK Signaling	3.05E-01	1.19E-02	NaN	ATF2
+Calcium Signaling	3.04E-01	9.71E-03	NaN	CALM1 (includes others),ATF2
+Adrenomedullin signaling pathway	3.01E-01	9.66E-03	NaN	CALM1 (includes others),TNF
+Regulation of IL-2 Expression in Activated and Anergic T Lymphocytes	2.98E-01	1.16E-02	NaN	CALM1 (includes others)
+Gap Junction Signaling	2.98E-01	9.62E-03	NaN	TUBA1B,TUBA1C
+Clathrin-mediated Endocytosis Signaling	2.97E-01	9.57E-03	NaN	UBA52,RPS27A
+Estrogen-Dependent Breast Cancer Signaling	2.95E-01	1.15E-02	NaN	ATF2
+Osteoarthritis Pathway	2.92E-01	9.48E-03	NaN	TNF,ATF2
+α-Adrenergic Signaling	2.78E-01	1.09E-02	NaN	CALM1 (includes others)
+Factors Promoting Cardiogenesis in Vertebrates	2.78E-01	1.09E-02	NaN	ATF2
+FLT3 Signaling in Hematopoietic Progenitor Cells	2.78E-01	1.09E-02	NaN	ATF2
+FGF Signaling	2.78E-01	1.09E-02	NaN	ATF2
+IL-17 Signaling	2.76E-01	1.08E-02	NaN	ATF2
+IL-7 Signaling Pathway	2.76E-01	1.08E-02	NaN	IFNG
+CCR5 Signaling in Macrophages	2.72E-01	1.06E-02	NaN	CALM1 (includes others)
+LPS-stimulated MAPK Signaling	2.69E-01	1.05E-02	NaN	ATF2
+LPS/IL-1 Mediated Inhibition of RXR Function	2.68E-01	8.97E-03	NaN	GSTM1,TNF
+IL-4 Signaling	2.66E-01	1.04E-02	NaN	HLA-B
+Apoptosis Signaling	2.66E-01	1.04E-02	NaN	TNF
+cAMP-mediated signaling	2.6E-01	8.81E-03	NaN	CALM1 (includes others),ATF2
+Actin Cytoskeleton Signaling	2.53E-01	8.66E-03	NaN	ABI2,TMSB10/TMSB4X
+Ceramide Signaling	2.52E-01	9.9E-03	NaN	TNF
+RANK Signaling in Osteoclasts	2.43E-01	9.62E-03	NaN	CALM1 (includes others)
+Melanocyte Development and Pigmentation Signaling	2.41E-01	9.52E-03	NaN	ATF2
+Gαs Signaling	2.36E-01	9.35E-03	NaN	ATF2
+Cardiac Hypertrophy Signaling	2.34E-01	8.26E-03	NaN	CALM1 (includes others),ATF2
+PAK Signaling	2.31E-01	9.17E-03	NaN	TNF
+Phospholipase C Signaling	2.3E-01	8.2E-03	NaN	CALM1 (includes others),ATF2
+Opioid Signaling Pathway	2.27E-01	8.13E-03	NaN	CALM1 (includes others),ATF2
+SAPK/JNK Signaling	2.23E-01	8.93E-03	NaN	ATF2
+p53 Signaling	2.21E-01	8.85E-03	NaN	BRCA1
+UVA-Induced MAPK Signaling	2.21E-01	8.85E-03	NaN	ZC3HAV1
+T Cell Receptor Signaling	2.12E-01	8.55E-03	NaN	CALM1 (includes others)
+Telomerase Signaling	2.08E-01	8.4E-03	NaN	HSP90B1
+LXR/RXR Activation	2.03E-01	8.26E-03	NaN	TNF
+HGF Signaling	2.03E-01	8.26E-03	NaN	ATF2
+Glioma Signaling	2.01E-01	8.2E-03	NaN	CALM1 (includes others)
+Pancreatic Adenocarcinoma Signaling	2.01E-01	8.2E-03	NaN	RAD51
+Axonal Guidance Signaling	-0E00	4.02E-03	NaN	TUBA1B,TUBA1C
+Fc Epsilon RI Signaling	-0E00	7.87E-03	NaN	TNF
+Synaptic Long Term Depression	-0E00	5.38E-03	NaN	RARRES3
+PPARα/RXRα Activation	-0E00	5.38E-03	NaN	HSP90B1
+Acute Phase Response Signaling	-0E00	5.68E-03	NaN	TNF
+FXR/RXR Activation	-0E00	7.94E-03	NaN	TNF
+Tight Junction Signaling	-0E00	5.95E-03	NaN	TNF
+RAR Activation	-0E00	5.26E-03	NaN	RPL7A
+fMLP Signaling in Neutrophils	-0E00	7.75E-03	NaN	CALM1 (includes others)
+CCR3 Signaling in Eosinophils	-0E00	7.3E-03	NaN	CALM1 (includes others)
+HIF1α Signaling	-0E00	7.94E-03	NaN	ELOB
+Cellular Effects of Sildenafil (Viagra)	-0E00	7.63E-03	NaN	CALM1 (includes others)
+Endothelin-1 Signaling	-0E00	5.03E-03	NaN	RARRES3
+Molecular Mechanisms of Cancer	-0E00	2.54E-03	NaN	BRCA1
+Type II Diabetes Mellitus Signaling	-0E00	6.45E-03	NaN	TNF
+p70S6K Signaling	-0E00	7.14E-03	NaN	RPS6
+Colorectal Cancer Metastasis Signaling	-0E00	7.84E-03	NaN	IFNG,TNF
+AMPK Signaling	-0E00	4.57E-03	NaN	ATF2
+Rac Signaling	-0E00	8.06E-03	NaN	ABI2
+Protein Kinase A Signaling	-0E00	5.01E-03	NaN	CALM1 (includes others),ATF2
+Role of NFAT in Cardiac Hypertrophy	-0E00	4.42E-03	NaN	CALM1 (includes others)
+PKCθ Signaling in T Lymphocytes	-0E00	5.99E-03	NaN	HLA-B
+P2Y Purigenic Receptor Signaling Pathway	-0E00	7.14E-03	NaN	ATF2
+NGF Signaling	-0E00	8E-03	NaN	ATF2
+Signaling by Rho Family GTPases	-0E00	3.97E-03	NaN	STMN1
+Gαq Signaling	-0E00	6.17E-03	NaN	CALM1 (includes others)
+Agranulocyte Adhesion and Diapedesis	-0E00	5.21E-03	NaN	TNF
+Granulocyte Adhesion and Diapedesis	-0E00	5.56E-03	NaN	TNF
+Tec Kinase Signaling	-0E00	5.85E-03	NaN	TNF
+Adipogenesis pathway	-0E00	7.46E-03	NaN	TNF
+Estrogen Receptor Signaling	-0E00	7.46E-03	NaN	POLR2L
+ERK/MAPK Signaling	-0E00	4.88E-03	NaN	ATF2
+PI3K/AKT Signaling	-0E00	7.75E-03	NaN	HSP90B1
+NF-κB Signaling	-0E00	5.35E-03	NaN	TNF
+G-Protein Coupled Receptor Signaling	-0E00	3.53E-03	NaN	ATF2
+IL-6 Signaling	-0E00	7.35E-03	NaN	TNF
+GP6 Signaling Pathway	-0E00	7.41E-03	NaN	CALM1 (includes others)
+Endocannabinoid Cancer Inhibition Pathway	-0E00	6.33E-03	NaN	ATF2
+Apelin Endothelial Signaling Pathway	-0E00	7.87E-03	NaN	CALM1 (includes others)
+Ephrin Receptor Signaling	-0E00	5.65E-03	NaN	ATF2

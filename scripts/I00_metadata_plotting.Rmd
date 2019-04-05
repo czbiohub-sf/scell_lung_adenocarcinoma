@@ -1,0 +1,50 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+require(gplots)
+require(FactoMineR)
+require(factoextra)
+```
+Load data 
+```{r}
+load(file = "/myVolume/sclung_adeno/R_objects/04_main_seurat_subset_190128_immune_annotated.RData")
+```
+
+Plot Ncells across clinical metadata after removing Pleura and Brain tissues 
+```{r}
+metadata <- tiss_subset@meta.data
+# Only immune cells 
+metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+# Remove brain and pleura 
+metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
+# Plot for analysis 
+tab.1 <- table(metadata$analysis, metadata$biopsy_site)
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/general/response_vs_biopsy_site_table.pdf",width = 7, height = 5)
+balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+dev.off()
+# Plot for pfs
+tab.1 <- table(metadata$pfs_over_under, metadata$biopsy_site)
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/general/pfs_vs_biopsy_site_table.pdf",width = 7, height = 5)
+balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+dev.off()
+```
+
+Subset and perform Correspondence analysis 
+```{r}
+metadata <- tiss_subset@meta.data
+# Only immune cells 
+metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+# Remove brain and pleura 
+metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
+# Make table 
+tab.1 <- table(as.character(metadata$biopsy_site), metadata$analysis)
+# CA analysis 
+chisq <- chisq.test(tab.1)
+# 
+CA(tab.1, ncp = 2, graph = TRUE)
+```

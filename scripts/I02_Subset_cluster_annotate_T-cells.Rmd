@@ -1,0 +1,275 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+More detailed Immune phenotyping of different immune cell types
+T-cells 
+
+Subset T-cells
+```{r}
+t.cells <- row.names(tiss_subset_immune@meta.data)[which(tiss_subset_immune@meta.data$immune_subtype_annotation == "T-cells")]
+length(t.cells)
+t.cell.tiss <- SubsetData(object = tiss_subset_immune, cells.use = t.cells)
+```
+
+Save T-cell workspace 
+```{r}
+save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_T_cells.RData")
+```
+
+
+Classify all T-cells based on CD4 or CD8 expression
+
+First plot CD4 vs CD8
+```{r}
+t.cell.data <- as.matrix(t.cell.tiss@data[c("CD4", "CD8A"),])
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I02/T-cells_CD4_CD8_scatterplot.pdf",width = 7, height = 5)
+plot(t.cell.data[1,],t.cell.data[2,], xlab="CD8A", ylab="CD4", pch=19)
+dev.off()
+# 
+plot(t.cell.data[1,],t.cell.data[2,], xlab="CD8A", ylab="CD4", pch=19)
+```
+
+Score T-cells based on expression of CD4 or CD8
+Expression is absolute currently using a cutoff of 0 for expression. 
+```{r}
+# Convert expression to boolean
+t.cell.data[1,which(t.cell.data[1,] != 0)] <- 1
+t.cell.data[2,which(t.cell.data[2,] != 0)] <- 3
+# Add column for annotating T-cells on CD4 and CD8 expression
+t.cell.tiss@meta.data[,"T.cell.generic"] <- NA
+# 
+vec.score <- c(0,1,3,4)
+vec.names <- c("negative", "CD4pos", "CD8pos", "Doublepos")
+for(i in 1:length(vec.score)){
+    t.cell.tiss@meta.data[names(which(colSums(t.cell.data)==vec.score[i])),"T.cell.generic"] <-  vec.names[i]
+}
+table(t.cell.tiss@meta.data$T.cell.generic)
+```
+
+Unsupervised clustering of T-cells 
+
+Find variable genes
+```{r}
+t.cell.tiss <- FindVariableGenes(object = t.cell.tiss, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 1, num.bin = 20, 
+                                          binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
+# Selction vector 
+sel.vec <- row.names(t.cell.tiss@data) %in% t.cell.tiss@var.genes
+table(sel.vec)
+# Create color vector 
+col.vec <- rep("black", nrow(t.cell.tiss@data))
+col.vec[sel.vec] <- "red"
+# Plot 
+par(mfcol=c(2,1))
+plot(t.cell.tiss@hvg.info$gene.mean, t.cell.tiss@hvg.info$gene.dispersion.scaled, 
+     pch=19, col=col.vec,cex=0.2)
+plot(t.cell.tiss@hvg.info$gene.mean[sel.vec], t.cell.tiss@hvg.info$gene.dispersion.scaled[sel.vec], 
+     pch=19, col="red",cex=0.2)
+```
+
+Unsupervised clustering of T-cells 
+# PCA
+```{r}
+t.cell.tiss <- RunPCA(object = t.cell.tiss, do.print = FALSE, pcs.compute = )
+t.cell.tiss <- ProjectPCA(object = t.cell.tiss, do.print = FALSE)
+```
+
+# visualize PCA heatmaps and PC variance
+```{r}
+PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+PCElbowPlot(object = t.cell.tiss)
+```
+
+Perform correlation of PCs and metadata fields
+```{r}
+require(corrplot)
+pca.obj <- t.cell.tiss@dr$pca
+pc.coords <- pca.obj@cell.embeddings
+df1 <- t.cell.tiss@meta.data[,c("nGene","nReads","percent.ribo")]
+df2 <- pc.coords[,c(1:10)]
+cordf12 <- cor(df1,df2)
+# Make a correlation plot
+corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+```
+
+JackStraw of PCs 
+```{r}
+t.cell.tiss <- JackStraw(t.cell.tiss, num.replicate = 100, display.progress = T, 
+                         do.par = T, num.cores = 15, num.pc = 15)
+JackStrawPlot(t.cell.tiss, PCs = 1:15)
+```
+
+
+Define components to be used for clustering 
+```{r}
+n.pcs.min = 1
+n.pcs.max = 10
+```
+
+pick resolution parameter
+```{r}
+res.used <- 0.3
+t.cell.tiss <- FindClusters(object = t.cell.tiss, reduction.type = "pca", dims.use = n.pcs.min:n.pcs.max, 
+    resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+```
+
+Plot a few of the principal components 
+```{r}
+require(GGally)
+require(reshape)
+temp <- t.cell.tiss@dr$pca@cell.embeddings
+temp <- as.data.frame(temp)
+names <- colnames(temp)
+temp <- cbind(temp, t.cell.tiss@meta.data$res.0.3)
+colnames(temp) <- c(names, "cluster")
+pca.scatter = ggpairs(data=temp,
+             columns=1:10, 
+             upper = list(continuous = "points"),
+             lower = list(combo = "na"),
+             mapping=ggplot2::aes(colour = cluster), legend = 2) + theme(legend.position = "bottom")
+ggsave(plot = pca.scatter, filename = "/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I02/T-cells_PCA_scatterplots_largefile.pdf",width = 15, height = 12)
+```
+
+
+# Run TSNE
+```{r}
+t.cell.tiss <- RunTSNE(object = t.cell.tiss, dims.use = n.pcs.min:n.pcs.max, seed.use = 10, perplexity=30)
+```
+
+# Plot TSNE
+```{r}
+TSNEPlot(object = t.cell.tiss, do.label = T)
+```
+
+Find all cluster markers 
+```{r}
+t.cell.markers <- FindAllMarkers(object = t.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
+```
+
+Plot top genes 
+```{r}
+require(tidyverse)
+t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
+```
+
+Write table of top genes 
+```{r}
+write.table(t.cell.markers, "/myVolume/sclung_adeno/immune_cell_analysis/data_out/I02/T-cells_DE_genes_between_subclusters.csv")
+```
+
+
+Calculate and plot average expression of broad cell type specific gene sets 
+Import a list of genes specific to different T-cell types (Zheng et al and Guo et al)
+```{r}
+library(ggridges)
+library(ggplot2)
+# # # 
+cell.genes <- read.csv("/myVolume/sclung_adeno/immune_cell_analysis/gene_lists/Tcell_subtypes_literature.csv", header=T)
+# Subset gene list to genes that are part of the dataset 
+cell.genes <- cell.genes[cell.genes$gene %in%  row.names(t.cell.tiss@data) ,]
+cell.types  <- as.character(unique(cell.genes$cell))
+tsne.coor <- slot(t.cell.tiss@dr$tsne, "cell.embeddings")
+## 
+ggplot.list <- list()
+ggplot.list.2 <- list()
+# 
+rm(temp)
+for(i in 1:length(unique(cell.types))){
+genes <- as.character(cell.genes$gene[which(cell.genes$cell==cell.types[i])])
+gene.exp <- colMeans(as.matrix(t.cell.tiss@data[genes,]))[row.names(tsne.coor)]
+clusters <- t.cell.tiss@meta.data$res.0.3
+# Make ggplot friendly 
+temp <- as.data.frame(cbind(tsne.coor, as.data.frame(gene.exp), as.data.frame(clusters)))
+# Plot with ggplot 
+ggplot.list[[i]] <- ggplot(temp, aes(tSNE_1, tSNE_2)) + 
+      geom_point(aes(colour = gene.exp)) + 
+      scale_colour_gradient(low = "grey95", high = "red") + 
+      labs(title = cell.types[i], subtitle = paste(genes, collapse = ", "))
+# Boxplot per cluster 
+ggplot.list.2[[i]] <- ggplot(temp, aes(x = clusters, y = gene.exp)) + 
+                      geom_boxplot() + 
+                      ggtitle(cell.types[i]) + ylab("Average gene expression (log)")
+}
+# Plot all 
+library(gridExtra)
+n <- length(ggplot.list)
+nCol <- floor(sqrt(n))
+# Exzpression on tSNE
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I02/T-cells_TSNE_with_average_expression_of_cell_markers.pdf",15,15)
+do.call("grid.arrange", c(ggplot.list, ncol=nCol))
+dev.off()
+# Expression per cluster boxplots 
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I02/T-cells_per_cluster_with_average_expression_of_cell_markers.pdf",15,15)
+do.call("grid.arrange", c(ggplot.list.2, ncol=nCol))
+dev.off()
+```
+
+
+
+
+Plot all relevant, PCA, tSNE and Clustering plots as pdf 
+```{r}
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I02/T-cells_subclustering_TSNE.pdf",10,10)
+PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+PCElbowPlot(object = t.cell.tiss)
+JackStrawPlot(t.cell.tiss, PCs = 1:12)
+TSNEPlot(object = t.cell.tiss, do.label = T)
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
+DoHeatmap(t.cell.tiss, genes.use = cell.genes$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Genes of subtypes (Literature)")
+# FeaturePlot(t.cell.tiss, genes_to_check_4, pt.size = 1, nCol = 3, cols.use = c("grey90", "red"))
+# FeaturePlot(t.cell.tiss, genes_to_check_4, pt.size = 1, nCol = 3, cols.use = c("grey90", "red"))
+TSNEPlot(object = t.cell.tiss, do.label = F, group.by = "T.cell.generic")
+TSNEPlot(object = t.cell.tiss, do.label = F, group.by = "patient_id")
+dev.off()
+```
+
+
+```{r}
+VlnPlot(t.cell.tiss, c("CD3G","CD3E", "EOMES"))
+```
+
+Annotate T-cells
+```{r}
+# stash current cluster IDs
+t.cell.tiss <- StashIdent(object = t.cell.tiss, save.name = "T_cell.subcluster.ids")
+# enumerate current cluster IDs and the labels for them
+cluster.ids <- c(0:7)
+free_annotation <- c("CD8.cytotoxic_IFNG","CD4.TH", "CD4.Naive", "Neg.unknown", "CD4.Treg", "mixed.exhausted_PD1", "CD8_cytotoxic_GZMK", "CD8_cytotoxic_GZMB")
+t.cell.tiss@meta.data[,'t_cell_subtypes'] <- plyr::mapvalues(x = t.cell.tiss@meta.data$T_cell.subcluster.ids, from = cluster.ids, to = free_annotation)
+# Plot 
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I02/T-cells_free_annotation_on_TSNE.pdf",10,10)
+TSNEPlot(object = t.cell.tiss, do.label = TRUE, pt.size = 1, group.by='t_cell_subtypes', label.size = 3)
+TSNEPlot(object = t.cell.tiss, do.label = FALSE, pt.size = 1, group.by='t_cell_subtypes', label.size = 3)
+dev.off()
+```
+
+
+# Barplot of T-cell counts 
+```{r}
+table.temp <- as.data.frame(table(t.cell.tiss@meta.data$t_cell_subtypes))
+p <-  ggplot(data=table.temp, aes(x=Var1, y=Freq)) +
+      geom_bar(stat="identity") + coord_flip()
+ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I02/T-cells_subtype_counts.pdf", width = 10, height = 7)
+```
+
+
+Write annotations of immune cells to tiss_subset
+```{r}
+# Add column epithelial_annotation_lvl_1 to tiss_subset
+tiss_subset@meta.data[,"T_cell_subtype_annotation"] <- NA
+# Add annotations 
+for(i in 1:nrow(t.cell.tiss@meta.data)){
+  cell <- row.names(t.cell.tiss@meta.data)[i]
+  a <- which(row.names(tiss_subset@meta.data)==cell)
+  tiss_subset@meta.data[a,"T_cell_subtype_annotation"] <- t.cell.tiss@meta.data$t_cell_subtypes[i]
+}
+```
+
+
+Save immune cell workspace as well as updated main workspace 
+```{r}
+save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_T-cells.RData")
+save(tiss_subset, file = "/myVolume/sclung_adeno/R_objects/04_main_seurat_subset_190128_immune_annotated.RData")
+```

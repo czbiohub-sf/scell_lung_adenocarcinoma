@@ -1,0 +1,487 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## This is the workflow for reading in TRACER output to an existing Seurat object           
+
+load libraries
+```{r, comment=NA, messages=FALSE, warning=FALSE, results='hide'}
+library(Seurat)
+```
+
+Load Seurat obj
+```{r, comment=NA, messages=FALSE, warning=FALSE, results='hide'}
+rm(list=ls())
+load("/myVolume/sclung_adeno/R_objects/04_main_seurat_subset_190128_immune_annotated.RData")
+```
+
+```{r, comment=NA}
+dim(tiss_subset@meta.data)
+```
+
+```{r, echo=FALSE}
+TSNEPlot(tiss_subset)
+```
+
+```{r, comment=NA}
+colnames(tiss_subset@meta.data)
+```
+
+```{r}
+unique(tiss_subset@meta.data$Final_immune_annotation)
+```
+
+Read in Tracer data
+```{r, comment=NA}
+# A/B summary
+tracer_summary <- read.csv("/myVolume/TCR_assembly_pipeline/filtered_TCRAB_summary/cell_data.csv", header = T)
+```
+
+Lets define a new metadata df
+  and add some new cols
+```{r, comment=NA}
+meta_edit <- tiss_subset@meta.data
+
+meta_edit$A_productive <- NA
+meta_edit$A_productive <- as.vector(meta_edit$A_productive)
+
+meta_edit$B_productive <- NA
+meta_edit$B_productive <- as.vector(meta_edit$B_productive)
+
+meta_edit$clonal_group_AB <- NA
+meta_edit$group_size_AB <- NA
+```
+
+Make sure cell IDs look the same
+```{r, comment=NA}
+tracer_summary$cell_name <- gsub("[.]", "_", tracer_summary$cell_name)
+```
+
+find cell name matches btwn meta_edit and tracer_summary
+  this match() function is so much more efficient that looping!!
+```{r, comment=NA}
+match_vec <- match(row.names(meta_edit), tracer_summary$cell_name) # meta_edit first
+match_vec1 <- match(tracer_summary$cell_name, row.names(meta_edit)) # tracer_summary first
+
+length(match_vec)
+length(match_vec1)
+
+head(match_vec)
+```
+
+```{r, comment=NA}
+length(unique(match_vec))
+```
+
+add tracer_summary info to meta_edit, based on cell name matches
+```{r, comment=NA}
+for (i in 1:length(match_vec)){
+  currIndex <- match_vec[i]
+  meta_edit$A_productive[i] <- as.vector(tracer_summary$A_productive[currIndex])
+  meta_edit$B_productive[i] <- as.vector(tracer_summary$B_productive[currIndex])
+  meta_edit$clonal_group[i] <- as.vector(tracer_summary$clonal_group[currIndex])
+  meta_edit$group_size[i] <- as.vector(tracer_summary$group_size[currIndex])
+}
+```
+
+now export to csv
+```{r, comment=NA}
+write.csv(meta_edit, "/myVolume/sclung_adeno/immune_cell_analysis/data_out/I06/metadata_with_assembled_TCRs.csv")
+```
+
+add to metadata of Seurat object 
+```{r, comment=NA}
+tiss_subset@meta.data <- meta_edit
+```
+
+Save Seurat obj
+```{r, comment=NA, messages=FALSE, warning=FALSE, results='hide'}
+save(tiss_subset, file = "/myVolume/sclung_adeno/R_objects/04_main_seurat_subset_190128_immune_annotated.RData")
+```
+
+
+
+Subset immune data 
+```{r}
+cells <- row.names(tiss_subset@meta.data)[grep("immune/",tiss_subset@meta.data$Final_immune_annotation)]
+tiss_subset_immune  <- SubsetData(tiss_subset,cells.use = cells)
+rm(tiss_subset, cells)
+tiss_subset_Tclonality <- tiss_subset_immune
+rm(tiss_subset_immune, meta_edit)
+```
+
+Rename NAT cells to the same patient name
+For the purposes of T-cell clonality the fact that they are not from the tumor core is not relevant 
+```{r}
+tiss_subset_Tclonality@meta.data$patient_id[grep("NAT", tiss_subset_Tclonality@meta.data$patient_id)] <- gsub("_NAT", "", tiss_subset_Tclonality@meta.data$patient_id[grep("NAT", tiss_subset_Tclonality@meta.data$patient_id)])
+```
+
+
+Counting the total number of clonotypes containing more than 2 T-cells per treatment group 
+```{r}
+tab.1 <- table(tiss_subset_Tclonality@meta.data$clonal_group, tiss_subset_Tclonality@meta.data$analysis)
+tab.1[tab.1 != 0] <- 1
+tcr_clon_per_group <- colSums(tab.1)
+tcr_clon_per_group <- melt(tcr_clon_per_group)
+tcr_clon_per_group$Var1 <-  factor(colnames(tab.1), levels = c("naive", "grouped_pr", "grouped_pd"))
+p <- ggplot(tcr_clon_per_group, aes(Var1, value)) +geom_bar(stat = "identity")+ 
+      geom_text(data = melt(tcr_clon_per_group),aes(x = Var1, y = value, label=value),
+      position = position_dodge(width = 1),
+      vjust = -0.5, size = 4) + ggtitle("Number of T-clonotypes") + 
+      labs(x = "")
+ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/T-cell_clonotypes_per_treatment_group.pdf", width = 7, height = 5, plot=p)
+p
+```
+
+
+Counting the number of T-cells that are part of clonotypes across treatment groups as a fraction of total T-cells in each group 
+```{r}
+tab.1 <- table(tiss_subset_Tclonality@meta.data$clonal_group, tiss_subset_Tclonality@meta.data$analysis)
+clono_t <- colSums(tab.1)
+# Also count the total cells that were analyzed by TRACER for each group 
+clono_all <- table(tiss_subset_Tclonality@meta.data[which(tiss_subset_Tclonality@meta.data$immune_subtype_annotation=="T-cells"),"analysis"])
+clono_all <- clono_all[names(clono_t)]
+# 
+tab.1 <- melt(round(clono_t/clono_all, 4)*100)
+tab.1$Var.1 <- factor(tab.1$Var.1, levels = c("naive", "grouped_pr", "grouped_pd"))
+# Plot 
+p <- ggplot(tab.1, aes(Var.1, value)) +geom_bar(stat = "identity") + 
+      geom_text(data = tab.1,aes(x = Var.1, y = value, label=value),
+      position = position_dodge(width = 1),
+      vjust = -0.5, size = 4) + ggtitle("% cells in clonotypes (of total T-cells)") + 
+      labs(x = "")
+ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/Fraction_of_cells_in_T-cell_clonotypes_per_treatment_group.pdf", width = 7, height = 5, plot=p)
+p
+```
+
+Histogram of clonotype sizes 
+```{r}
+tab.1 <- table(tiss_subset_Tclonality@meta.data$clonal_group, tiss_subset_Tclonality@meta.data$analysis)
+tab.1 <- as.data.frame(melt(tab.1))
+# remove zeros 
+tab.1 <- tab.1[tab.1$value != 0,]
+# Reorder factor 
+tab.1$Var.2 <-  factor(tab.1$Var.2, levels = c("naive", "grouped_pr", "grouped_pd"))
+df <- tab.1 %>% group_by(Var.2) %>% dplyr::summarize(Mean = mean(value, na.rm=TRUE))
+# Plot per treatment group 
+p <- ggplot(tab.1, aes(x = Var.2, y = value)) + 
+      geom_jitter() + labs(x="", y="Clonotype size") +
+      geom_errorbar(data=df, aes(y=NULL, ymax=Mean, ymin=Mean), colour="firebrick")
+ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/T-cell_clonotype_size_by_treatment.pdf", width = 7, height = 5, plot=p)
+# Plot a histogram with all sizes 
+q <-ggplot(tab.1, aes(x=value)) +
+    geom_histogram(color="black", fill="white", bins = 50) + 
+    labs(x="Clonotype size")
+ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/All_T-cell_clonotype_sizes.pdf", width = 7, height = 5, plot=q)
+# Test significance of size distribution 
+pairwise.wilcox.test(x = tab.1$value, g = tab.1$Var.2)
+```
+
+Look for correlation with T-cell Subtype 
+```{r}
+tab.1 <- table(tiss_subset_Tclonality@meta.data$T_cell_subtype_annotation,tiss_subset_Tclonality@meta.data$clonal_group)
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/Clonotypes_and_subtypes_heatmap.pdf", width = 15,height = 10)
+heatmap.2(log2(tab.1+1), trace = "n", Rowv=T, Colv=F, col = viridis(100), 
+          hclustfun = function(x) hclust(x, "ward.D2"), margins = c(10,15),
+          key.title="log2 cell counts + 1")
+dev.off()
+```
+
+Number of T-cells per T-cell subgroup that is part of a clnotype 
+```{r}
+cells <- row.names(tiss_subset_Tclonality@meta.data)[!is.na(tiss_subset_Tclonality@meta.data$clonal_group)]
+clono.t <- table(tiss_subset_Tclonality@meta.data[cells,"T_cell_subtype_annotation"])
+cells <- row.names(tiss_subset_Tclonality@meta.data)[which(tiss_subset_Tclonality@meta.data$immune_subtype_annotation=="T-cells")]
+clono.all <- table(tiss_subset_Tclonality@meta.data[cells,"T_cell_subtype_annotation"])
+# 
+tab.1 <- melt(round(clono.t/clono.all, 4)*100)
+# Plot 
+p <- ggplot(tab.1, aes(Var.1, value)) +geom_bar(stat = "identity") + 
+      geom_text(data = tab.1,aes(x = Var.1, y = value, label=value),
+      position = position_dodge(width = 1),
+      vjust = -0.5, size = 4) + ggtitle("% cells in clonotypes (of total T-cells)") + 
+      labs(x = "") + theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/Fraction_of_cells_in_T-cell_clonotypes_per_T_cell_subtype.pdf", width = 7, height = 5, plot=p)
+p
+```
+
+
+Plot the actual sequences within the clonotypes that are shared between patients  
+```{r}
+# source("https://bioconductor.org/biocLite.R")
+# biocLite("msa")
+require(msa)
+require(tools)
+require(latexpdf)
+require(Biobase)
+# Which clonotypes contain cells from multiple patients ? 
+tab.1 <- table(tiss_subset_Tclonality@meta.data$patient_id,tiss_subset_Tclonality@meta.data$clonal_group)
+tab.1[tab.1 !=0] <- 1
+inter.p.clonos <- names(which(colSums(tab.1) > 1))
+# Subset those cell only 
+metadata <- tiss_subset_Tclonality@meta.data
+meta.temp.inter <- metadata[metadata$clonal_group %in% inter.p.clonos,]
+```
+
+
+Fixing weird parssing issue with some of the TRACER output naming of A and B productive chains 
+```{r}
+unique(meta.temp.inter$A_productive)
+meta.temp.inter$A_productive <- gsub("TRAV29_DV5", "TRAV29-DV5", meta.temp.inter$A_productive)
+meta.temp.inter$A_productive <- gsub("TRAV38-2_DV8", "TRAV38-2-DV8", meta.temp.inter$A_productive)
+unique(meta.temp.inter$A_productive)
+```
+
+```{r}
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/Interpatient_clonotypes_baloonplot.pdf",width = 15,height = 10)
+balloonplot(table(as.character(meta.temp.inter$patient_id),meta.temp.inter$clonal_group), 
+            xlab ="Patient_ID", ylab="Clonotype",
+            label = T, show.margins = F, 
+            text.size=1, main="Interpatient clonotypes")
+dev.off()
+```
+
+
+Plot actual CDR3 sequences  for interpatient clonotypes 
+Use TCRA and TCRB productive chains
+```{r}
+meta.temp.inter$cell_name <- row.names(meta.temp.inter)
+for(i in inter.p.clonos){
+meta.temp.temp <- meta.temp.inter[meta.temp.inter$clonal_group == i,]
+# Align TCR As
+a.vec <- meta.temp.temp$A_productive
+names(a.vec) <- paste(meta.temp.temp$patient_id, meta.temp.temp$cell_name, sep = "//")
+a.list <- strsplit(as.character(a.vec), "_")
+names(a.list) <- names(a.vec)
+secs <- do.call(rbind,a.list)[,2]
+# Do not plot if there are less than 2 sequences 
+if(length(secs) > 1)
+{
+# names(secs) <- meta.temp.temp$patient_id
+al_A <- msa(inputSeqs = secs, type = "dna")
+# 
+tmpFile <- paste0(paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/tex_files/interpatient_T_clonos/clonotype",i,"TCR-A",sep="_"),".tex")
+  file.create(tmpFile)
+  msaPrettyPrint(al_A, file=tmpFile, output="tex",
+               showNames="left", showNumbering="none", showLogo="top",
+               showConsensus="bottom", logoColors="rasmol",
+               verbose=FALSE, askForOverwrite=FALSE, paperWidth=7, paperHeight = 9, 
+               shadingMode="identical", shadingColors = "reds", consensusColors = "Gray", 
+               showLegend=F)
+}
+# Align TCR Bs
+a.vec <- meta.temp.temp$B_productive
+names(a.vec) <- paste(meta.temp.temp$patient_id, meta.temp.temp$cell_name, sep = "//")
+a.list <- strsplit(as.character(a.vec), "_")
+names(a.list) <- names(a.vec)
+secs <- do.call(rbind,a.list)[,2]
+# Do not plot if there are less than 2 sequences 
+if(length(secs) > 1)
+{
+al_B <- msa(inputSeqs = secs, type = "dna")
+# 
+tmpFile <- paste0(paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/tex_files/interpatient_T_clonos/clonotype",i,"TCR-B",sep="_"),".tex")
+  file.create(tmpFile)
+  msaPrettyPrint(al_B, file=tmpFile, output="tex",
+               showNames="left", showNumbering="none", showLogo="top",
+               showConsensus="bottom", logoColors="rasmol",
+               verbose=FALSE, askForOverwrite=FALSE, paperWidth=7, paperHeight = 9,
+               shadingMode="identical", shadingColors = "reds", consensusColors = "Gray",
+               showLegend=F)
+}  
+}
+al_A
+```
+Plot actual CDR3 sequences  for interpatient clonotypes 
+Use TCRA and TCRB UNproductive chains
+```{r}
+for(i in inter.p.clonos){
+meta.temp.temp <- meta.temp.inter[meta.temp.inter$clonal_group == i,]
+# Align TCR As
+  a.vec <- meta.temp.temp$A_unproductive
+names(a.vec) <- paste(meta.temp.temp$patient_id, meta.temp.temp$cell_name, sep = "//")
+a.list <- strsplit(as.character(a.vec), "_")
+names(a.list) <- names(a.vec)
+if(ncol(do.call(rbind,a.list)) != 0) {secs <- do.call(rbind,a.list)[,2]}
+# Do not plot if there are less than 2 sequences 
+if(length(secs) > 1)
+{
+# names(secs) <- meta.temp.temp$patient_id
+al_A <- msa(inputSeqs = secs, type = "dna")
+# 
+tmpFile <- paste0(paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/tex_files/interpatient_T_clonos/clonotype",i,"unproductive_TCR-A",sep="_"),".tex")
+  file.create(tmpFile)
+  msaPrettyPrint(al_A, file=tmpFile, output="tex",
+               showNames="left", showNumbering="none", showLogo="top",
+               showConsensus="bottom", logoColors="rasmol",
+               verbose=FALSE, askForOverwrite=FALSE, paperWidth=7, paperHeight = 9, 
+               shadingMode="identical", shadingColors = "reds", consensusColors = "Gray", 
+               showLegend=F)
+}
+# Align TCR Bs
+a.vec <- meta.temp.temp$B_unproductive
+names(a.vec) <- paste(meta.temp.temp$patient_id, meta.temp.temp$cell_name, sep = "//")
+a.list <- strsplit(as.character(a.vec), "_")
+names(a.list) <- names(a.vec)
+if(ncol(do.call(rbind,a.list)) != 0) {secs <- do.call(rbind,a.list)[,2]}
+# Do not plot if there are less than 2 sequences 
+if(length(secs) > 1)
+{
+al_B <- msa(inputSeqs = secs, type = "dna")
+# 
+tmpFile <- paste0(paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/tex_files/interpatient_T_clonos/clonotype",i,"unproductive_TCR-B",sep="_"),".tex")
+  file.create(tmpFile)
+  msaPrettyPrint(al_B, file=tmpFile, output="tex",
+               showNames="left", showNumbering="none", showLogo="top",
+               showConsensus="bottom", logoColors="rasmol",
+               verbose=FALSE, askForOverwrite=FALSE, paperWidth=7, paperHeight = 9,
+               shadingMode="identical", shadingColors = "reds", consensusColors = "Gray",
+               showLegend=F)
+}  
+}
+al_A
+```
+
+
+Analysis of persistent clonotypes aligning productive TCRa and b 
+
+Find the patients with multiple biopsies 
+```{r}
+require(gtools)
+# Subset metadata 
+metadata <- tiss_subset_Tclonality@meta.data
+# Create new patient ID plus biopsy date and site 
+metadata$new.id <- paste(metadata$patient_id, metadata$biopsy_site, metadata$biopsy_date, metadata$cell_name, sep="_")
+metadata$new.id.2 <- paste(metadata$patient_id, metadata$biopsy_site, metadata$biopsy_date, sep="_")
+meta.temp <- metadata
+# Whoc has more than 1 biopsy ? 
+tab.1 <- table(meta.temp$biopsy_date, meta.temp$patient_id)
+tab.1[tab.1 !=0]  <- 1
+pers.patients <- names(which(colSums(tab.1) > 1))
+# Plot actual nu,ber of cells for those patients 
+tab.1 <- table(meta.temp$biopsy_date, meta.temp$patient_id)
+tab.1 <- tab.1[,pers.patients]
+tab.2 <- tab.1[names(which(rowSums(tab.1) != 0)),]
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/Patients_with_multiple_biopsies_Immune_cell_counts.pdf", width = 10, height = 7)
+balloonplot(t(tab.2), main ="Patients with multiple biopsies", xlab ="", ylab="",
+label = T, show.margins = F)
+dev.off()
+```
+
+Plot the number of T-cells in clonotypes for each patient with multiple biopsies 
+```{r}
+require(gtools)
+require(reshape2)
+# Proceed to analyzaing patients with multiple biopsies in terms of TCR content 
+# pers.patients <- c("TH179", "TH185", "TH218", "TH226", "TH231", "TH248", "TH266")
+meta.temp.pers <- meta.temp[meta.temp$patient_id %in% pers.patients,]
+# Make a table with clonotypes 
+tab.1 <- table(meta.temp.pers$new.id,meta.temp.pers$clonal_group)
+tab.2 <- table(meta.temp.pers$new.id.2,meta.temp.pers$clonal_group)
+# Iterate for each patient 
+ggplot.pers.pat <- list()
+for(i in 1:length(pers.patients))
+{
+  # Subset the table 
+  tab.1.temp <- tab.2[grep(pers.patients[i], rownames(tab.2)),]
+  # Assuming there are remaining cells in that patient 
+  if(length(which(colSums(tab.1.temp) == 0)) < ncol(tab.1.temp)-1) 
+    {
+  # Remove clonotype with no cells for this patient 
+  tab.1.temp <- tab.1.temp[,colSums(tab.1.temp) != 0  ] 
+  # Print message 
+  message(paste(pers.patients[i], "has cells in clonotypes"))
+  # Melt the table to long format 
+  tab.1.long <- melt(tab.1.temp)
+  # Convert clonotype number to factor and sort new patient Ids on date
+  tab.1.long$Var.2 <- factor(tab.1.long$Var.2, levels = unique(tab.1.long$Var.2))
+  tab.1.long$Var.1 <- factor(tab.1.long$Var.1, levels = mixedsort(as.character(unique(tab.1.long$Var.1)), decreasing = T))
+  # Plot 
+  p <- ggplot(tab.1.long, aes(x = Var.1, y = Var.2)) +
+  geom_point(data=tab.1.long,aes(x=Var.1, y=Var.2,size = ifelse(value==0, NA, value))) + 
+  geom_hline(yintercept = c(1:length(unique(tab.1.long$Var.2))), linetype = "dashed", colour="grey90") +
+  geom_point(data=tab.1.long,aes(x=Var.1, y=Var.2,size = ifelse(value==0, NA, value))) + 
+  xlab("patient timepoint") + ylab("clonotype ID") + 
+  theme(axis.text.x = element_text(angle=45, vjust = 0.5)) + 
+  labs(size="Ncells")
+  # Store plot for each patient
+  ggplot.pers.pat[[i]] <- p
+  }
+  else {message(paste(pers.patients[i], "has no cells in clonotypes"))}
+}
+# Plot number of cells in persistent clonotypes across patients with multiple biopsies 
+ggplot.pers.pat <- ggplot.pers.pat[which(lapply(ggplot.pers.pat, is.null) == F)]
+ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/Persistent_T-clonotypes_per_patient.pdf", gridExtra::marrangeGrob(grobs = ggplot.pers.pat, nrow=1, ncol=1))   
+```  
+  
+  
+Plot actual sequences for TCRA and B for clonotypes that appear persistently 
+within the patient's multiple biopsies  
+```{r}
+# Refine the patients after inspecting the plot generated above 
+pers.patients.filtered <- c("TH158", "TH179", "TH185", "TH218", "TH226", "TH248", "TH266")
+# Resubset abd re-generate master table 
+meta.temp.pers <- meta.temp[meta.temp$patient_id %in% pers.patients.filtered,]
+# Make a table with clonotypes 
+tab.1 <- table(meta.temp.pers$new.id,meta.temp.pers$clonal_group)
+tab.2 <- table(meta.temp.pers$new.id.2,meta.temp.pers$clonal_group)
+  # Iterate for each patient 
+for(i in 1:length(pers.patients.filtered))
+{
+  # Subset the table 
+  tab.1.temp <- tab.2[grep(pers.patients.filtered[i], rownames(tab.2)),]
+  # Remove clonotype with no cells for this patient 
+  tab.1.temp.b <- tab.1.temp[,colSums(tab.1.temp) != 0  ] 
+  # Which clonotypes 
+  tab.1.temp.b[tab.1.temp.b !=0 ] <- 1  
+  a <- which(colSums(tab.1.temp.b) > 1)
+  # Plot the actual aligments 
+  if(length(a) != 0 ) {pers.clonos <- names(a)}
+    if(length(pers.clonos) != 0 ) {
+      for(j in pers.clonos){
+      meta.temp.temp <- metadata[which(metadata$clonal_group == j),]
+      if(length(which(meta.temp.temp$patient_id == pers.patients.filtered[i])) != 0){
+      meta.temp.temp <- meta.temp.temp[which(meta.temp.temp$patient_id == pers.patients.filtered[i]),]
+      # Align TCR As
+      a.vec <- as.character(meta.temp.temp$A_productive)
+      #a.vec <- as.character(meta.temp.temp$A_unproductive)
+      # Check if vector contains sequences 
+      if(length(which(do.call(c,lapply(a.vec, nchar)) !=0)) > 1){ 
+      # Remove DV from string
+      a.vec <- gsub("DV._", "",a.vec)
+      names(a.vec) <- meta.temp.temp$new.id
+      secs <- do.call(rbind,strsplit(a.vec, "_"))[,2]
+      # Align
+      al_A <- msa(inputSeqs = secs, type = "dna")
+      # Plot 
+      tmpFile <- paste0(paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/tex_files/persistent_T_clonos/clonotype",j,pers.patients.filtered[i],"TCR-A",sep="_"),".tex")
+                file.create(tmpFile)
+      msaPrettyPrint(al_A, file=tmpFile, output="tex",
+               showNames="left", showNumbering="none", showLogo="top",
+               showConsensus="bottom", logoColors="rasmol",
+               verbose=FALSE, askForOverwrite=FALSE, paperWidth=7, paperHeight = 9, 
+               shadingMode="identical", shadingColors = "reds", consensusColors = "Gray", 
+               showLegend=F)}
+      # Align TCR Bs
+      a.vec <- as.character(meta.temp.temp$B_productive)
+      # Check if vector contains sequences 
+      if(length(which(do.call(c,lapply(a.vec, nchar)) !=0)) > 1){ 
+      # Remove DV from string
+      a.vec <- gsub("DV._", "",a.vec)
+      names(a.vec) <- meta.temp.temp$new.id
+      secs <- do.call(rbind,strsplit(a.vec, "_"))[,2]
+      # Align
+      al_A <- msa(inputSeqs = secs, type = "dna")
+      # Plot 
+      tmpFile <- paste0(paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I06/tex_files/persistent_T_clonos/clonotype",j,pers.patients.filtered[i],"TCR-B",sep="_"),".tex")
+                file.create(tmpFile)
+      msaPrettyPrint(al_A, file=tmpFile, output="tex",
+               showNames="left", showNumbering="none", showLogo="top",
+               showConsensus="bottom", logoColors="rasmol",
+               verbose=FALSE, askForOverwrite=FALSE, paperWidth=7, paperHeight = 9, 
+               shadingMode="identical", shadingColors = "reds", consensusColors = "Gray", 
+               showLegend=F)}  
+}  
+      }}}  
+```

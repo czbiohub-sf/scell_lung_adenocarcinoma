@@ -1,0 +1,61 @@
+---
+title: "Get Interpatient Clonogroups"
+author: "Lincoln Harris"
+date: "9.12.19"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Which clonogroups have cells from multiple patients         
+
+
+read in Ashley's cDNA plate metadata csv
+```{r, comment=NA}
+cDNA_plate_metadata <- read.csv("../rawdata/cDNA_plate_metadata.csv", header = T)
+```
+
+read in TCR_summary.txt from TRACER output
+    note that TCR_summary.txt has had all header lines removed
+```{r, comment=NA}
+tcr_summary_df <- read.csv("../TCR_analysis/filtered_TCRAB_summary/TCR_summary1.txt", header = F, na.strings = c("", NA))
+```
+
+define new df to store interpatient matches
+```{r}
+matches_df <- data.frame(matrix(ncol = 3, nrow = 1))
+colnames(matches_df) <- c('Clonal_group', 'Num_patients', 'Group_size')
+```
+
+Show me the clonogroups that have cells from multiple patients          
+    for loop does the trick here
+```{r}
+for(i in 1:nrow(tcr_summary_df)){
+  curr_clonogroup <- tcr_summary_df[i,]
+  group_size <- length(which(!(is.na(tcr_summary_df[i,]))))
+  patientsList <- c()
+  for(j in 1:length(curr_clonogroup)){
+    curr_cell <- tcr_summary_df[i,j]
+    curr_cell <- as.character(curr_cell)
+    curr_plate <- strsplit(curr_cell, "_")[[1]][2]
+    curr_index <- which(cDNA_plate_metadata$plate == curr_plate)
+    curr_patient <- cDNA_plate_metadata$patient_id[curr_index]
+    patientsList <- c(patientsList, curr_patient)
+  }
+  if(length(unique(patientsList)) > 1){
+    currLen <- length(unique(patientsList))
+    clonalGroupNum <- i
+    rowToAdd <- c(clonalGroupNum, currLen, group_size)
+    matches_df <- rbind(matches_df, rowToAdd)
+  }
+}
+```
+
+```{r, comment=NA}
+matches_df
+```
+
+```{r, comment=NA}
+matches_df1 <- matches_df[-1,]
+print(matches_df1, row.names = F)
+```
