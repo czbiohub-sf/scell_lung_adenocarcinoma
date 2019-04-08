@@ -285,6 +285,7 @@ table.temp <- as.data.frame(table(tiss_immune@meta.data$immune_subtype_annotatio
 p <-  ggplot(data=table.temp, aes(x=Var1, y=Freq)) +
       geom_bar(stat="identity") + coord_flip()
 ggsave(paste(dir,"plot_out/IM01/Immune_cell_counts.pdf", sep=""), width = 10, height = 7)
+table.temp
 ```
 
 <!-- Write annotations of immune cells to tiss_subset (which is the master object containing all cells) -->
