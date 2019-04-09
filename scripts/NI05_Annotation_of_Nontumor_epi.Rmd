@@ -1,0 +1,284 @@
+---
+title: "NI05 Annotate Non Tumor Epitheial Clusters"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+require(corrplot)
+library(clustree)
+```
+
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/NI03_epithelial_annotated_tumor.RData", sep=""))
+```
+
+Look for clincal mutation found in normal classified cells
+```{r}
+cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells_4.1.19.csv", sep = ""))
+rownames(cell_mutation_tab) <- cell_mutation_tab$cell
+cell_mutation_tab$tumorCell_bool <- NULL
+
+# Subset cell_mutation_tab to only normal cells
+normal_cells <- filter(tiss_nonimmune_epi@meta.data, inferCNV_annotation == "nontumor")
+normal_cells <- normal_cells$cell_id
+length(normal_cells)
+normal_cell_mutation_tab <- cell_mutation_tab[normal_cells, ]
+
+sub_normal_cell_mutation_tab <- filter(normal_cell_mutation_tab, clinical_mutation_found_bool == 1)
+sub_normal_cell_mutation_tab
+# only one cell confirmed with clincial mutation (G22_B003776)
+```
+
+Subset the Normal Epithelial cells, recluster and annotate
+```{r}
+cells.use <- row.names(tiss_nonimmune_epi@meta.data)[which(tiss_nonimmune_epi@meta.data$inferCNV_annotation == "nontumor")]
+length(cells.use)
+tiss_subset_normalepi <- SubsetData(tiss_nonimmune_epi, cells.use = cells.use)
+```
+
+Find variable genes
+```{r}
+tiss_subset_normalepi <- FindVariableGenes(object = tiss_subset_normalepi, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+```
+
+Perform PCA
+```{r}
+tiss_subset_normalepi <- RunPCA(object = tiss_subset_normalepi, do.print = FALSE)
+tiss_subset_normalepi <- ProjectPCA(object = tiss_subset_normalepi, do.print = FALSE)
+```
+
+Visualize top genes in principal components
+```{r}
+PCHeatmap(object = tiss_subset_normalepi, pc.use = 1:6, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 20)
+```
+
+Perform correlation of PCs and metadata fields
+```{r}
+pca.obj <- tiss_subset_normalepi@dr$pca
+pc.coords <- pca.obj@cell.embeddings
+df1 <- tiss_subset_normalepi@meta.data[,c("nGene","nReads","percent.ribo")]
+df2 <- pc.coords[,c(1:10)]
+cordf12 <- cor(df1,df2)
+# Make a correlation plot
+corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+```
+
+Also visaulize PC variance
+```{r}
+PCElbowPlot(object = tiss_subset_normalepi)
+```
+
+Choose the number of principal components to use.
+```{r}
+n.pcs = 20
+```
+
+Check clustering stability at given resolution (Clustree)
+```{r}
+# Set different resolutions 
+res.used <- seq(0.1,1,by=0.2)
+# Loop over and perform clustering of different resolutions 
+for(i in res.used){
+tiss_subset_normalepi <- FindClusters(object = tiss_subset_normalepi, reduction.type = "pca", dims.use = 1:n.pcs, 
+    resolution = i, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)}
+# Make Plot
+clus.tree.out <- clustree(tiss_subset_normalepi, layout="sugiyama") +
+    theme(legend.position = "bottom") + 
+  scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+# Save pdf 
+ggsave(clus.tree.out, filename = paste(dir,"plot_out/NI05/Cluster_resolutions_clustree_output.pdf", sep=""), width = 15, height = 15)
+clus.tree.out
+```
+
+Set resolution and perform clustering
+```{r}
+res.used <- 0.3
+tiss_subset_normalepi <- FindClusters(object = tiss_subset_normalepi, reduction.type = "pca", dims.use = 1:n.pcs, resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+```
+
+Perform  tSNE
+```{r}
+tiss_subset_normalepi <- RunTSNE(object = tiss_subset_normalepi, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+```
+
+Visualize TSNE colroed by cluster
+```{r}
+pdf(file = paste(dir, "plot_out/NI05/tumor_tsne.pdf", sep = ""))
+TSNEPlot(object = tiss_subset_normalepi, do.label = T)
+dev.off()
+```
+
+Cluster Occ by patient
+```{r}
+# Calculate mixing score for each cluster 
+tab.1 <- table(tiss_subset_normalepi@meta.data$patient_id, tiss_subset_normalepi@meta.data$res.0.9)
+occ_score <- apply(tab.1, 2, max)/colSums(tab.1)
+# Plot mixing score
+pdf(file = paste(dir, "plot_out/NI05/tumor_clusocc_bargraph.pdf", sep = ""))
+par(las=3);barplot(sort(occ_score), xlab="Cluster", ylab="Patient max Ncells/Total cells", ylim=c(0,1));abline(h=0.7, col="red")
+dev.off()
+```
+
+Create a Dendrogram of all Epitheial Clusters
+```{r}
+# Export data from Seurat object and normalize
+data.raw <- tiss_subset_normalepi@raw.data
+dim(data.raw)
+
+#r Export metadata from Seurat object
+metadata <- tiss_subset_normalepi@meta.data
+dim(metadata)
+
+# Subset data and metadata to contain same cells and in the same order. Normalize data
+data.raw <- as.matrix(data.raw[,row.names(metadata)])
+# Remove non-expressed genes 
+data.raw <- data.raw[names(which(rowSums(data.raw)!=0)),]
+# Normalize
+data.norm <- apply(X=data.raw, MARGIN=2, function(x) log2((((x/sum(x))*1000000)+1)) )
+dim(data.norm)
+
+# Overdispersion
+sel.by.cv <- function(counts.nodups) {
+  require(statmod)# library(pcaMethods); library(fastICA)
+  ed <- counts.nodups*1000000/colSums(counts.nodups) # Second pass, no duplicates
+  #ed <- counts.nodups
+  means <- rowMeans(ed)
+  vars <- apply(ed,1,var)
+  cv2 <- vars/means^2
+  winsorize <- function (x, fraction=0.05) {
+    if(length(fraction) != 1 || fraction < 0 ||
+       fraction > 0.5) {
+      stop("bad value for 'fraction'")
+    }
+    lim <- quantile(x, probs=c(fraction, 1-fraction))
+    x[ x < lim[1] ] <- lim[1]
+    x[ x > lim[2] ] <- lim[2]
+    x
+  }
+  wed <- t(apply(ed, 1, winsorize, fraction=2/ncol(ed))) 
+  means = rowMeans(wed); vars = apply(wed,1,var); cv2 <- vars/means^2
+  useForFit <- means >= unname( quantile( means[ which( cv2 > .3 ) ], .95 ) ) 
+  fit <- glmgam.fit( cbind( a0 = 1, a1tilde = 1/means[useForFit] ),cv2[useForFit] )
+  xg <- exp(seq( min(log(means[means>0])), max(log(means), na.rm=T), length.out=1000 ))
+  afit <- fit$coef["a1tilde"]/means+fit$coef["a0"]
+  vfit <- fit$coef["a1tilde"]/xg+fit$coef["a0"]
+  varFitRatio <- vars/(afit*means^2)
+  varorder <- order(varFitRatio,decreasing=T)
+  return(varorder)
+}
+# OD analysis
+o <- sel.by.cv(data.raw)
+
+# select top OD genes (1000 genes)
+
+data.norm.top <- data.norm[o[1:1000],]
+dim(data.norm.top)
+# Remove cells with no expression of any of the overdispersed genes 
+cells <- names(which(colSums(data.norm.top)!=0))
+metadata <- metadata[cells,]
+data.raw <- data.raw[,row.names(metadata)]
+data.norm <- data.norm[,row.names(metadata)]
+data.norm.top <- data.norm.top[,row.names(metadata)]
+
+#Calculate distance
+dist.cor <- as.dist(1-abs(cor(data.norm.top)))
+
+# Create a cluster distance matrix
+
+# Rename the res column to cluster
+mat_clus_dis <- matrix(nrow=length(unique(metadata$res.0.3)), 
+                       ncol=length(unique(metadata$res.0.3)))
+colnames(mat_clus_dis) <- paste("Cluster_", 0:(length(unique(metadata$res.0.3))-1), sep="")
+row.names(mat_clus_dis) <- paste("Cluster_", 0:(length(unique(metadata$res.0.3))-1), sep="")
+# 
+diag(mat_clus_dis) <- 0
+# 
+clusters <- 0:max(as.numeric(metadata$res.0.3))
+for(i in 1:nrow(mat_clus_dis)){
+  cells <- row.names(metadata)[which(metadata$res.0.3==clusters[i])]
+  for(j in 1:ncol(mat_clus_dis)){
+  no_cells <- row.names(metadata)[which(metadata$res.0.3==clusters[j])]
+  mat.dist.temp <- as.matrix(dist.cor)[cells,no_cells]
+  mat_clus_dis[i,j] <-  mean(mat.dist.temp)
+  }
+}
+# Convert to distance object
+dist.clus <- as.dist(mat_clus_dis)
+```
+
+```{r Hierarchical clusterting}
+# Convert to clustering object
+tree.clus <- hclust(dist.clus, "ward.D2")
+# Plot 
+#pdf("/myVolume/plot_out/tiss_subset_normalepi_dendro_181206.pdf")
+plot(tree.clus)
+#dev.off()
+```
+
+Find markers for each cluster
+```{r}
+unique(tiss_subset_normalepi@ident)
+tiss.markers.epi <- FindAllMarkers(object = tiss_subset_normalepi, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
+```
+
+Write differential gene table
+```{r}
+write.csv(tiss.markers.epi, file = paste(dir, "data_out/NI05/NI05_DE_epithelial.csv", sep = ""))
+```
+
+Display the top markers you computed above.
+```{r}
+tiss.markers.epi %>% group_by(cluster) %>% top_n(10, avg_logFC)
+```
+
+Create dotplots of the top markers displayed above
+```{r}
+markers.small  <- tiss.markers.epi %>% group_by(cluster) %>% top_n(5, avg_logFC)
+genes_to_check <- markers.small$gene
+DotPlot(object = tiss_subset_normalepi, genes.plot = genes_to_check)
+```
+
+```{r}
+# Cell markers
+s.muscle <- c('CNN1','SUSD5','ACTC1','ASB2','KCNA5','LDB3','MYOCD','ELN','ACTG2','ACTA2')
+neuro.e <- c('RESP18','NOV','SCG5','NNAT','CALCA','PTPRN','SLC35D3','ASCL1','CHGA')
+glial <- c('KCNA1','CDH19','SOX10','GFRA3','PLP1','GPR37L1','ART3','RASGEF1C','KCNA6','GFAP')
+club <- c('GABRP','CCKAR','HP','KCNK2','UPK3A','CLDN10','PON1','SCGB1A1','BPIFB1','MUC5B')
+ciliated <- c('CDHR3','FOXJ1','RGS22','MAPK15','SPEF2','CCDC153')
+at2 <- c('NAPSA','CHIA','SFTPC','SFTPB','MUC1','SFTPA1','SFTPA2')
+at1 <- c('IGFBP2','COL4A3','PDPN','AGER','CAV1','CDKN2B','RTKN2')
+basal <- c('KRT17','KRT5','SYT8','FHL2','MMP1')
+heptaocyte <- c('ALB')
+all_epi_markers <- c(s.muscle, neuro.e, glial, club, ciliated, at2, at1, basal, heptaocyte)
+
+DotPlot(object = tiss_subset_normalepi, genes.plot = all_epi_markers, x.lab.rot = T)
+DotPlot(object = tiss_subset_normalepi, genes.plot = s.muscle, x.lab.rot = T)
+DotPlot(object = tiss_subset_normalepi, genes.plot = neuro.e, x.lab.rot = T) # cluster 9 ASCL1
+DotPlot(object = tiss_subset_normalepi, genes.plot = glial, x.lab.rot = T) # none
+DotPlot(object = tiss_subset_normalepi, genes.plot = club, x.lab.rot = T) # cluster 3
+DotPlot(object = tiss_subset_normalepi, genes.plot = ciliated, x.lab.rot = T) # cluster 15
+DotPlot(object = tiss_subset_normalepi, genes.plot = at2, x.lab.rot = T) # cluster 0, 2, 8, 12, 13
+DotPlot(object = tiss_subset_normalepi, genes.plot = at1, x.lab.rot = T) # cluster 1
+DotPlot(object = tiss_subset_normalepi, genes.plot = basal, x.lab.rot = T) # cluster 14
+DotPlot(object = tiss_subset_normalepi, genes.plot = heptaocyte, x.lab.rot = T) # cluster 7
+```
+
+Set Metadata Column for Cluster IDs
+```{r}
+tiss_subset_normalepi@meta.data$normalepi_seurat_cluster <- tiss_subset_normalepi@meta.data$res.0.3
+```
+
+Save object
+```{r}
+save(tiss_subset_normalepi, file = paste(dir, "Data_input/NI05_normalepi_seurat_object.RData", sep = ""))
+```
+
+
+
+
