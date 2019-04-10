@@ -1,0 +1,174 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(Seurat)
+# install.packages('miscTools')
+library(miscTools)
+library(viridis)
+library(venn)
+```
+
+Read in mutation table
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/NI04_tumor_seurat_object.RData", sep=""))
+cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells_4.1.19.csv", sep = ""))
+mutation_table <- read.csv("/myVolume/data_out/geneCellMutationCounts1.csv", header = T, row.names = 1)
+head(mutation_table)
+```
+
+```{r}
+#drop X.1 and X.2 to clean mutation table
+mutation_table$X.1 <- NULL
+mutation_table$X.2 <- NULL
+```
+
+Normalize the number of mutations by the raw # of transcripts found
+```{r}
+# Subset table to tumor cells alone
+dim(mutation_table)
+colnames(mutation_table) <- gsub(pattern = "\\.", replacement = "-", x = colnames(mutation_table))
+head(mutation_table)
+cells.to.use.tumor <- tiss_subset_tumor@meta.data$cell_id
+mutation_table <- mutation_table[cells.to.use.tumor, ]
+genes.to.use.mutations <- colnames(mutation_table)
+length(genes.to.use.mutations)
+
+raw_counts <- as.data.frame(as.matrix(tiss_subset_tumor@raw.data))[genes.to.use.mutations, cells.to.use.tumor]
+head(raw_counts)
+dim(raw_counts)
+raw_counts1 <- as.data.frame(t(raw_counts))
+head(raw_counts)
+head(raw_counts1)
+head(mutation_table)
+dim(raw_counts1)
+
+normalized_mutation_table <- mutation_table/raw_counts1
+dim(normalized_mutation_table)
+
+is.nan.data.frame <- function(x)
+do.call(cbind, lapply(x, is.nan))
+
+is.infinite.data.frame <- function(x)
+do.call(cbind, lapply(x, is.infinite))
+
+normalized_mutation_table[is.nan(normalized_mutation_table)] <- 0
+
+normalized_mutation_table[is.na(normalized_mutation_table)] <- 0
+head(normalized_mutation_table)
+```
+
+Add Metadata to normalized mutation table
+```{r}
+normalized_mutation_table_wmetadata <- normalized_mutation_table
+normalized_mutation_table_wmetadata$cell_id <- rownames(normalized_mutation_table_wmetadata)
+normalized_mutation_table_wmetadata <- left_join(normalized_mutation_table_wmetadata, tiss_subset_tumor@meta.data, by = 'cell_id')
+rownames(normalized_mutation_table_wmetadata) <- normalized_mutation_table_wmetadata$cell_id
+```
+
+Total Mutations Analysis
+```{r}
+# Remove NA's from Normalized Table
+length(grep(pattern = "NA", x = rownames(normalized_mutation_table)))
+
+normalized_mutation_table_total <- normalized_mutation_table
+dim(normalized_mutation_table_total)
+
+# Remove Inf/NA/NaN
+is.nan.data.frame <- function(x)
+do.call(cbind, lapply(x, is.nan))
+is.infinite.data.frame <- function(x)
+do.call(cbind, lapply(x, is.infinite))
+
+normalized_mutation_table_total[is.nan(normalized_mutation_table_total)] <- 0
+normalized_mutation_table_total[is.na(normalized_mutation_table_total)] <- 0
+normalized_mutation_table_total[is.infinite(normalized_mutation_table_total)] <- 0
+
+head(normalized_mutation_table_total)
+
+# Set Table to Report Only the Total Number of Mutations
+total_mutations_table <- as.data.frame(rowSums(normalized_mutation_table_total))
+head(total_mutations_table)
+total_mutations_table$cell_name <- rownames(total_mutations_table)
+colnames(total_mutations_table) <- c('total_mutations_score','cell_id')
+head(total_mutations_table)
+```
+
+Total Mutations detected by Group
+```{r}
+# Merge Metadata to total_mutations_table
+total_mutations_table1 <- left_join(total_mutations_table, tiss_subset_tumor@meta.data, by = "cell_id")
+colnames(total_mutations_table1)
+
+pr_mutation_table <- filter(total_mutations_table1, analysis == 'grouped_pr')
+pd_mutation_table <- filter(total_mutations_table1, analysis == 'grouped_pd')
+naive_mutation_table <- filter(total_mutations_table1, analysis == 'naive')
+
+# Driver Gene
+total_mutations_table_driver <- filter(total_mutations_table1, driver_gene == 'EGFR' | driver_gene == 'ALK')
+```
+
+By Group
+```{r}
+
+total_mt_score <- pairwise.wilcox.test(x = total_mutations_table1$total_mutations_score, g = total_mutations_table1$analysis)
+
+pdf("/myVolume/plot_out/190304_totalmt.pdf")
+ggplot(total_mutations_table1, aes(x = total_mutations_score, y = analysis, fill = analysis)) + stat_density_ridges(quantile_lines = TRUE, quantiles = c(0.25, 0.50, 0.75), alpha = 0.7) + ggtitle("Distribution of Mutation Scores per Cell") + scale_x_log10() + guides(fill=FALSE) + ylab(NULL) + xlab("Mutation Score")
+
+ggplot(total_mutations_table1, aes(x = analysis, y = total_mutations_score, fill = analysis)) + geom_boxplot(outlier.shape = NA) + geom_jitter(alpha = 1/8, aes(colour = analysis)) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Mutation Score") + ggtitle("Distribution of Mutation Scores per Cell") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 45, annotations = '< 2e-16') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 50, annotations = '< 2e-16') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 40, annotations = '0.0031')
+
+ggplot(total_mutations_table1, aes(x = total_mutations_score, y = analysis, fill = patient_id)) + stat_density_ridges(quantile_lines = TRUE, quantiles = c(0.25, 0.50, 0.75), alpha = 0.7) + ggtitle("Distribution of Mutation Scores per Cell") + scale_x_log10() + guides(fill=FALSE) + ylab(NULL) + xlab("Mutation Score")
+dev.off()
+
+ggplot(total_mutations_table_driver, aes(x = analysis, y = total_mutations_score, fill = driver_gene)) + geom_boxplot(outlier.shape = NA) + geom_jitter(alpha = 1/8, aes(colour = driver_gene)) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Mutation Score") + ggtitle("Distribution of Mutation Scores per Cell") 
+#+ geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 45, annotations = '< 2e-16') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 50, annotations = '< 2e-16') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 40, annotations = '0.0031')
+
+total_mt_score_primmet <- pairwise.wilcox.test(x = total_mutations_table1$total_mutations_score, g = total_mutations_table1$primary_or_metastaic)
+
+ggplot(data=subset(total_mutations_table1, !is.na(primary_or_metastaic)), aes(x = primary_or_metastaic, y = total_mutations_score, fill = primary_or_metastaic)) + geom_boxplot(outlier.shape = NA) + geom_jitter(alpha = 1/8, aes(colour = primary_or_metastaic)) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Mutation Score") + ggtitle("Distribution of Mutation Scores per Cell") + geom_signif(comparisons = list(c("Primary", "Metastatic")), map_signif_level=TRUE, y_position = 45, annotations = '< 2e-16')
+
+ggplot(data=subset(total_mutations_table1, !is.na(primary_or_metastaic)), aes(x = primary_or_metastaic , y = total_mutations_score, color = analysis)) +
+      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+      geom_boxplot(outlier.colour = NA, position = position_dodge(width=0.9)) +
+      xlab("Group") +
+      ylab("Mutation Score") +
+      ggtitle("Distribution of Mutation Scores per Cell") +
+      guides(colour=guide_legend(title="Response Group")) +
+      guides(fill = FALSE)
+```
+
+
+```{r}
+pdf("/myVolume/plot_out/190304_totalmt_driver.pdf")
+ggplot(total_mutations_table_driver, aes(x = total_mutations_score, y = driver_gene, fill = driver_gene)) +  stat_density_ridges(quantile_lines = TRUE, quantiles = c(0.25, 0.50, 0.75), alpha = 0.7) + ggtitle("Distribution of Mutation Scores per Cell") + scale_x_log10() + guides(fill=FALSE)
+
+ggplot(total_mutations_table_driver, aes(x = total_mutations_score, y = driver_gene, fill = patient_id)) +  stat_density_ridges(quantile_lines = TRUE, quantiles = c(0.25, 0.50, 0.75), alpha = 0.7) + ggtitle("Distribution of Mutation Scores per Cell") + scale_x_log10() + guides(fill=FALSE)
+
+ggplot(total_mutations_table_driver, aes(x = driver_gene, y = total_mutations_score, fill = driver_gene)) + geom_boxplot(outlier.shape = NA) + geom_jitter(alpha = 1/8, aes(colour = driver_gene)) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Mutation Score") + ggtitle("Distribution of Mutation Scores per Cell")
+
+ggplot(total_mutations_table_driver, aes(x = analysis , y = total_mutations_score, color = driver_gene)) +
+      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+      geom_boxplot(outlier.colour = NA, position = position_dodge(width=0.9)) +
+      xlab("Group") +
+      ylab("Mutation Score") +
+      ggtitle("Distribution of Mutation Scores per Cell") +
+      guides(colour=guide_legend(title="Driver Gene")) +
+      guides(fill = FALSE)
+
+dev.off()
+
+
+```
+
+
+
+
+
+

@@ -1,0 +1,154 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(devtools)
+require(corrplot)
+library(clustree)
+library(ggsignif)
+library(ggpubr)
+library(pheatmap)
+```
+
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/NI04_tumor_seurat_object.RData", sep=""))
+cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells_4.1.19.csv", sep = ""))
+rownames(cell_mutation_tab) <- cell_mutation_tab$cell
+cell_mutation_tab$tumorCell_bool <- NULL
+```
+
+Create mutation table with tumor cells and cluster assignments
+```{r}
+# Subset cell_mutation_tab to only tumor cells
+tumor_cells <- tiss_subset_tumor@meta.data$cell_id
+sub_cell_mutation_tab <- cell_mutation_tab[tumor_cells, ]
+
+# Append tumor cluster number and sample_name to sub_cell_mutation_tab from tiss_subset_tumor metadata
+# rename cell column to cell_id and then join to metadata columns of interest 
+colnames(sub_cell_mutation_tab)[1] <- "cell_id"
+sub_cell_mutation_tab <- left_join(x = sub_cell_mutation_tab, y = tiss_subset_tumor@meta.data[,c("sample_name", "tumor_seurat_cluster", "cell_id", "patient_id")], by = "cell_id")
+# add back rownames
+rownames(sub_cell_mutation_tab) <- sub_cell_mutation_tab$cell_id
+```
+
+Create summary table by cluster for cells with/without mutation/coverage
+```{r}
+clus.max <- max(unique(as.numeric(sub_cell_mutation_tab$tumor_seurat_cluster)))
+clus.mat <- matrix(nrow=clus.max, ncol=4)
+for(i in 1:clus.max){
+x <- filter(sub_cell_mutation_tab, tumor_seurat_cluster == i)
+clus.mat[i,1] <- i
+clus.mat[i,2] <- length(which(x$coverage_to_ROI !=0))
+clus.mat[i,3] <- length(which(x$clinical_mutation_found_bool !=0))
+clus.mat[i,4] <- 100*(clus.mat[i,3]/clus.mat[i,2])
+}
+colnames(clus.mat) <- c("tumor_cluster", "coverage", "mutation", "cov_mut_percent")
+```
+
+Query cells to find clincal mutations given a set of criteria
+```{r}
+# Find Patients for which there is coverage but not clincal mutation
+cov_nomut <- filter(sub_cell_mutation_tab, coverage_to_ROI !=0, clinical_mutation_found_bool ==0)
+table(cov_nomut$tumor_seurat_cluster, cov_nomut$patient)
+length(cov_nomut$cell_id)
+
+# Find Patients for which there is no coverage and no clincal mutation
+nocov_nomut <- filter(sub_cell_mutation_tab, coverage_to_ROI == 0, clinical_mutation_found_bool == 0)
+table(nocov_nomut$tumor_seurat_cluster, nocov_nomut$patient)
+length(nocov_nomut$cell_id)
+
+# Find Patients for which there is coverage and clincal mutation
+cov_mut <- filter(sub_cell_mutation_tab, coverage_to_ROI != 0, clinical_mutation_found_bool !=0)
+table(cov_mut$tumor_seurat_cluster, cov_mut$patient)
+length(cov_mut$cell_id)
+
+# Find Patients for which there is no coverage and clincal mutation (fusions)
+test <- sub_cell_mutation_tab
+test[is.na(test)] <- 0
+nocov_mut <- filter(test, coverage_to_ROI == 0, clinical_mutation_found_bool !=0)
+table(nocov_mut$tumor_seurat_cluster, nocov_mut$patient)
+length(nocov_mut$cell_id)
+```
+
+Create table across all samples
+```{r}
+# All samples 
+samples <- unique(sub_cell_mutation_tab$sample_name)
+# Create matrix to store stats 
+mat.samples <- as.data.frame(matrix(nrow=length(samples), ncol=6))
+row.names(mat.samples) <- samples
+
+for(i in 1:length(samples)){
+temp <- sub_cell_mutation_tab[sub_cell_mutation_tab$sample_name %in% samples[i] ,]
+mat.samples[i,1] <- unique(as.character(temp$patient_id))
+mat.samples[i,2] <- nrow(temp)
+mat.samples[i,3] <- length(which(temp$coverage_to_ROI !=0))
+mat.samples[i,4] <- sum(temp$clinical_mutation_found_bool)
+mat.samples[i,5] <- paste(unique(temp$tumor_seurat_cluster), collapse = "/")
+mat.samples[i,6] <- paste(unique(unlist(strsplit(unique(as.character(temp$mutations_found)), ","))), collapse  = "/")
+}
+
+colnames(mat.samples) <- c("patient_id", "num_cells", "cov_ROI", "mut_found", "tumor_clus", "mutations")
+mat.samples
+
+write.csv(mat.samples, file = paste(dir, "data_out/NI06/NI06_mutation_summary_table.csv", sep = ""))
+```
+
+Query individual cluster
+```{r}
+clusters <- unique(sub_cell_mutation_tab$tumor_seurat_cluster)
+list.mats <- list()
+for(j in 1:length(clusters)){
+temp.clus <- sub_cell_mutation_tab[sub_cell_mutation_tab$tumor_seurat_cluster %in% clusters[j],]
+samples <- unique(temp.clus$sample_name)
+mat.samples <- as.data.frame(matrix(nrow=length(samples), ncol=7))
+  for(i in 1:length(samples)){
+      temp <- temp.clus[temp.clus$sample_name %in% samples[i] ,]
+      mat.samples[i,1] <- nrow(temp)
+      mat.samples[i,2] <- length(which(temp$coverage_to_ROI !=0))
+      mat.samples[i,3] <- sum(temp$clinical_mutation_found_bool)
+      mat.samples[i,4] <- paste(unique(temp$tumor_seurat_cluster), collapse = "/")
+      mat.samples[i,5] <- samples[i]
+      mat.samples[i,6] <- unique(as.character(temp$patient_id))
+      mat.samples[i,7] <- paste(unique(unlist(strsplit(unique(as.character(temp$mutations_found)), ","))), collapse  = "/")  
+  }
+list.mats[[j]] <- mat.samples
+}
+names(list.mats) <- clusters
+# Combine into a large table 
+all.mats <- do.call(rbind, list.mats)
+colnames(all.mats) <- c("nCells","cov_ROI","mut_found", "tumor_cluster","sample_name", "patient_id", "mutations")
+
+write.csv(all.mats, file = paste(dir, "data_out/NI06/NI06_mutation_summary_clus_table.csv", sep = ""))
+```
+
+Add the clincal mutation boolean to tumor subset seurat object
+```{r}
+# Add Clincial Mutation Bool to each cell on Seurat Metadata
+tiss_subset_tumor@meta.data <- left_join(x = tiss_subset_tumor@meta.data, y = sub_cell_mutation_tab[,c(1,7)], by = "cell_id")
+rownames(tiss_subset_tumor@meta.data) <- tiss_subset_tumor@meta.data$cell_id
+
+# Save Seurat Object
+save(tiss_subset_tumor, file = paste(dir, "Data_input/NI04_epithelial_annotated_tumor_mut.RData", sep = ""))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

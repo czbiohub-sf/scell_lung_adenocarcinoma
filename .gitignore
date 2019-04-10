@@ -1,2 +1,7 @@
 /Data_input
 /Data_input/*.csv
+*run.final.infercnv_obj
+*infercnv.observations.txt
+*General_HCL_1_members.txt
+*infercnv.references.txt
+*largefile*

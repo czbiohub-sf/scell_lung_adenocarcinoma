@@ -1,0 +1,123 @@
+---
+title: "NI04 Subset Tumor Cells and Cluster"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+require(corrplot)
+library(clustree)
+```
+
+
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/NI03_epithelial_annotated_tumor.RData", sep=""))
+```
+
+Subset tumor cells from epi_cells object
+```{r}
+cells.use <- row.names(tiss_nonimmune_epi@meta.data)[which(tiss_nonimmune_epi@meta.data$inferCNV_annotation=="tumor")]
+length(cells.use)
+tiss_subset_tumor <- SubsetData(tiss_nonimmune_epi, cells.use = cells.use)
+```
+
+Find variable genes
+```{r}
+tiss_subset_tumor <- FindVariableGenes(object = tiss_subset_tumor, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+```
+
+Perform PCA
+```{r}
+tiss_subset_tumor <- RunPCA(object = tiss_subset_tumor, do.print = FALSE)
+tiss_subset_tumor <- ProjectPCA(object = tiss_subset_tumor, do.print = FALSE)
+```
+
+Visualize top genes in principal components
+```{r}
+PCHeatmap(object = tiss_subset_tumor, pc.use = 1:6, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 20)
+```
+
+Perform correlation of PCs and metadata fields
+```{r}
+pca.obj <- tiss_subset_tumor@dr$pca
+pc.coords <- pca.obj@cell.embeddings
+df1 <- tiss_subset_tumor@meta.data[,c("nGene","nReads","percent.ribo")]
+df2 <- pc.coords[,c(1:10)]
+cordf12 <- cor(df1,df2)
+# Make a correlation plot
+corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+```
+
+Also visaulize PC variance
+```{r}
+PCElbowPlot(object = tiss_subset_tumor)
+```
+
+Choose the number of principal components to use.
+```{r}
+n.pcs = 15
+```
+
+Check clustering stability at given resolution (Clustree)
+```{r}
+# Set different resolutions 
+res.used <- seq(0.1,1,by=0.2)
+# Loop over and perform clustering of different resolutions 
+for(i in res.used){
+tiss_subset_tumor <- FindClusters(object = tiss_subset_tumor, reduction.type = "pca", dims.use = 1:n.pcs, 
+    resolution = i, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)}
+# Make Plot
+clus.tree.out <- clustree(tiss_subset_tumor, layout="sugiyama") +
+    theme(legend.position = "bottom") + 
+  scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+# Save pdf 
+ggsave(clus.tree.out, filename = paste(dir,"plot_out/NI04/Cluster_resolutions_clustree_output.pdf", sep=""), width = 15, height = 15)
+clus.tree.out
+```
+
+Set resolution and perform clustering
+```{r}
+res.used <- 0.9
+tiss_subset_tumor <- FindClusters(object = tiss_subset_tumor, reduction.type = "pca", dims.use = 1:n.pcs, resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+```
+
+Perform  tSNE
+```{r}
+tiss_subset_tumor <- RunTSNE(object = tiss_subset_tumor, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+```
+
+Visualize TSNE colroed by cluster
+```{r}
+pdf(file = paste(dir, "plot_out/NI04/tumor_tsne.pdf", sep = ""))
+TSNEPlot(object = tiss_subset_tumor, do.label = T)
+dev.off()
+```
+
+Cluster Occ by patient
+```{r}
+# Calculate mixing score for each cluster 
+tab.1 <- table(tiss_subset_tumor@meta.data$patient_id, tiss_subset_tumor@meta.data$res.0.9)
+occ_score <- apply(tab.1, 2, max)/colSums(tab.1)
+# Plot mixing score
+pdf(file = paste(dir, "plot_out/NI04/tumor_clusocc_bargraph.pdf", sep = ""))
+par(las=3);barplot(sort(occ_score), xlab="Cluster", ylab="Patient max Ncells/Total cells", ylim=c(0,1));abline(h=0.7, col="red")
+dev.off()
+```
+
+Set Metadata Column for Cluster IDs
+```{r}
+tiss_subset_tumor@meta.data$tumor_seurat_cluster <- tiss_subset_tumor@meta.data$res.0.9
+```
+
+Save object
+```{r}
+save(tiss_subset_tumor, file = paste(dir, "Data_input/NI04_tumor_seurat_object.RData", sep = ""))
+```
+
+
+
