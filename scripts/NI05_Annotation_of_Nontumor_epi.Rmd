@@ -216,9 +216,9 @@ dist.clus <- as.dist(mat_clus_dis)
 # Convert to clustering object
 tree.clus <- hclust(dist.clus, "ward.D2")
 # Plot 
-#pdf("/myVolume/plot_out/tiss_subset_normalepi_dendro_181206.pdf")
+pdf(file = paste(dir, "/plot_out/NI05/NI05_normalepi_dendro.pdf", sep = ""))
 plot(tree.clus)
-#dev.off()
+dev.off()
 ```
 
 Find markers for each cluster

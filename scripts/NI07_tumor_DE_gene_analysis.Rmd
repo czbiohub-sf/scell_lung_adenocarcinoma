@@ -1,0 +1,172 @@
+---
+title: "DE Analysis by Response"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+library(fgsea)
+library(gridExtra)
+library(devtools)
+library(DT)
+require(corrplot)
+library(clustree)
+library(ggsignif)
+library(ggpubr)
+library(viridis)
+library(plotly)
+library(ggridges)
+library(reshape)
+```
+
+Read in tumor object
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file = paste(dir, "Data_input/NI04_tumor_seurat_object.RData", sep = ""))
+```
+
+Seurat Function for IPA Analysis
+```{r}
+seurat.to.ipa <- function(df, score.column, divide.by.column, gene.column, divide.append) {
+  # Find appropriate columns in DE output 
+  col.1 <- which(colnames(df)==divide.by.column)
+  col.2 <- which(colnames(df)==score.column)
+  col.3 <- which(colnames(df)==gene.column)
+  # Create new table
+  tab.temp <- matrix(nrow=length(unique(df[,col.3])), ncol=length(unique(df[,col.1])), 0)
+  # Set colnames 
+  colnames(tab.temp) <- unique(df[,col.1])
+  # Set townames 
+  row.names(tab.temp) <- as.character(unique(df[,col.3]))
+  # Populate values 
+    for(i in 1:nrow(tab.temp)){
+      temp <- df[as.character(df[,col.3]) %in% row.names(tab.temp)[i] ,]
+        for(j in 1:nrow(temp)){
+          col.to <- which(colnames(tab.temp)==as.character(temp[j,col.1]))
+          tab.temp[i,col.to] <- temp[j,col.2]
+        }
+    }
+  # Set colnames 
+  colnames(tab.temp) <- paste(divide.append, colnames(tab.temp), sep="_")
+  return(tab.temp)
+}
+```
+
+Calculate the DE genes for every tumor cluster
+```{r}
+de_by_cluster <- FindAllMarkers(tiss_subset_tumor)
+write.csv(de_by_cluster, file = paste(dir, "data_out/NI07_tumor_clusters_DEgenes.csv", sep = ""))
+```
+
+Calculate the DE genes between different treatment responses (naive, grouped_pr and grouped_pd)
+```{r}
+# set the ident of the object to the "analysis" column
+unique(tiss_subset_tumor@ident) # check current ident
+tiss_subset_tumor <- SetIdent(tiss_subset_tumor, ident.use = tiss_subset_tumor@meta.data$analysis)
+unique(tiss_subset_tumor@ident) # check current ident
+
+# find diff. expressed genes with wilcox test
+analysis_markers <- FindAllMarkers(tiss_subset_tumor)
+write.csv(analysis_markers, file = paste(dir, "data_out/NI07_response_group_DEgenes.csv", sep = ""))
+```
+
+Group the DE genes and add the number of patients with nonzero expressing cells and the highest contributing patient's occupancy
+```{r}
+groups <- as.character(unique(analysis_markers$cluster))
+for(i in 1:nrow(analysis_markers)){
+  message(paste(round(i/nrow(analysis_markers),2)*100,"% of genes completed"))
+  gene <- as.character(analysis_markers$gene)[i]
+  gene.vec <- tiss_subset_tumor@data[gene,]
+    for(j in 1:length(groups)){
+      cells <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$analysis==groups[j])]
+      all.no.zero.cells <- names(which(gene.vec[cells] !=0 )) # Set threshold
+      tab.1 <- table(as.character(tiss_subset_tumor@meta.data[all.no.zero.cells,"patient_id"]))
+      high.pat.per <- tab.1[which(tab.1==max(tab.1))[1]]/length(all.no.zero.cells)
+      all.pat.length <- length(tab.1)
+      analysis_markers[i,paste(groups[j],"pt.occupancy")] <- high.pat.per
+      analysis_markers[i,paste(groups[j],"n.nonzero.pts")] <- all.pat.length
+    }
+}
+write.csv(analysis_markers, file = paste(dir, "data_out/NI07_response_group_DEgenes_with_pt_occ.csv", sep = ""))
+```
+
+Filter the DE Genes based on nonzero paitents
+```{r}
+
+```
+
+
+*Patients that have multiple samples*
+
+Find DE genes between TH226 timepoints
+```{r}
+# cells.use_TH226 <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$patient_id=='TH226')]
+# length(cells.use_TH226)
+# 
+# tiss_subset_tumor_TH226 <- SubsetData(tiss_subset_tumor, cells.use = (cells.use_TH226))
+# table(tiss_subset_tumor_TH226@meta.data$sample_name)
+# 
+# tiss_subset_tumor_TH226 <- SetIdent(tiss_subset_tumor_TH226, ident.use = tiss_subset_tumor_TH226@meta.data$sample_name)
+# tiss_subset_tumor_TH226@ident
+# TH226_markers <- FindAllMarkers(tiss_subset_tumor_TH226)
+# dim(TH226_markers)
+# TH226_markers1 <- FindAllMarkers(tiss_subset_tumor_TH226, logfc.threshold = 1)
+# dim(TH226_markers1)
+# 
+# TH226_markers_ipa <- seurat.to.ipa(df = late_markers, score.column = "avg_logFC",divide.by.column = "cluster",
+#                         gene.column = "gene",divide.append = "late")
+# TH226_markers_ipa <- as.data.frame(TH226_markers_ipa)
+# TH226_markers_ipa$gene <- rownames(TH226_markers_ipa)
+# TH226_markers1_ipa <- seurat.to.ipa(df = TH226_markers1, score.column = "avg_logFC",divide.by.column = "cluster",
+#                         gene.column = "gene",divide.append = "late")
+# TH226_markers1_ipa <- as.data.frame(TH226_markers1_ipa)
+# TH226_markers1_ipa$gene <- rownames(TH226_markers1_ipa)
+# dim(TH226_markers1_ipa)
+# 
+# write.table(TH226_markers_ipa, file = "/myVolume/data_out/181212_TH226_markers_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
+# write.table(TH226_markers1_ipa, file = "/myVolume/data_out/181212_TH226_markers1_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
+# save(TH226_markers, file = "/myVolume/data_out/181211_TH226_markers_epi.pdf")
+```
+
+Find DE genes between TH179 timepoints
+```{r}
+# cells.use_TH179_1 <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$sample_name=='LT_S58')]
+# cells.use_TH179_2 <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$sample_name=='LT_S79')]
+# cells.use_TH179 <- c(cells.use_TH179_1, cells.use_TH179_2)
+# #subset away LT_S80 (only yields 3 cells)
+# 
+# 
+# tiss_subset_tumor_TH179 <- SubsetData(tiss_subset_tumor, cells.use = (cells.use_TH179))
+# 
+# table(tiss_subset_tumor_TH179@meta.data$sample_name)
+# 
+# tiss_subset_tumor_TH179 <- SetIdent(tiss_subset_tumor_TH179, ident.use = tiss_subset_tumor_TH179@meta.data$sample_name)
+# tiss_subset_tumor_TH179@ident
+# TH179_markers <- FindAllMarkers(tiss_subset_tumor_TH179)
+# dim(TH179_markers)
+# TH179_markers1 <- FindAllMarkers(tiss_subset_tumor_TH179, logfc.threshold = 1)
+# dim(TH179_markers1)
+# 
+# TH179_markers_ipa <- seurat.to.ipa(df = late_markers, score.column = "avg_logFC",divide.by.column = "cluster",
+#                         gene.column = "gene",divide.append = "late")
+# TH179_markers_ipa <- as.data.frame(TH179_markers_ipa)
+# TH179_markers_ipa$gene <- rownames(TH179_markers_ipa)
+# TH179_markers1_ipa <- seurat.to.ipa(df = TH179_markers1, score.column = "avg_logFC",divide.by.column = "cluster",
+#                         gene.column = "gene",divide.append = "late")
+# TH179_markers1_ipa <- as.data.frame(TH179_markers1_ipa)
+# TH179_markers1_ipa$gene <- rownames(TH179_markers1_ipa)
+# dim(TH179_markers1_ipa)
+# 
+# write.table(TH179_markers_ipa, file = "/myVolume/data_out/181212_TH179_markers_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
+# write.table(TH179_markers1_ipa, file = "/myVolume/data_out/181212_TH179_markers1_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
+# save(TH179_markers, file = "/myVolume/data_out/181211_TH179_markers_epi.pdf")
+```
+
+
+
+
+
+

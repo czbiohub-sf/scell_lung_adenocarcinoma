@@ -137,7 +137,7 @@ tiss_subset_tumor@meta.data <- left_join(x = tiss_subset_tumor@meta.data, y = su
 rownames(tiss_subset_tumor@meta.data) <- tiss_subset_tumor@meta.data$cell_id
 
 # Save Seurat Object
-save(tiss_subset_tumor, file = paste(dir, "Data_input/NI03_epithelial_annotated_tumor_mut.RData", sep = ""))
+save(tiss_subset_tumor, file = paste(dir, "Data_input/NI04_epithelial_annotated_tumor_mut.RData", sep = ""))
 ```
 
 
