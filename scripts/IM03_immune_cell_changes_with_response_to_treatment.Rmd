@@ -15,9 +15,11 @@ require(ggpubr)
 require(GGally)
 ```
 
+Load immune workspace
 ```{r}
-# rm(list=ls())
-load(file = "/myVolume/sclung_adeno/R_objects/04_main_seurat_subset_190128_immune_annotated.RData")
+rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
 ```
 
 # Subset metadata 
@@ -31,14 +33,11 @@ library(ggrepel)
 require(qdapTools)
 require(REdaS)
 # 
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+metadata <- tiss_immune@meta.data
 # Keep only cells from tissues that are not brain or pleura 
 metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
 # Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
 # Create table and keep selected cell types 
 meta.temp <- metadata[,c("immune_subtype_annotation", "analysis")]
 # Loop over treatment response categories 
@@ -66,7 +65,7 @@ for(i in names(prop.table.error)){
 tab.1$analysis <- b
 tab.1$cell <- row.names(tab.1)
 # Resort factor analysis 
-tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -78,23 +77,16 @@ p<- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
     xlab("") + 
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05))
 # Save plot 
-ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/All_immune_populations_across_treatment.pdf",width = 11, height = 8)
+ggsave(paste(dir,"plot_out/IM03/All_immune_populations_across_treatment.pdf", sep=""),width = 11, height = 8)
 p
 ```
+
 
 
 Changes of specific cell populations across clinical fields 
 All vs All correlation plots 
 ```{r}
 library(ggrepel)
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
 # Create table and keep selected cell types 
 meta.temp <- metadata[,c("immune_subtype_annotation", "analysis")]
 # Create table for PD and PR
@@ -103,7 +95,7 @@ tab.1 <- as.data.frame.array(prop.table(table(meta.temp$immune_subtype_annotatio
 cor.v <- as.matrix(cor(tab.1))
 # Plot 
 require(corrplot)
-pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/All_cell_fraction_correlations.pdf", width = 5, height = 5)
+pdf(paste(dir,"plot_out/IM03/All_immune_population_correlations_across_treatment.pdf", sep=""), width = 5, height = 5)
 corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F, mar=c(2,2,2,2))
 dev.off()
 # 
@@ -115,14 +107,14 @@ All vs All correlation plots
 Plot actual correlations between time points 
 ```{r}
 library(ggrepel)
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+# metadata <- tiss_subset@meta.data
+# metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+# # Keep only cells from tissues that are not brain or pleura 
+# metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
+# # Remove unknown cells 
+# # metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
+# # Convert to factor with logical order 
+# metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
 # Create table and keep selected cell types 
 meta.temp <- metadata[,c("immune_subtype_annotation", "analysis")]
 # Create table for PD and PR
@@ -160,7 +152,8 @@ p.3 <-  ggplot(tab.1, aes(x=naive, y=grouped_pr, label = cell.type)) +
         xlim(0,0.5) + ylim(0,0.5)
 # Plot all together
 p.all <- grid.arrange(p.1,p.2,p.3,ncol=2)
-ggsave(filename = "/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/Immune_cell_population_fractions_pairwise.pdf", plot = p.all, width = 12, height = 12)
+# Save 
+ggsave(filename = paste(dir,"plot_out/IM03/Immune_cell_population_fractions_pairwise.pdf", sep=""), plot = p.all, width = 12, height = 12)
 p.all
 ```
 
@@ -170,18 +163,13 @@ library(ggrepel)
 require(qdapTools)
 require(REdaS)
 # 
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+metadata <- tiss_immune@meta.data
 # Keep only cells from tissues that are not brain or pleura 
 metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
 # Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Keep only T-cells 
-metadata <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
-# Create table and keep selected cell types 
-meta.temp <- metadata[,c("T_cell_subtype_annotation", "analysis")]
+metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+metadata.T <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
+meta.temp <- metadata.T[,c("T_cell_subtype_annotation", "analysis")]
 # Keep only common T-cell subtypes 
 tab.temp <- table(meta.temp$T_cell_subtype_annotation, meta.temp$analysis)
 tab.temp[tab.temp !=0] <- 1
@@ -211,7 +199,7 @@ for(i in names(prop.table.error)){
 tab.1$analysis <- b
 tab.1$cell <- row.names(tab.1)
 # Resort factor analysis 
-tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -223,8 +211,28 @@ p <-ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
     xlab("") + 
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05))
 # Save plot 
-ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/T-cell_populations_across_treatment.pdf",width = 11, height = 8)
+ggsave(paste(dir,"plot_out/IM03/T-cell_populations_across_treatment.pdf", sep=""),width = 11, height = 8)
 p
+```
+
+
+```{r}
+library(treemap)
+# 
+tab.1 <- as.data.frame(prop.table(table(meta.temp), margin = 2)*100)
+cats <- unique(tab.1$analysis)
+pdf(paste(dir,"plot_out/IM03/Treemaps_T-cell_subtypes.pdf", sep=""),width = 7, height = 5)
+for(i in 1:length(cats)){
+    tab.1.temp <- tab.1[which(tab.1$analysis == cats[i]),]
+    treemap(tab.1.temp,
+            index="T_cell_subtype_annotation",
+            vSize="Freq",
+            type="index", 
+            lowerbound.cex.labels = 0, 
+            title = cats[i]
+            )  
+}
+dev.off()
 ```
 
 Plot fractional changes of T-cell subsets across treatment ONLY within LUNG
@@ -233,18 +241,18 @@ library(ggrepel)
 require(qdapTools)
 require(REdaS)
 # 
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[which(metadata$biopsy_site=="Lung"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Keep only T-cells 
-metadata <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
+# metadata <- tiss_subset@meta.data
+# metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+# # Keep only cells from tissues that are not brain or pleura 
+metadata.lung <- metadata[which(metadata$biopsy_site=="Lung"),]
+# # Remove unknown cells 
+# # metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
+# # Convert to factor with logical order 
+# metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+# # Keep only T-cells 
+metadata.T <- metadata.lung[which(metadata.lung$immune_subtype_annotation=="T-cells"),]
 # Create table and keep selected cell types 
-meta.temp <- metadata[,c("T_cell_subtype_annotation", "analysis")]
+meta.temp <- metadata.T[,c("T_cell_subtype_annotation", "analysis")]
 # Keep only common T-cell subtypes 
 tab.temp <- table(meta.temp$T_cell_subtype_annotation, meta.temp$analysis)
 tab.temp[tab.temp !=0] <- 1
@@ -274,7 +282,7 @@ for(i in names(prop.table.error)){
 tab.1$analysis <- b
 tab.1$cell <- row.names(tab.1)
 # Resort factor analysis 
-tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -286,7 +294,7 @@ p <-ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
     xlab("") + 
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05))
 # Save plot 
-ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/T-cell_populations_across_treatment_LUNG.pdf",width = 11, height = 8)
+ggsave(paste(dir,"plot_out/IM03/T-cell_populations_across_treatment_LUNG.pdf", sep=""),width = 11, height = 8)
 p
 ```
 
@@ -296,18 +304,18 @@ library(ggrepel)
 require(qdapTools)
 require(REdaS)
 # 
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+# metadata <- tiss_subset@meta.data
+# metadata <- metadata[which(metadata$immune_annotation=="immune"),]
 # Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[which(metadata$biopsy_site=="Liver"),]
+metadata.liver <- metadata[which(metadata$biopsy_site=="Liver"),]
 # Remove unknown cells 
 # metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
 # Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+# metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
 # Keep only T-cells 
-metadata <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
+metadata.T <- metadata.liver[which(metadata.liver$immune_subtype_annotation=="T-cells"),]
 # Create table and keep selected cell types 
-meta.temp <- metadata[,c("T_cell_subtype_annotation", "analysis")]
+meta.temp <- metadata.T[,c("T_cell_subtype_annotation", "analysis")]
 # Keep only common T-cell subtypes 
 tab.temp <- table(meta.temp$T_cell_subtype_annotation, meta.temp$analysis)
 tab.temp[tab.temp !=0] <- 1
@@ -337,7 +345,7 @@ for(i in names(prop.table.error)){
 tab.1$analysis <- b
 tab.1$cell <- row.names(tab.1)
 # Resort factor analysis 
-tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
+tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -349,7 +357,7 @@ p <-ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
     xlab("") + 
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05))
 # Save plot 
-ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/T-cell_populations_across_treatment_LIVER.pdf",width = 11, height = 8)
+ggsave(paste(dir,"plot_out/IM03/T-cell_populations_across_treatment_LIVER.pdf", sep=""),width = 11, height = 8)
 p
 ```
 
@@ -357,24 +365,19 @@ Changes of specific cell populations across clinical fields
 Correlation plots among t_cell subsets 
 ```{r}
 library(ggrepel)
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+metadata <- tiss_immune@meta.data
 # Keep only cells from tissues that are not brain or pleura 
 metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
 # Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Keep only T-cells 
-metadata <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
-# Create table and keep selected cell types 
-meta.temp <- metadata[,c("T_cell_subtype_annotation", "analysis")]
+metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+metadata.T <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
+meta.temp <- metadata.T[,c("T_cell_subtype_annotation", "analysis")]
 # Create table for PD and PR
 tab.1 <- as.data.frame.array(prop.table(table(meta.temp$T_cell_subtype_annotation, meta.temp$analysis), margin = 2))
 cor.v <-  as.matrix(cor(tab.1))
 # Plot 
 require(corrplot)
-pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/T-cell_fraction_correlations.pdf", width = 5, height = 5)
+pdf(paste(dir,"plot_out/IM03/T-cell_fraction_correlations.pdf", sep=""), width = 5, height = 5)
 corrplot(cor.v, method = "number", main="T-cell subsets correlations", type="lower", diag=F, mar=c(2,2,2,2))
 dev.off()
 # 
@@ -386,19 +389,13 @@ Correlation plots among t_cell subsets
 Plot actual correlations between time points 
 ```{r}
 library(ggrepel)
-library(ggrepel)
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
+metadata <- tiss_immune@meta.data
 # Keep only cells from tissues that are not brain or pleura 
 metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
 # Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Keep only T-cells 
-metadata <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
-# Create table and keep selected cell types 
-meta.temp <- metadata[,c("T_cell_subtype_annotation", "analysis")]
+metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+metadata.T <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
+meta.temp <- metadata.T[,c("T_cell_subtype_annotation", "analysis")]
 # Create table for PD and PR
 tab.1 <- as.data.frame.array(prop.table(table(meta.temp$T_cell_subtype_annotation, meta.temp$analysis), margin = 2))
 tab.1$cell.type <- row.names(tab.1)
@@ -433,235 +430,235 @@ p.3 <-  ggplot(tab.1, aes(x=naive, y=grouped_pr, label = cell.type)) +
         annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
         xlim(0,0.5) + ylim(0,0.5)
 p.all <- grid.arrange(p.1,p.2,p.3,ncol=2)
-ggsave(filename = "/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/T-cell_population_fractions_pairwise.pdf", plot = p.all, width = 12, height = 12)
+ggsave(filename = paste(dir,"plot_out/IM03/T-cell_population_fractions_pairwise.pdf", sep=""), plot = p.all, width = 12, height = 12)
 p.all
 ```
 
 
 
-Look at all cells and perform chi.square tests
-This plotting is redudant since most things have already been plotted above 
-The output here is just a bit more "concentrated"
-```{r}
-require(ggthemes)
-require(rcompanion)
-require(ggpubr)
-# 
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Create table and keep selected cell types 
-meta.temp <- metadata[,c("immune_subtype_annotation", "analysis")]
-######
-# Loop over metadata labels 
-for(i in 2:ncol(meta.temp)){
-table.temp <- melt(as.data.frame(meta.temp[c(1,i)]))
-colnames(table.temp) <- c("Var1", "Var2")
-pal <- tableau_color_pal("Tableau 20")
-# Imune cells per category
-p <- ggplot(table.temp) + geom_bar(aes(x = Var2,fill = Var1), position = "fill") + 
-  scale_fill_manual(values = pal(20)) + 
-  labs(x = colnames(meta.temp)[i], y="Fraction of cells") + 
-  guides(fill=guide_legend(title="Cell types"))
-# Total nu,ber of cells 
-q <- ggplot(melt(meta.temp[,i])) + geom_bar(aes(x = value)) +
-  geom_text(data = as.data.frame(table(meta.temp[,i])),aes(x = Var1, y = Freq, label=Freq),
-    position = position_dodge(width = 1),
-    vjust = -0.5, size = 4) + ggtitle("Ncells")
-# Perform a chiSquare test 
-table.chi <- t(table(meta.temp[c(1,i)]))
-table.chi.res <- pairwiseNominalIndependence(table.chi,fisher = FALSE,gtest  = FALSE,chisq  = TRUE,method = "fdr")
-temp <- -log10(table.chi.res$p.adj.Chisq)
-temp[is.infinite(temp)] <- 0
-temp[is.na(temp)] <- 0
-# Plot 
-temp <- cbind(as.data.frame(temp), as.data.frame( table.chi.res$Comparison))
-colnames(temp) <- c("p.value", "group")
-r <- ggplot(temp) +geom_point(aes(x = p.value, y = group)) + 
-  labs(x = "-log10(p.value)", y="Treatment Status group") + 
-  geom_vline(xintercept = 5)
-# Also make a line chart 
-tt <- as.data.frame(table(as.data.frame(meta.temp[c(1,i)])))
-colnames(tt) <- c("Var1", "Var2", "Freq")
-o <- ggplot(tt, aes(x=Var1, group=Var2, y=Freq)) +
-  geom_line(aes(color=Var2))+
-  geom_point(aes(color=Var2)) + 
-  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
-  labs(x ="", y="Number of cells") + 
-  guides(fill=guide_legend(title=colnames(meta.temp)[i]))
-# Similar plot with normalized axis 
-tt2 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)])), margin = 2))
-colnames(tt2) <- c("Var1", "Var2", "Freq")
-o2 <- ggplot(tt2, aes(x=Var1, group=Var2, y=Freq)) + geom_ribbon(data = tt2, aes(ymin=0, ymax=Freq, fill=Var2), alpha=0.5) +
-  geom_line(aes(color=Var2))+
-  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
-  labs(x ="", y="Fraction of cells") + 
-  guides(fill=guide_legend(title=colnames(meta.temp)[i]))
+<!-- Look at all cells and perform chi.square tests -->
+<!-- This plotting is redudant since most things have already been plotted above  -->
+<!-- The output here is just a bit more "concentrated" -->
+<!-- ```{r} -->
+<!-- require(ggthemes) -->
+<!-- require(rcompanion) -->
+<!-- require(ggpubr) -->
+<!-- #  -->
+<!-- metadata <- tiss_subset@meta.data -->
+<!-- metadata <- metadata[which(metadata$immune_annotation=="immune"),] -->
+<!-- # Keep only cells from tissues that are not brain or pleura  -->
+<!-- metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),] -->
+<!-- # Remove unknown cells  -->
+<!-- # metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),] -->
+<!-- # Convert to factor with logical order  -->
+<!-- metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr")) -->
+<!-- # Create table and keep selected cell types  -->
+<!-- meta.temp <- metadata[,c("immune_subtype_annotation", "analysis")] -->
+<!-- ###### -->
+<!-- # Loop over metadata labels  -->
+<!-- for(i in 2:ncol(meta.temp)){ -->
+<!-- table.temp <- melt(as.data.frame(meta.temp[c(1,i)])) -->
+<!-- colnames(table.temp) <- c("Var1", "Var2") -->
+<!-- pal <- tableau_color_pal("Tableau 20") -->
+<!-- # Imune cells per category -->
+<!-- p <- ggplot(table.temp) + geom_bar(aes(x = Var2,fill = Var1), position = "fill") +  -->
+<!--   scale_fill_manual(values = pal(20)) +  -->
+<!--   labs(x = colnames(meta.temp)[i], y="Fraction of cells") +  -->
+<!--   guides(fill=guide_legend(title="Cell types")) -->
+<!-- # Total nu,ber of cells  -->
+<!-- q <- ggplot(melt(meta.temp[,i])) + geom_bar(aes(x = value)) + -->
+<!--   geom_text(data = as.data.frame(table(meta.temp[,i])),aes(x = Var1, y = Freq, label=Freq), -->
+<!--     position = position_dodge(width = 1), -->
+<!--     vjust = -0.5, size = 4) + ggtitle("Ncells") -->
+<!-- # Perform a chiSquare test  -->
+<!-- table.chi <- t(table(meta.temp[c(1,i)])) -->
+<!-- table.chi.res <- pairwiseNominalIndependence(table.chi,fisher = FALSE,gtest  = FALSE,chisq  = TRUE,method = "fdr") -->
+<!-- temp <- -log10(table.chi.res$p.adj.Chisq) -->
+<!-- temp[is.infinite(temp)] <- 0 -->
+<!-- temp[is.na(temp)] <- 0 -->
+<!-- # Plot  -->
+<!-- temp <- cbind(as.data.frame(temp), as.data.frame( table.chi.res$Comparison)) -->
+<!-- colnames(temp) <- c("p.value", "group") -->
+<!-- r <- ggplot(temp) +geom_point(aes(x = p.value, y = group)) +  -->
+<!--   labs(x = "-log10(p.value)", y="Treatment Status group") +  -->
+<!--   geom_vline(xintercept = 5) -->
+<!-- # Also make a line chart  -->
+<!-- tt <- as.data.frame(table(as.data.frame(meta.temp[c(1,i)]))) -->
+<!-- colnames(tt) <- c("Var1", "Var2", "Freq") -->
+<!-- o <- ggplot(tt, aes(x=Var1, group=Var2, y=Freq)) + -->
+<!--   geom_line(aes(color=Var2))+ -->
+<!--   geom_point(aes(color=Var2)) +  -->
+<!--   theme(axis.text.x = element_text(angle = 60, hjust = 1)) +  -->
+<!--   labs(x ="", y="Number of cells") +  -->
+<!--   guides(fill=guide_legend(title=colnames(meta.temp)[i])) -->
+<!-- # Similar plot with normalized axis  -->
+<!-- tt2 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)])), margin = 2)) -->
+<!-- colnames(tt2) <- c("Var1", "Var2", "Freq") -->
+<!-- o2 <- ggplot(tt2, aes(x=Var1, group=Var2, y=Freq)) + geom_ribbon(data = tt2, aes(ymin=0, ymax=Freq, fill=Var2), alpha=0.5) + -->
+<!--   geom_line(aes(color=Var2))+ -->
+<!--   theme(axis.text.x = element_text(angle = 60, hjust = 1)) +  -->
+<!--   labs(x ="", y="Fraction of cells") +  -->
+<!--   guides(fill=guide_legend(title=colnames(meta.temp)[i])) -->
 
-#Make a correlation panel
-tab.2 <- as.data.frame.matrix(prop.table(table(as.data.frame(meta.temp[c(1,i)]))))
-tab.2$types <- row.names(tab.2)
-# Make and get legend
-tab.3 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)]))))
-p.dum <- ggplot(tab.3, aes(Freq,Freq,color=immune_subtype_annotation)) + geom_point() +
-      guides(col = guide_legend(ncol = 3)) +
-      theme(legend.text=element_text(size=8), legend.title=element_blank())
-###### 
-p.dum <- get_legend(p.dum)
-p.dum <- as_ggplot(p.dum)
-# Create ggpair plot
-pm <- ggpairs(tab.2,columns = c(1:3), diag=list("blankDiag"), ggplot2::aes(colour=types), upper = list(continuous = "blank")) #, upper = list(continuous = gglegend("points"))
-pm[1,2] <- p.dum
-# Combine and plot all 
-# pqr <- ggarrange(p,ggarrange(q, r, ncol = 2),nrow = 2) 
-opqr <- ggarrange(p,o,o2,q,r,nrow = 2, ncol=3, labels = "AUTO") 
-# Save 
-ggsave(filename = paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/","Immune_cell_population_fractions_by_",colnames(meta.temp)[i], ".pdf", sep="") , plot = opqr, width = 17, height = 10)
-}
-```
-
-
-Repeat the above analysis for T-cells only 
-```{r}
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Keep only T-cells 
-metadata <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),]
-# Create table and keep selected cell types 
-meta.temp <- metadata[,c("T_cell_subtype_annotation", "analysis")]
-######
-# Loop over metadata labels 
-for(i in 2:ncol(meta.temp)){
-table.temp <- melt(as.data.frame(meta.temp[c(1,i)]))
-colnames(table.temp) <- c("Var1", "Var2")
-pal <- tableau_color_pal("Tableau 20")
-# Imune cells per category
-p <- ggplot(table.temp) + geom_bar(aes(x = Var2,fill = Var1), position = "fill") + 
-  scale_fill_manual(values = pal(20)) + 
-  labs(x = colnames(meta.temp)[i], y="Fraction of cells") + 
-  guides(fill=guide_legend(title="Cell types"))
-# Total nu,ber of cells 
-q <- ggplot(melt(meta.temp[,i])) + geom_bar(aes(x = value)) +
-  geom_text(data = as.data.frame(table(meta.temp[,i])),aes(x = Var1, y = Freq, label=Freq),
-    position = position_dodge(width = 1),
-    vjust = -0.5, size = 4) + ggtitle("Ncells")
-# Perform a chiSquare test 
-table.chi <- t(table(meta.temp[c(1,i)]))
-table.chi.res <- pairwiseNominalIndependence(table.chi,fisher = FALSE,gtest  = FALSE,chisq  = TRUE,method = "fdr")
-temp <- -log10(table.chi.res$p.adj.Chisq)
-temp[is.infinite(temp)] <- 0
-temp[is.na(temp)] <- 0
-# Plot 
-temp <- cbind(as.data.frame(temp), as.data.frame( table.chi.res$Comparison))
-colnames(temp) <- c("p.value", "group")
-r <- ggplot(temp) +geom_point(aes(x = p.value, y = group)) + 
-  labs(x = "-log10(p.value)", y="Treatment Status group") + 
-  geom_vline(xintercept = 5)
-# Also make a line chart 
-tt <- as.data.frame(table(as.data.frame(meta.temp[c(1,i)])))
-colnames(tt) <- c("Var1", "Var2", "Freq")
-o <- ggplot(tt, aes(x=Var1, group=Var2, y=Freq)) +
-  geom_line(aes(color=Var2))+
-  geom_point(aes(color=Var2)) + 
-  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
-  labs(x ="", y="Number of cells") + 
-  guides(fill=guide_legend(title=colnames(meta.temp)[i]))
-# Similar plot with normalized axis 
-tt2 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)])), margin = 2))
-colnames(tt2) <- c("Var1", "Var2", "Freq")
-o2 <- ggplot(tt2, aes(x=Var1, group=Var2, y=Freq)) + geom_ribbon(data = tt2, aes(ymin=0, ymax=Freq, fill=Var2), alpha=0.5) +
-  geom_line(aes(color=Var2))+
-  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
-  labs(x ="", y="Fraction of cells") + 
-  guides(fill=guide_legend(title=colnames(meta.temp)[i]))
-
-#Make a correlation panel
-tab.2 <- as.data.frame.matrix(prop.table(table(as.data.frame(meta.temp[c(1,i)]))))
-tab.2$types <- row.names(tab.2)
-# Make and get legend
-tab.3 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)]))))
-p.dum <- ggplot(tab.3, aes(Freq,Freq,color=T_cell_subtype_annotation)) + geom_point() +
-      guides(col = guide_legend(ncol = 3)) +
-      theme(legend.text=element_text(size=8), legend.title=element_blank())
-p.dum <- get_legend(p.dum)
-p.dum <- as_ggplot(p.dum)
-# Create ggpair plot
-pm <- ggpairs(tab.2,columns = c(1:3), diag=list("blankDiag"), ggplot2::aes(colour=types), upper = list(continuous = "blank")) #, upper = list(continuous = gglegend("points"))
-pm[1,2] <- p.dum
-# Combine and plot all 
-opqr <- ggarrange(p,o,o2,q,r,nrow = 2, ncol=3, labels = "AUTO") 
-# Save 
-ggsave(filename = paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/","T_cell_population_fractions_by_",colnames(meta.temp)[i], ".pdf", sep="") , plot = opqr, width = 17, height = 10)
-}
-```
+<!-- #Make a correlation panel -->
+<!-- tab.2 <- as.data.frame.matrix(prop.table(table(as.data.frame(meta.temp[c(1,i)])))) -->
+<!-- tab.2$types <- row.names(tab.2) -->
+<!-- # Make and get legend -->
+<!-- tab.3 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)])))) -->
+<!-- p.dum <- ggplot(tab.3, aes(Freq,Freq,color=immune_subtype_annotation)) + geom_point() + -->
+<!--       guides(col = guide_legend(ncol = 3)) + -->
+<!--       theme(legend.text=element_text(size=8), legend.title=element_blank()) -->
+<!-- ######  -->
+<!-- p.dum <- get_legend(p.dum) -->
+<!-- p.dum <- as_ggplot(p.dum) -->
+<!-- # Create ggpair plot -->
+<!-- pm <- ggpairs(tab.2,columns = c(1:3), diag=list("blankDiag"), ggplot2::aes(colour=types), upper = list(continuous = "blank")) #, upper = list(continuous = gglegend("points")) -->
+<!-- pm[1,2] <- p.dum -->
+<!-- # Combine and plot all  -->
+<!-- # pqr <- ggarrange(p,ggarrange(q, r, ncol = 2),nrow = 2)  -->
+<!-- opqr <- ggarrange(p,o,o2,q,r,nrow = 2, ncol=3, labels = "AUTO")  -->
+<!-- # Save  -->
+<!-- ggsave(filename = paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/","Immune_cell_population_fractions_by_",colnames(meta.temp)[i], ".pdf", sep="") , plot = opqr, width = 17, height = 10) -->
+<!-- } -->
+<!-- ``` -->
 
 
+<!-- Repeat the above analysis for T-cells only  -->
+<!-- ```{r} -->
+<!-- metadata <- tiss_subset@meta.data -->
+<!-- metadata <- metadata[which(metadata$immune_annotation=="immune"),] -->
+<!-- # Keep only cells from tissues that are not brain or pleura  -->
+<!-- metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),] -->
+<!-- # Remove unknown cells  -->
+<!-- # metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),] -->
+<!-- # Convert to factor with logical order  -->
+<!-- metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr")) -->
+<!-- # Keep only T-cells  -->
+<!-- metadata <- metadata[which(metadata$immune_subtype_annotation=="T-cells"),] -->
+<!-- # Create table and keep selected cell types  -->
+<!-- meta.temp <- metadata[,c("T_cell_subtype_annotation", "analysis")] -->
+<!-- ###### -->
+<!-- # Loop over metadata labels  -->
+<!-- for(i in 2:ncol(meta.temp)){ -->
+<!-- table.temp <- melt(as.data.frame(meta.temp[c(1,i)])) -->
+<!-- colnames(table.temp) <- c("Var1", "Var2") -->
+<!-- pal <- tableau_color_pal("Tableau 20") -->
+<!-- # Imune cells per category -->
+<!-- p <- ggplot(table.temp) + geom_bar(aes(x = Var2,fill = Var1), position = "fill") +  -->
+<!--   scale_fill_manual(values = pal(20)) +  -->
+<!--   labs(x = colnames(meta.temp)[i], y="Fraction of cells") +  -->
+<!--   guides(fill=guide_legend(title="Cell types")) -->
+<!-- # Total nu,ber of cells  -->
+<!-- q <- ggplot(melt(meta.temp[,i])) + geom_bar(aes(x = value)) + -->
+<!--   geom_text(data = as.data.frame(table(meta.temp[,i])),aes(x = Var1, y = Freq, label=Freq), -->
+<!--     position = position_dodge(width = 1), -->
+<!--     vjust = -0.5, size = 4) + ggtitle("Ncells") -->
+<!-- # Perform a chiSquare test  -->
+<!-- table.chi <- t(table(meta.temp[c(1,i)])) -->
+<!-- table.chi.res <- pairwiseNominalIndependence(table.chi,fisher = FALSE,gtest  = FALSE,chisq  = TRUE,method = "fdr") -->
+<!-- temp <- -log10(table.chi.res$p.adj.Chisq) -->
+<!-- temp[is.infinite(temp)] <- 0 -->
+<!-- temp[is.na(temp)] <- 0 -->
+<!-- # Plot  -->
+<!-- temp <- cbind(as.data.frame(temp), as.data.frame( table.chi.res$Comparison)) -->
+<!-- colnames(temp) <- c("p.value", "group") -->
+<!-- r <- ggplot(temp) +geom_point(aes(x = p.value, y = group)) +  -->
+<!--   labs(x = "-log10(p.value)", y="Treatment Status group") +  -->
+<!--   geom_vline(xintercept = 5) -->
+<!-- # Also make a line chart  -->
+<!-- tt <- as.data.frame(table(as.data.frame(meta.temp[c(1,i)]))) -->
+<!-- colnames(tt) <- c("Var1", "Var2", "Freq") -->
+<!-- o <- ggplot(tt, aes(x=Var1, group=Var2, y=Freq)) + -->
+<!--   geom_line(aes(color=Var2))+ -->
+<!--   geom_point(aes(color=Var2)) +  -->
+<!--   theme(axis.text.x = element_text(angle = 60, hjust = 1)) +  -->
+<!--   labs(x ="", y="Number of cells") +  -->
+<!--   guides(fill=guide_legend(title=colnames(meta.temp)[i])) -->
+<!-- # Similar plot with normalized axis  -->
+<!-- tt2 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)])), margin = 2)) -->
+<!-- colnames(tt2) <- c("Var1", "Var2", "Freq") -->
+<!-- o2 <- ggplot(tt2, aes(x=Var1, group=Var2, y=Freq)) + geom_ribbon(data = tt2, aes(ymin=0, ymax=Freq, fill=Var2), alpha=0.5) + -->
+<!--   geom_line(aes(color=Var2))+ -->
+<!--   theme(axis.text.x = element_text(angle = 60, hjust = 1)) +  -->
+<!--   labs(x ="", y="Fraction of cells") +  -->
+<!--   guides(fill=guide_legend(title=colnames(meta.temp)[i])) -->
 
-Conclusions hold true even when only conisdering Liver and Lung (which are common across the three fields)
-All cells 
-```{r}
-library(ggrepel)
-require(qdapTools)
-require(REdaS)
-# 
-metadata <- tiss_subset@meta.data
-metadata <- metadata[which(metadata$immune_annotation=="immune"),]
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[which(metadata$biopsy_site=="Lung" | metadata$biopsy_site=="Liver"),]
-# Remove unknown cells 
-# metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Create table and keep selected cell types 
-meta.temp <- metadata[,c("immune_subtype_annotation", "analysis")]
-# Loop over treatment response categories 
-# Create list to store frequency tables 
-prop.table.error <- list()
-for(i in 1:length(unique(meta.temp$analysis))){
-vec.temp <- meta.temp[meta.temp$analysis==unique(meta.temp$analysis)[i],"immune_subtype_annotation"]
-# Convert to counts and calculate 95% CI 
-# Store in list 
-table.temp <- freqCI(vec.temp, level = c(.95))
-prop.table.error[[i]] <- print(table.temp, percent = TRUE, digits = 3)
-# 
-}
-# Name list 
-names(prop.table.error) <- unique(meta.temp$analysis)
-# Convert to data frame 
-tab.1 <- as.data.frame.array(do.call(rbind, prop.table.error))
-# Add analysis column 
-b <- c()
-a <- c()
-for(i in names(prop.table.error)){
-  a <- rep(i,length(unique(row.names(tab.1))))
-  b <- c(b,a)
-}
-tab.1$analysis <- b
-tab.1$cell <- row.names(tab.1)
-# Resort factor analysis 
-tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pd", "grouped_pr"))
-# Rename percentile columns 
-colnames(tab.1)[1] <- "lower"
-colnames(tab.1)[3] <- "upper"
-# 
-p<- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
-    geom_line(aes(color=cell))+
-    geom_point(aes(color=cell)) + facet_grid(cols =  vars(cell)) + 
-    theme(axis.text.x = element_text(angle = 45, hjust=1, vjust=0.5), legend.position="bottom") + 
-    xlab("") + 
-    geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05))
-# Save plot 
-ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/All_immune_populations_across_treatment_Lung_Liver.pdf",width = 11, height = 8)
-p
-```
+<!-- #Make a correlation panel -->
+<!-- tab.2 <- as.data.frame.matrix(prop.table(table(as.data.frame(meta.temp[c(1,i)])))) -->
+<!-- tab.2$types <- row.names(tab.2) -->
+<!-- # Make and get legend -->
+<!-- tab.3 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,i)])))) -->
+<!-- p.dum <- ggplot(tab.3, aes(Freq,Freq,color=T_cell_subtype_annotation)) + geom_point() + -->
+<!--       guides(col = guide_legend(ncol = 3)) + -->
+<!--       theme(legend.text=element_text(size=8), legend.title=element_blank()) -->
+<!-- p.dum <- get_legend(p.dum) -->
+<!-- p.dum <- as_ggplot(p.dum) -->
+<!-- # Create ggpair plot -->
+<!-- pm <- ggpairs(tab.2,columns = c(1:3), diag=list("blankDiag"), ggplot2::aes(colour=types), upper = list(continuous = "blank")) #, upper = list(continuous = gglegend("points")) -->
+<!-- pm[1,2] <- p.dum -->
+<!-- # Combine and plot all  -->
+<!-- opqr <- ggarrange(p,o,o2,q,r,nrow = 2, ncol=3, labels = "AUTO")  -->
+<!-- # Save  -->
+<!-- ggsave(filename = paste("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/","T_cell_population_fractions_by_",colnames(meta.temp)[i], ".pdf", sep="") , plot = opqr, width = 17, height = 10) -->
+<!-- } -->
+<!-- ``` -->
+
+
+
+<!-- Conclusions hold true even when only conisdering Liver and Lung (which are common across the three fields) -->
+<!-- All cells  -->
+<!-- ```{r} -->
+<!-- library(ggrepel) -->
+<!-- require(qdapTools) -->
+<!-- require(REdaS) -->
+<!-- #  -->
+<!-- metadata <- tiss_subset@meta.data -->
+<!-- metadata <- metadata[which(metadata$immune_annotation=="immune"),] -->
+<!-- # Keep only cells from tissues that are not brain or pleura  -->
+<!-- metadata <- metadata[which(metadata$biopsy_site=="Lung" | metadata$biopsy_site=="Liver"),] -->
+<!-- # Remove unknown cells  -->
+<!-- # metadata <- metadata[-which(metadata$immune_subtype_annotation=="Unknown"),] -->
+<!-- # Convert to factor with logical order  -->
+<!-- metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pd", "grouped_pr")) -->
+<!-- # Create table and keep selected cell types  -->
+<!-- meta.temp <- metadata[,c("immune_subtype_annotation", "analysis")] -->
+<!-- # Loop over treatment response categories  -->
+<!-- # Create list to store frequency tables  -->
+<!-- prop.table.error <- list() -->
+<!-- for(i in 1:length(unique(meta.temp$analysis))){ -->
+<!-- vec.temp <- meta.temp[meta.temp$analysis==unique(meta.temp$analysis)[i],"immune_subtype_annotation"] -->
+<!-- # Convert to counts and calculate 95% CI  -->
+<!-- # Store in list  -->
+<!-- table.temp <- freqCI(vec.temp, level = c(.95)) -->
+<!-- prop.table.error[[i]] <- print(table.temp, percent = TRUE, digits = 3) -->
+<!-- #  -->
+<!-- } -->
+<!-- # Name list  -->
+<!-- names(prop.table.error) <- unique(meta.temp$analysis) -->
+<!-- # Convert to data frame  -->
+<!-- tab.1 <- as.data.frame.array(do.call(rbind, prop.table.error)) -->
+<!-- # Add analysis column  -->
+<!-- b <- c() -->
+<!-- a <- c() -->
+<!-- for(i in names(prop.table.error)){ -->
+<!--   a <- rep(i,length(unique(row.names(tab.1)))) -->
+<!--   b <- c(b,a) -->
+<!-- } -->
+<!-- tab.1$analysis <- b -->
+<!-- tab.1$cell <- row.names(tab.1) -->
+<!-- # Resort factor analysis  -->
+<!-- tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pd", "grouped_pr")) -->
+<!-- # Rename percentile columns  -->
+<!-- colnames(tab.1)[1] <- "lower" -->
+<!-- colnames(tab.1)[3] <- "upper" -->
+<!-- #  -->
+<!-- p<- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) + -->
+<!--     geom_line(aes(color=cell))+ -->
+<!--     geom_point(aes(color=cell)) + facet_grid(cols =  vars(cell)) +  -->
+<!--     theme(axis.text.x = element_text(angle = 45, hjust=1, vjust=0.5), legend.position="bottom") +  -->
+<!--     xlab("") +  -->
+<!--     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05)) -->
+<!-- # Save plot  -->
+<!-- ggsave("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/All_immune_populations_across_treatment_Lung_Liver.pdf",width = 11, height = 8) -->
+<!-- p -->
+<!-- ``` -->
