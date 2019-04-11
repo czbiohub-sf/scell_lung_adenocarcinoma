@@ -58,7 +58,7 @@ seurat.to.ipa <- function(df, score.column, divide.by.column, gene.column, divid
 Calculate the DE genes for every tumor cluster
 ```{r}
 de_by_cluster <- FindAllMarkers(tiss_subset_tumor)
-write.csv(de_by_cluster, file = paste(dir, "data_out/NI07_tumor_clusters_DEgenes.csv", sep = ""))
+write.csv(de_by_cluster, file = paste(dir, "data_out/NI07/NI07_tumor_clusters_DEgenes.csv", sep = ""))
 ```
 
 Calculate the DE genes between different treatment responses (naive, grouped_pr and grouped_pd)
@@ -70,11 +70,9 @@ unique(tiss_subset_tumor@ident) # check current ident
 
 # find diff. expressed genes with wilcox test
 analysis_markers <- FindAllMarkers(tiss_subset_tumor)
-write.csv(analysis_markers, file = paste(dir, "data_out/NI07_response_group_DEgenes.csv", sep = ""))
-```
+write.csv(analysis_markers, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes.csv", sep = ""))
 
-Group the DE genes and add the number of patients with nonzero expressing cells and the highest contributing patient's occupancy
-```{r}
+# Group the DE genes and add the number of patients with nonzero expressing cells and the highest contributing patient's occupancy
 groups <- as.character(unique(analysis_markers$cluster))
 for(i in 1:nrow(analysis_markers)){
   message(paste(round(i/nrow(analysis_markers),2)*100,"% of genes completed"))
@@ -90,83 +88,201 @@ for(i in 1:nrow(analysis_markers)){
       analysis_markers[i,paste(groups[j],"n.nonzero.pts")] <- all.pat.length
     }
 }
-write.csv(analysis_markers, file = paste(dir, "data_out/NI07_response_group_DEgenes_with_pt_occ.csv", sep = ""))
+write.csv(analysis_markers, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_with_pt_occ.csv", sep = ""))
+
+# Look at top 20 mutations for each group
+markers.small  <- analysis_markers %>% group_by(cluster) %>% top_n(50, -p_val_adj)
+markers.small
 ```
 
-Filter the DE Genes based on nonzero paitents
+Break markers.medium into analysis groups
 ```{r}
+markers.small.pd <- filter(markers.small, cluster == "grouped_pd") 
+markers.small.pd.genes <- as.character(markers.small.pd$gene)
 
+markers.small.pr <- filter(markers.small, cluster == "grouped_pr") 
+markers.small.pr.genes <- as.character(markers.small.pr$gene)
+
+markers.small.naive <- filter(markers.small, cluster == "naive") 
+markers.small.naive.genes <- as.character(markers.small.naive$gene)
 ```
 
 
-*Patients that have multiple samples*
-
-Find DE genes between TH226 timepoints
+Top PD genes breakdown
 ```{r}
-# cells.use_TH226 <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$patient_id=='TH226')]
-# length(cells.use_TH226)
-# 
-# tiss_subset_tumor_TH226 <- SubsetData(tiss_subset_tumor, cells.use = (cells.use_TH226))
-# table(tiss_subset_tumor_TH226@meta.data$sample_name)
-# 
-# tiss_subset_tumor_TH226 <- SetIdent(tiss_subset_tumor_TH226, ident.use = tiss_subset_tumor_TH226@meta.data$sample_name)
-# tiss_subset_tumor_TH226@ident
-# TH226_markers <- FindAllMarkers(tiss_subset_tumor_TH226)
-# dim(TH226_markers)
-# TH226_markers1 <- FindAllMarkers(tiss_subset_tumor_TH226, logfc.threshold = 1)
-# dim(TH226_markers1)
-# 
-# TH226_markers_ipa <- seurat.to.ipa(df = late_markers, score.column = "avg_logFC",divide.by.column = "cluster",
-#                         gene.column = "gene",divide.append = "late")
-# TH226_markers_ipa <- as.data.frame(TH226_markers_ipa)
-# TH226_markers_ipa$gene <- rownames(TH226_markers_ipa)
-# TH226_markers1_ipa <- seurat.to.ipa(df = TH226_markers1, score.column = "avg_logFC",divide.by.column = "cluster",
-#                         gene.column = "gene",divide.append = "late")
-# TH226_markers1_ipa <- as.data.frame(TH226_markers1_ipa)
-# TH226_markers1_ipa$gene <- rownames(TH226_markers1_ipa)
-# dim(TH226_markers1_ipa)
-# 
-# write.table(TH226_markers_ipa, file = "/myVolume/data_out/181212_TH226_markers_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
-# write.table(TH226_markers1_ipa, file = "/myVolume/data_out/181212_TH226_markers1_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
-# save(TH226_markers, file = "/myVolume/data_out/181211_TH226_markers_epi.pdf")
+pd.de.genes <- FetchData(tiss_subset_tumor, c(markers.small.pd.genes, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
+colnames(tiss_subset_tumor@meta.data)
+pd.de.genes1 <- colnames(pd.de.genes)[c(1:50)]
+temp <- pd.de.genes[,c(grep("nGene", colnames(pd.de.genes)):ncol(pd.de.genes))]
+
+# Plot jitter plot of PD vs PR vs naive for top 50 DE genes
+pd.plot.lists.box <- list()
+for(i in pd.de.genes1){
+  a <- as.data.frame(pd.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.1 <- cbind(a, temp) ; rm(a)
+  pd.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, fill = analysis)) + geom_jitter(aes(colour = analysis), alpha = 1/4) + ggtitle(i)
+}
+
+# Plot jitter plot/boxplot of PD vs PR vs naive for top 50 DE genes by patient
+pd.plot.lists.pt.box <- list()
+for(i in pd.de.genes1){
+  a <- as.data.frame(pd.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.2 <- cbind(a, temp) ; rm(a)
+  pd.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
+      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+      geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
+      xlab("Group") +
+      ylab(paste(i,"Gene Expression")) +
+      guides(colour = FALSE) +
+      guides(fill = FALSE) + 
+      ggtitle(i)
+}
+
+# Plot ridge plot of PD vs PR vs naive for top 50 DE genes
+pd.plot.lists.ridge <- list()
+for(i in pd.de.genes1){
+  a <- as.data.frame(pd.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.3 <- cbind(a, temp) ; rm(a)
+  pd.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+}
+
+# Plot ridge plot of PD vs PR vs naive for top 50 DE genes by patient
+pd.plot.lists.ridge.pt <- list()
+for(i in pd.de.genes1){
+  a <- as.data.frame(pd.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.4 <- cbind(a, temp) ; rm(a)
+  pd.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+}
+pd.plot.lists.ridge.pt[1]
 ```
 
-Find DE genes between TH179 timepoints
+Top PR DE Genes breakdown
 ```{r}
-# cells.use_TH179_1 <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$sample_name=='LT_S58')]
-# cells.use_TH179_2 <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$sample_name=='LT_S79')]
-# cells.use_TH179 <- c(cells.use_TH179_1, cells.use_TH179_2)
-# #subset away LT_S80 (only yields 3 cells)
-# 
-# 
-# tiss_subset_tumor_TH179 <- SubsetData(tiss_subset_tumor, cells.use = (cells.use_TH179))
-# 
-# table(tiss_subset_tumor_TH179@meta.data$sample_name)
-# 
-# tiss_subset_tumor_TH179 <- SetIdent(tiss_subset_tumor_TH179, ident.use = tiss_subset_tumor_TH179@meta.data$sample_name)
-# tiss_subset_tumor_TH179@ident
-# TH179_markers <- FindAllMarkers(tiss_subset_tumor_TH179)
-# dim(TH179_markers)
-# TH179_markers1 <- FindAllMarkers(tiss_subset_tumor_TH179, logfc.threshold = 1)
-# dim(TH179_markers1)
-# 
-# TH179_markers_ipa <- seurat.to.ipa(df = late_markers, score.column = "avg_logFC",divide.by.column = "cluster",
-#                         gene.column = "gene",divide.append = "late")
-# TH179_markers_ipa <- as.data.frame(TH179_markers_ipa)
-# TH179_markers_ipa$gene <- rownames(TH179_markers_ipa)
-# TH179_markers1_ipa <- seurat.to.ipa(df = TH179_markers1, score.column = "avg_logFC",divide.by.column = "cluster",
-#                         gene.column = "gene",divide.append = "late")
-# TH179_markers1_ipa <- as.data.frame(TH179_markers1_ipa)
-# TH179_markers1_ipa$gene <- rownames(TH179_markers1_ipa)
-# dim(TH179_markers1_ipa)
-# 
-# write.table(TH179_markers_ipa, file = "/myVolume/data_out/181212_TH179_markers_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
-# write.table(TH179_markers1_ipa, file = "/myVolume/data_out/181212_TH179_markers1_epi_for_ipa.txt", row.names = T, quote=F, sep="\t")
-# save(TH179_markers, file = "/myVolume/data_out/181211_TH179_markers_epi.pdf")
+pr.de.genes <- FetchData(tiss_subset_tumor, c(markers.small.pr.genes, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site'))
+
+pr.de.genes1 <- colnames(pr.de.genes)[c(1:50)]
+temp <- pr.de.genes[,c(grep("nGene", colnames(pr.de.genes)):ncol(pr.de.genes))]
+
+
+# Plot jitter plot of pr vs PR vs naive for top 50 DE genes
+pr.plot.lists.box <- list()
+for(i in pr.de.genes1){
+  a <- as.data.frame(pr.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.1 <- cbind(a, temp) ; rm(a)
+  pr.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, fill = analysis)) + geom_jitter(aes(colour = analysis), alpha = 1/4) + ggtitle(i)
+}
+
+# Plot jitter plot/boxplot of pr vs PR vs naive for top 50 DE genes by patient
+pr.plot.lists.pt.box <- list()
+for(i in pr.de.genes1){
+  a <- as.data.frame(pr.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.2 <- cbind(a, temp) ; rm(a)
+  pr.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
+      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+      geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
+      xlab("Group") +
+      ylab(paste(i,"Gene Expression")) +
+      guides(colour = FALSE) +
+      guides(fill = FALSE) + 
+      ggtitle(i)
+}
+
+# Plot ridge plot of pr vs PR vs naive for top 50 DE genes
+pr.plot.lists.ridge <- list()
+for(i in pr.de.genes1){
+  a <- as.data.frame(pr.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.3 <- cbind(a, temp) ; rm(a)
+  pr.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+}
+
+# Plot ridge plot of pr vs PR vs naive for top 50 DE genes by patient
+pr.plot.lists.ridge.pt <- list()
+for(i in pr.de.genes1){
+  a <- as.data.frame(pr.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.4 <- cbind(a, temp) ; rm(a)
+  pr.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+}
+
+pr.plot.lists.ridge.pt[1]
+```
+
+Top Naive DE Genes breakdown
+```{r}
+naive.de.genes <- FetchData(tiss_subset_tumor, c(markers.small.naive.genes, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site'))
+
+naive.de.genes1 <- colnames(naive.de.genes)[c(1:50)]
+temp <- naive.de.genes[,c(grep("nGene", colnames(naive.de.genes)):ncol(naive.de.genes))]
+
+
+# Plot jitter plot of naive vs naive vs naive for top 50 DE genes
+naive.plot.lists.box <- list()
+for(i in naive.de.genes1){
+  a <- as.data.frame(naive.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.1 <- cbind(a, temp) ; rm(a)
+  naive.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, fill = analysis)) + geom_jitter(aes(colour = analysis), alpha = 1/4) + ggtitle(i)
+}
+
+# Plot jitter plot/boxplot of naive vs naive vs naive for top 50 DE genes by patient
+naive.plot.lists.pt.box <- list()
+for(i in naive.de.genes1){
+  a <- as.data.frame(naive.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.2 <- cbind(a, temp) ; rm(a)
+  naive.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
+      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+      geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
+      xlab("Group") +
+      ylab(paste(i,"Gene Expression")) +
+      guides(colour = FALSE) +
+      guides(fill = FALSE) + 
+      ggtitle(i)
+}
+
+# Plot ridge plot of naive vs naive vs naive for top 50 DE genes
+naive.plot.lists.ridge <- list()
+for(i in naive.de.genes1){
+  a <- as.data.frame(naive.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.3 <- cbind(a, temp) ; rm(a)
+  naive.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+}
+
+# Plot ridge plot of naive vs naive vs naive for top 50 DE genes by patient
+naive.plot.lists.ridge.pt <- list()
+for(i in naive.de.genes1){
+  a <- as.data.frame(naive.de.genes[,i])
+  colnames(a) <- "gene"
+  temp.4 <- cbind(a, temp) ; rm(a)
+  naive.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+}
+
+naive.plot.lists.ridge.pt[1]
+
 ```
 
 
 
 
+library(gridExtra)
+pdf("/myVolume/plot_out/test.pdf", onefile = TRUE)
+marrangeGrob(grobs=pr.plot.lists.ridge.pt, nrow=2, ncol=2)
+dev.off()
+
+marrangeGrob
 
 
+n <- length(pr.plot.lists.ridge.pt)
+nCol <- 5
+nRow <- 10
+do.call("grid.arrange", c(pr.plot.lists.ridge.pt, ncol=nCol, nrow=nRow))
+
+dev.off()
