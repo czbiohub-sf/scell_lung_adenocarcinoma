@@ -1,0 +1,214 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+More detailed Immune phenotyping of different immune cell types
+Myeloid 
+
+Load immune workspace
+```{r}
+rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+```
+
+Subset Myeloid
+```{r}
+t.cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$immune_subtype_annotation == "T-cells")]
+length(t.cells)
+t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
+```
+
+Save Myeloid workspace 
+```{r}
+save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_Myeloid.RData")
+```
+
+Biopsy site vs analysis 
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$biopsy_site, t.cell.tiss@meta.data$analysis)
+balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+Subset Myeloid only within Lung 
+```{r}
+t.cells <- row.names(t.cell.tiss@meta.data)[which(t.cell.tiss@meta.data$biopsy_site == "Lung")]
+length(t.cells)
+t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
+```
+
+Unsupervised clustering of Myeloid cells
+
+Find variable genes
+```{r}
+t.cell.tiss <- FindVariableGenes(object = t.cell.tiss, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 1, num.bin = 20, 
+                                          binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
+```
+
+Unsupervised clustering of Myeloid cells
+# PCA
+```{r}
+t.cell.tiss <- RunPCA(object = t.cell.tiss, do.print = FALSE, pcs.compute = )
+t.cell.tiss <- ProjectPCA(object = t.cell.tiss, do.print = FALSE)
+```
+
+# visualize PCA heatmaps and PC variance
+```{r}
+PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+```
+
+```{r}
+PCElbowPlot(object = t.cell.tiss)
+```
+
+Perform correlation of PCs and metadata fields
+```{r}
+require(corrplot)
+pca.obj <- t.cell.tiss@dr$pca
+pc.coords <- pca.obj@cell.embeddings
+df1 <- t.cell.tiss@meta.data[,c("nGene","nReads","percent.ribo")]
+df2 <- pc.coords[,c(1:10)]
+cordf12 <- cor(df1,df2)
+# Make a correlation plot
+corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+```
+
+JackStraw of PCs 
+```{r}
+t.cell.tiss <- JackStraw(t.cell.tiss, num.replicate = 100, display.progress = T, 
+                         do.par = T, num.cores = 15, num.pc = 15)
+JackStrawPlot(t.cell.tiss, PCs = 1:15)
+```
+
+
+Define components to be used for clustering 
+```{r}
+n.pcs.min = 1
+n.pcs.max = 10
+```
+
+pick resolution parameter
+```{r}
+res.used <- 0.3
+t.cell.tiss <- FindClusters(object = t.cell.tiss, reduction.type = "pca", dims.use = n.pcs.min:n.pcs.max, 
+    resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+```
+
+# Run TSNE
+```{r}
+t.cell.tiss <- RunTSNE(object = t.cell.tiss, dims.use = n.pcs.min:n.pcs.max, seed.use = 10, perplexity=30)
+```
+
+# Plot TSNE
+```{r}
+TSNEPlot(object = t.cell.tiss, do.label = T)
+```
+
+
+# Plot TSNE with analysis colors 
+```{r}
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$analysis)
+TSNEPlot(object = t.cell.tiss, do.label = T)
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$res.0.3)
+```
+
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis)
+balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$T_cell_subtype_annotation)
+balloonplot(tab.1, main ="Subtype vs T-cell cluster", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
+balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+Find all cluster markers 
+```{r}
+t.cell.markers <- FindAllMarkers(object = t.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
+```
+
+Plot top genes 
+```{r}
+require(tidyverse)
+t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
+# DoHeatmap(t.cell.tiss, genes.use = c("CD8A", "CD4", "PDCD1", "CD3E", "TOP2A"), slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, use.scaled = F)
+```
+
+Plot top genes annotate by reponse
+```{r}
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$analysis)
+#t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$res.0.3)
+```
+
+
+
+Write table of top genes 
+```{r}
+write.table(t.cell.markers, "/myVolume/sclung_adeno/immune_cell_analysis/data_out/I03/Myeloid-cells_DE_genes_between_subclusters_Lung.csv")
+```
+
+
+
+Plot all relevant, PCA, tSNE and Clustering plots as pdf 
+```{r}
+pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I03/Myeloid-cells_subclustering_TSNE_LUNG.pdf",10,10)
+# Table 
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis)
+balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+# TSNE plots 
+TSNEPlot(object = t.cell.tiss, do.label = T)
+TSNEPlot(object = t.cell.tiss, do.label = T, group.by="analysis")
+# Heatmaps
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
+# PCA plots 
+PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+PCElbowPlot(object = t.cell.tiss)
+JackStrawPlot(t.cell.tiss, PCs = 1:12)
+# Feature plot
+DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T)
+DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T, group.by = "analysis")
+dev.off()
+```
+
+Save Myeloid workspace 
+```{r}
+save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_Myeloid_LUNG.RData")
+```
+
+
+Import the differential expression results 
+Convert to IPA format and export for IPA analysis
+```{r}
+# Read table generated above 
+markers <- read.table("/myVolume/sclung_adeno/immune_cell_analysis/data_out/I03/Myeloid-cells_DE_genes_between_subclusters_Lung.csv")
+# Source function 
+source("/myVolume/sclung_adeno/immune_cell_analysis/scripts/seurat_to_IPA.R")
+# Import table of DE genes 
+t.ipa <- seurat.to.ipa(df = markers, score.column = "avg_logFC",divide.by.column = "cluster",
+                        gene.column = "gene",divide.append = cell_type)
+
+# # Write table 
+write.table(t.ipa, "/myVolume/sclung_adeno/immune_cell_analysis/data_out/I03/Differentially_expressed_genes_Myeloid_clusters_LUNG.txt" , row.names = T, quote=F, sep="\t")
+```
+
+
+
+Save Myeloid workspace 
+```{r}
+VlnPlot(t.cell.tiss, c("CTLA4","CD274"))
+```
