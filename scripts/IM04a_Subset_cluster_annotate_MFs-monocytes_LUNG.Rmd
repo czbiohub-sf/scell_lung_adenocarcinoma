@@ -15,15 +15,15 @@ load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
 
 Subset Myeloid
 ```{r}
-t.cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$immune_subtype_annotation == "T-cells")]
-length(t.cells)
-t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
+mf.cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$immune_subtype_annotation == "MF-Monocytes")]
+length(mf.cells)
+mf.cell.tiss <- SubsetData(object = tiss_immune, cells.use = mf.cells)
 ```
 
-<!-- Save Myeloid workspace  -->
-<!-- ```{r} -->
-<!-- save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_Myeloid.RData") -->
-<!-- ``` -->
+Save Myeloid workspace 
+```{r}
+save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_Myeloid.RData")
+```
 
 Biopsy site vs analysis 
 ```{r}
@@ -133,17 +133,9 @@ balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
-Plot top genes annotate by reponse
-```{r}
-genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "MKI67", "FOXP3","CTLA4", "IL2RA", "PDCD1")
-DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
-VlnPlot(t.cell.tiss, features.plot = genes)
-```
-
 Find all cluster markers 
 ```{r}
 t.cell.markers <- FindAllMarkers(object = t.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
-# t.cell.markers <- read.table(paste(dir, "data_out/IM04/T-cells_DE_genes_between_subclusters_Lung.csv",sep=""))
 ```
 
 Plot top genes 
@@ -190,11 +182,6 @@ TSNEPlot(object = t.cell.tiss, do.label = T, group.by="analysis")
 # Heatmaps
 DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
 DoHeatmap(t.cell.tiss, genes.use = top50$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 50 DE genes")
-genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "MKI67", "FOXP3","CTLA4", "IL2RA", "PDCD1")
-DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
-# Violin plot 
-genes <- c("CD4", "CD8A","TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1", "TNFRSF18")
-VlnPlot(t.cell.tiss, features.plot = genes)
 # PCA plots 
 PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
 PCElbowPlot(object = t.cell.tiss)
@@ -204,15 +191,6 @@ DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T)
 # DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T, group.by = "analysis")
 dev.off()
 ```
-
-Relation between clonality and clusters 
-```{r}
-tab.1 <- table(as.character(t.cell.tiss@meta.data$clonal_group), t.cell.tiss@meta.data$res.0.3)
-(colSums(tab.1)/table(t.cell.tiss@meta.data$res.0.3))*100
-balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
-            label = T, show.margins = F)
-```
-
 
 TO DO ! 
 
