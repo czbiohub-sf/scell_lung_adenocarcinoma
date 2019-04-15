@@ -20,10 +20,6 @@ length(t.cells)
 t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
 ```
 
-<!-- Save Myeloid workspace  -->
-<!-- ```{r} -->
-<!-- save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_Myeloid.RData") -->
-<!-- ``` -->
 
 Biopsy site vs analysis 
 ```{r}
@@ -34,7 +30,7 @@ balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
 
 Subset Myeloid only within Lung 
 ```{r}
-t.cells <- row.names(t.cell.tiss@meta.data)[which(t.cell.tiss@meta.data$biopsy_site == "Lung")]
+t.cells <- row.names(t.cell.tiss@meta.data)[which(t.cell.tiss@meta.data$biopsy_site == "Lung" | t.cell.tiss@meta.data$biopsy_site == "Liver")]
 length(t.cells)
 t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
 ```
@@ -126,14 +122,11 @@ tab.1 <- melt(tab.1)
 tab.1$Var.1 <- as.factor(tab.1$Var.1)
 ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
                            stat="identity")
-
-ggplot(tab.1, aes(Var.1)) + geom_bar(aes(fill = Var.2))
-mpg
 ```
 
 ```{r}
-tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$T_cell_subtype_annotation)
-balloonplot(tab.1, main ="Subtype vs T-cell cluster", xlab ="", ylab="",
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$biopsy_site)
+balloonplot(tab.1, main ="Biopsy site vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
@@ -211,7 +204,7 @@ DoHeatmap(t.cell.tiss, genes.use = top50$gene, slim.col.label = TRUE, remove.key
 genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "MKI67", "FOXP3","CTLA4", "IL2RA", "PDCD1")
 DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
 # Violin plot 
-genes <- c("CD4", "CD8A","TOP2A", "FOXP3","CTLA4","PDCD1", "IL2RA","IL2RB")
+genes <- c("CD4", "CD8A","TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1", "TNFRSF18")
 VlnPlot(t.cell.tiss, features.plot = genes)
 # PCA plots 
 PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
