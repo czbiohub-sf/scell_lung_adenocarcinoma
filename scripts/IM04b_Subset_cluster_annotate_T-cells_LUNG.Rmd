@@ -124,11 +124,8 @@ Fraction of PD
 tab.1 <- prop.table(table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis), margin = 1)
 tab.1 <- melt(tab.1)
 tab.1$Var.1 <- as.factor(tab.1$Var.1)
-ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
+fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
                            stat="identity")
-
-ggplot(tab.1, aes(Var.1)) + geom_bar(aes(fill = Var.2))
-mpg
 ```
 
 ```{r}
