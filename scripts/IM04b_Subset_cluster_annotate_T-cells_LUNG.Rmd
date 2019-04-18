@@ -20,13 +20,9 @@ length(t.cells)
 t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
 ```
 
-<!-- Save Myeloid workspace  -->
-<!-- ```{r} -->
-<!-- save(t.cell.tiss, file = "/myVolume/sclung_adeno/R_objects/04_tiss_subset_190128_Myeloid.RData") -->
-<!-- ``` -->
-
 Biopsy site vs analysis 
 ```{r}
+require(gplots)
 tab.1 <- table(t.cell.tiss@meta.data$biopsy_site, t.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
             label = T, show.margins = F)
@@ -39,7 +35,7 @@ length(t.cells)
 t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
 ```
 
-Unsupervised clustering of Myeloid cells
+Unsupervised clustering of T-cells
 
 Find variable genes
 ```{r}
@@ -47,8 +43,7 @@ t.cell.tiss <- FindVariableGenes(object = t.cell.tiss, do.plot = TRUE, x.high.cu
                                           binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
 ```
 
-Unsupervised clustering of Myeloid cells
-# PCA
+PCA
 ```{r}
 t.cell.tiss <- RunPCA(object = t.cell.tiss, do.print = FALSE, pcs.compute = )
 t.cell.tiss <- ProjectPCA(object = t.cell.tiss, do.print = FALSE)
@@ -121,11 +116,14 @@ balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
 ```
 Fraction of PD
 ```{r}
+require(reshape)
 tab.1 <- prop.table(table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis), margin = 1)
 tab.1 <- melt(tab.1)
 tab.1$Var.1 <- as.factor(tab.1$Var.1)
 fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
                            stat="identity")
+ggsave(filename = paste(dir, "plot_out/IM04/Tcell_fraction_of_each_response_group_TSNE_clusters.pdf",sep=""), plot = fraction.plot,width = 7,height = 7)
+fraction.plot
 ```
 
 ```{r}
@@ -185,6 +183,14 @@ Write table of top genes
 write.table(t.cell.markers, paste(dir, "data_out/IM04/T-cells_DE_genes_between_subclusters_Lung.csv",sep=""))
 ```
 
+Plot top genes 
+```{r}
+# Violin plot 
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1")
+a <- VlnPlot(t.cell.tiss, features.plot = genes, do.return = T)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_T-cells.pdf",sep=""),plot = a,width = 10,height = 7)
+a
+```
 
 
 Plot all relevant, PCA, tSNE and Clustering plots as pdf 
@@ -205,10 +211,10 @@ TSNEPlot(object = t.cell.tiss, do.label = T, group.by="analysis")
 # Heatmaps
 DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
 DoHeatmap(t.cell.tiss, genes.use = top50$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 50 DE genes")
-genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "MKI67", "FOXP3","CTLA4", "IL2RA", "PDCD1")
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1")
 DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
 # Violin plot 
-genes <- c("CD4", "CD8A","TOP2A", "FOXP3","CTLA4","PDCD1", "IL2RA","IL2RB")
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1")
 VlnPlot(t.cell.tiss, features.plot = genes)
 # PCA plots 
 PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
@@ -223,7 +229,7 @@ dev.off()
 Relation between clonality and clusters 
 ```{r}
 tab.1 <- table(as.character(t.cell.tiss@meta.data$clonal_group), t.cell.tiss@meta.data$res.0.3)
-(colSums(tab.1)/table(t.cell.tiss@meta.data$res.0.3))*100
+barplot((colSums(tab.1)/table(t.cell.tiss@meta.data$res.0.3))*100)
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```

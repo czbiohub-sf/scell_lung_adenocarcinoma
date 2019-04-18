@@ -164,6 +164,7 @@ fraction.plot
 Find all cluster markers 
 ```{r}
 mf.cell.markers <- FindAllMarkers(object = mf.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
+# mf.cell.markers <- read.table(paste(dir, "data_out/IM04/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
 ```
 
 Plot top genes 
@@ -202,7 +203,7 @@ write.table(mf.cell.markers, paste(dir, "data_out/IM04/MFs_DE_genes_between_subc
 Plot top genes 
 ```{r}
 # Violin plot 
-genes <- c("CD68","CXCL9", "CXCL10", "CXCL11", "IDO1", "WARS", "GBP5", "GBP2", "TAP1")
+genes <- c("CD68", "IDO1","CXCL9","CXCL10","CXCL11", "GBP1", "GBP5", "ANKRD22")
 a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T)
 ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_MFs.pdf",sep=""),plot = a,width = 10,height = 7)
 a
@@ -234,6 +235,11 @@ TSNEPlot(object = mf.cell.tiss, do.label = T, group.by="analysis")
 DoHeatmap(mf.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
 DoHeatmap(mf.cell.tiss, genes.use = top20$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 20 DE genes")
 DoHeatmap(mf.cell.tiss, genes.use = top50$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 50 DE genes")
+# Violin plot 
+mf.cell.tiss <- SetIdent(object = mf.cell.tiss, ident.use = as.character(mf.cell.tiss@meta.data$analysis))
+genes <- c("IDO1","CXCL9","CXCL10","CXCL11", "GBP1", "GBP5", "ANKRD22")
+VlnPlot(mf.cell.tiss, features.plot = genes)
+mf.cell.tiss <- SetIdent(object = mf.cell.tiss, ident.use = mf.cell.tiss@meta.data$res.0.3)
 # PCA plots 
 PCHeatmap(object = mf.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
 PCElbowPlot(object = mf.cell.tiss)
