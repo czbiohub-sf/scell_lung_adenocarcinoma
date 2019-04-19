@@ -163,6 +163,7 @@ Plot top genes
 ```{r}
 require(tidyverse)
 t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
+t.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
 t.cell.markers %>% group_by(cluster) %>% top_n(50, avg_logFC) -> top50
 DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
 # DoHeatmap(t.cell.tiss, genes.use = c("CD8A", "CD4", "PDCD1", "CD3E", "TOP2A"), slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, use.scaled = F)
@@ -186,7 +187,7 @@ write.table(t.cell.markers, paste(dir, "data_out/IM04/T-cells_DE_genes_between_s
 Plot top genes 
 ```{r}
 # Violin plot 
-genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1")
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1", "CD28", "IL2")
 a <- VlnPlot(t.cell.tiss, features.plot = genes, do.return = T)
 ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_T-cells.pdf",sep=""),plot = a,width = 10,height = 7)
 a
@@ -206,16 +207,21 @@ tab.1 <- table(t.cell.tiss@meta.data$res.0.3, as.character(t.cell.tiss@meta.data
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 # TSNE plots 
-TSNEPlot(object = t.cell.tiss, do.label = T)
+TSNEPlot(object = t.cell.tiss, do.label = T, group.by="res.0.3")
 TSNEPlot(object = t.cell.tiss, do.label = T, group.by="analysis")
 # Heatmaps
 DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
+DoHeatmap(t.cell.tiss, genes.use = top20$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 20 DE genes")
 DoHeatmap(t.cell.tiss, genes.use = top50$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 50 DE genes")
-genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1")
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2")
 DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
 # Violin plot 
-genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1")
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = t.cell.tiss@meta.data$res.0.3)
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2")
 VlnPlot(t.cell.tiss, features.plot = genes)
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = as.character(t.cell.tiss@meta.data$analysis))
+VlnPlot(t.cell.tiss, features.plot = genes)
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = t.cell.tiss@meta.data$res.0.3)
 # PCA plots 
 PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
 PCElbowPlot(object = t.cell.tiss)
@@ -230,6 +236,13 @@ Relation between clonality and clusters
 ```{r}
 tab.1 <- table(as.character(t.cell.tiss@meta.data$clonal_group), t.cell.tiss@meta.data$res.0.3)
 barplot((colSums(tab.1)/table(t.cell.tiss@meta.data$res.0.3))*100)
+balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+Relation between clonality and clusters 
+```{r}
+tab.1 <- table(as.character(t.cell.tiss@meta.data$clonal_group), t.cell.tiss@meta.data$res.0.3)
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
@@ -250,4 +263,29 @@ t.ipa <- seurat.to.ipa(df = markers, score.column = "avg_logFC",divide.by.column
 # # Write table 
 write.table(t.ipa, paste(dir, "data_out/IM04/Differentially_expressed_genes_Tcell_clusters_LUNG.txt",sep=""), row.names = T, quote=F, sep="\t")
 ```
+```{r}
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = as.character(t.cell.tiss@meta.data$analysis))
+GenePlot(object = t.cell.tiss, gene1 = "CD28", gene2 = "CTLA4")
 
+
+plot()
+
+VlnPlot(t.cell.tiss, features.plot = genes)
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = mf.cell.tiss@meta.data$res.0.3)
+
+tiss_immune@meta.data$newID <-  paste(tiss_immune@meta.data$analysis, tiss_immune@meta.data$immune_subtype_annotation)
+tiss_immune <- SetIdent(object = tiss_immune, ident.use = as.character(tiss_immune@meta.data$newID))
+genes <- c("CD80", "CD86", "CD274")
+VlnPlot(tiss_immune, features.plot = genes, x.lab.rot = T)
+
+
+temp <- cbind(tiss_immune@data["CD80",], tiss_immune@data["CD86",],tiss_immune@data["CD274",])
+temp <- as.data.frame(temp)
+temp <- cbind(temp, as.data.frame(tiss_immune@meta.data$analysis), as.data.frame(tiss_immune@meta.data$immune_subtype_annotation))
+colnames(temp) <- c("CD80", "CD86", "CD274", "response", "cell.type")
+temp <- melt(temp)
+
+
+bp <- ggplot(temp, aes(x=response, y=value, group=response)) + 
+  geom_boxplot(aes(fill=response)) + facet_grid( variable ~ cell.type)
+```
