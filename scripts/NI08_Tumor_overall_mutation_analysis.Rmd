@@ -89,7 +89,18 @@ By Group
 total_mt_score <- pairwise.wilcox.test(x = total_mutations_table_wmetadata$total_mutations_score, g = total_mutations_table_wmetadata$analysis)
 
 pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_group.pdf", sep = ""))
-ggplot(total_mutations_table_wmetadata, aes(x = analysis, y = total_mutations_score, fill = analysis)) + geom_boxplot(outlier.shape = NA) + geom_jitter(alpha = 1/8, aes(colour = analysis)) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Mutation Score") + ggtitle("Distribution of Mutation Scores per Cell") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 45, annotations = '< 2e-16') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 50, annotations = '< 2e-16') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 40, annotations = '0.023')
+ggplot(total_mutations_table_wmetadata, aes(x = analysis, y = total_mutations_score, fill = analysis)) + geom_boxplot(outlier.shape = NA) + 
+    geom_jitter(alpha = 1/8, aes(colour = analysis)) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Mutation Score") + 
+    ggtitle("Distribution of Mutation Scores per Cell") + 
+    geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 45, annotations = '< 2e-16') + 
+    geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 50, annotations = '< 2e-16') + 
+    geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 40, annotations = '0.023')
+dev.off()
+
+pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_group_ridgeplot.pdf", sep = ""))
+ggplot(total_mutations_table_wmetadata, aes(x = total_mutations_score, y = analysis, fill = analysis)) + geom_density_ridges(alpha=.7) + 
+    ylab("Group") + xlab("Mutation Score") + scale_y_discrete(labels = c("Progressor", "Presister", "Naive")) + 
+    theme(legend.position = "none") + theme(axis.title.y = element_blank())
 dev.off()
 
 pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_group_and_patient.pdf", sep = ""))
@@ -113,28 +124,7 @@ ggplot(data=subset(total_mutations_table_wmetadata, !is.na(primary_or_metastaic)
       guides(colour=guide_legend(title="Response Group")) +
       guides(fill = FALSE)
 dev.off()
+
+
 ```
-
-
-```{r}
-pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_drivergene.pdf", sep = ""))
-ggplot(total_mutations_table_driver, aes(x = driver_gene, y = total_mutations_score, fill = driver_gene)) + geom_boxplot(outlier.shape = NA) + geom_jitter(alpha = 1/8, aes(colour = driver_gene)) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Mutation Score") + ggtitle("Distribution of Mutation Scores per Cell")
-dev.off()
-
-pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_drivergene_and_analysis.pdf", sep = ""))
-ggplot(total_mutations_table_driver, aes(x = driver_gene , y = total_mutations_score, color = analysis)) +
-      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
-      geom_boxplot(outlier.colour = NA, position = position_dodge(width=0.9)) +
-      xlab("Group") +
-      ylab("Mutation Score") +
-      ggtitle("Distribution of Mutation Scores per Cell") +
-      guides(colour=guide_legend(title="Driver Gene")) +
-      guides(fill = FALSE)
-dev.off()
-```
-
-
-
-
-
 
