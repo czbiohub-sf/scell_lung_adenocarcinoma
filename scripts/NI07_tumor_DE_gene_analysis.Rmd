@@ -323,6 +323,7 @@ write.table(analysis_markers_ipa, file = paste(dir, "data_out/NI07/NI07_analysis
 
 Calculate the Sig of GOIs between the Three Groups
 ```{r}
+read.csv(paste(dir, "data_out/NI07/NI07_top_20_data.csv", sep = ""))
 top_20_data <- FetchData(tiss_subset_tumor, c(top_20$gene, "analysis", "patient_id", "sample_name"))
 save(top_20_data, file = paste(dir, "data_out/NI07/NI07_top_20_data.csv", sep = ""))
 
