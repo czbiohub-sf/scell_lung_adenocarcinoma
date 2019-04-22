@@ -319,3 +319,31 @@ analysis_markers_ipa <- seurat.to.ipa(df = all_markers_sorted, score.column = "a
 # analysis_markers_ipa <- as.data.frame(analysis_markers_ipa)
 write.table(analysis_markers_ipa, file = paste(dir, "data_out/NI07/NI07_analysis_markers_for_ipa.txt", sep = ""), row.names = T, quote=F, sep="\t")
 ```
+
+
+Calculate the Sig of GOIs between the Three Groups
+```{r}
+top_20_data <- FetchData(tiss_subset_tumor, c(top_20$gene, "analysis", "patient_id", "sample_name"))
+
+
+# create dummy output
+test_df <- data.frame(colnames(top_20_data)[1:60])
+rownames(test_df) <- test_df$genes
+colnames(test_df) <- "genes"
+test_df$PDvsPR <- 0
+test_df$PDvsNaive <- 0
+test_df$PRvsNaive <- 0
+
+for(i in 1:ncol(top_20_data[,1:60])){
+  a <- pairwise.wilcox.test(x = top_20_data[,i], g = top_20_data$analysis)
+  b <- as.data.frame(a$p.value)
+  test_df[i,2] <- b[1,1]
+  test_df[i,3] <- b[2,1]
+  test_df[i,4] <- b[2,2]
+}
+
+pairwise.wilcox.test(x = top_20_data$TUBA1A, g = top_20_data$analysis)
+
+```
+
+
