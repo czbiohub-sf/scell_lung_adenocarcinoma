@@ -12,13 +12,14 @@ library(tidyverse)
 library(gridExtra)
 library(ggridges)
 library(ggplot2)
+require(corrplot)
 ```
 
 Clear environment and load filtered Seurat object 
 ```{r}
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/Nonimmune_Seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/S03_Nonimmune_Seurat_object.RData", sep=""))
 ```
 
 Normalize and scale the data
@@ -45,8 +46,6 @@ PCHeatmap(object = tiss_nonimmune, pc.use = 1:15, cells.use = 100, do.balanced =
 
 Perform correlation of PCs and metadata fields
 ```{r}
-#install.packages("corrplot")
-require(corrplot)
 pca.obj <- tiss_nonimmune@dr$pca
 pc.coords <- pca.obj@cell.embeddings
 df1 <- tiss_nonimmune@meta.data[,c("nGene","nReads","percent.ribo")]
@@ -55,6 +54,7 @@ cordf12 <- cor(df1,df2)
 # Make a correlation plot
 corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
 ```
+
 Also visaulize PC variance
 ```{r}
 #comp.dev <-pca.obj@sdev
@@ -125,7 +125,7 @@ tiss_nonimmune@meta.data$nonimmune_seurat_cluster <- tiss_nonimmune@meta.data$re
 # set the cluster ids
 cluster.ids <- sort(unique(as.numeric(tiss_nonimmune@meta.data$nonimmune_seurat_cluster)))
 # Manually check and ananotate each cluster to immmune and non-immune   
-nonimmune_general_annotation <- c("Epithelial","Fibroblast", "Fibroblast", "Epithelial", "Endothelial", "Fibroblasts", "Epithelial", "Epithelial", "Epithelial", "Epithelial", "Epithelial", "Fibroblast", "Epithelial", "Unknown", "Epithelial", "Epithelial", "Melanocytes", "Endothelial", "Fibroblast", "Epithelial", "Fibroblast", "Fibroblast","Epithelial", "Hepatocyte", "Epithelial", "Epithelial")
+nonimmune_general_annotation <- c("Epithelial","Fibroblast", "Fibroblast", "Epithelial", "Endothelial", "Fibroblast", "Epithelial", "Epithelial", "Epithelial", "Epithelial", "Epithelial", "Fibroblast", "Epithelial", "Unknown", "Epithelial", "Epithelial", "Melanocytes", "Endothelial", "Fibroblast", "Epithelial", "Fibroblast", "Fibroblast","Epithelial", "Hepatocyte", "Epithelial", "Epithelial")
 # Add annotation to the Seurat objedct 
 tiss_nonimmune@meta.data[,'nonimmune_general_annotation'] <- plyr::mapvalues(x = tiss_nonimmune@ident, from = cluster.ids, to = nonimmune_general_annotation)
 # MAke a table 
@@ -134,6 +134,6 @@ table(tiss_nonimmune@meta.data$nonimmune_general_annotation)
 
 Save Processed Subset Seurat Object
 ```{r}
-save(tiss_nonimmune, file=paste(dir,"Data_input/Nonimmune_Seurat_object_annotated.RData", sep=""))
+save(tiss_nonimmune, file=paste(dir,"Data_input/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
 ```
 

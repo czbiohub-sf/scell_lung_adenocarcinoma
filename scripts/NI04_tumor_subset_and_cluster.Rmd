@@ -9,6 +9,7 @@ library(ggplot2)
 library(tidyverse)
 require(corrplot)
 library(clustree)
+library(ggsignif)
 ```
 
 
@@ -16,6 +17,18 @@ library(clustree)
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/NI03_epithelial_annotated_tumor.RData", sep=""))
+```
+
+Check nGenes and nReads for tumor vs nontumor
+```{r}
+ggplot(data = tiss_nonimmune_epi@meta.data, aes(x = inferCNV_annotation, y = nGene)) + geom_boxplot() + geom_signif(comparisons = list(c("nontumor", "tumor")), map_signif_level=TRUE)
+
+ggplot(data = tiss_nonimmune_epi@meta.data, aes(x = inferCNV_annotation, y = nReads)) + geom_boxplot() + scale_y_log10() + geom_signif(comparisons = list(c("nontumor", "tumor")), map_signif_level=TRUE)
+
+x <- filter(tiss_nonimmune_epi@meta.data, inferCNV_annotation == 'tumor')
+mean(x$nReads) # mean genes expressed by tumor 5576 1726195(nReads)
+y <- filter(tiss_nonimmune_epi@meta.data, inferCNV_annotation == 'nontumor')
+mean(y$nReads) # mean genes expressed by tumor 2588 1395728(nReads)
 ```
 
 Subset tumor cells from epi_cells object
@@ -76,7 +89,7 @@ clus.tree.out <- clustree(tiss_subset_tumor, layout="sugiyama") +
   scale_color_brewer(palette = "Set1") +
     scale_edge_color_continuous(low = "grey80", high = "red")
 # Save pdf 
-ggsave(clus.tree.out, filename = paste(dir,"plot_out/NI04/Cluster_resolutions_clustree_output.pdf", sep=""), width = 15, height = 15)
+ggsave(clus.tree.out, filename = paste(dir,"plot_out/NI04/NI04_Cluster_resolutions_clustree_output.pdf", sep=""), width = 15, height = 15)
 clus.tree.out
 ```
 
@@ -93,7 +106,7 @@ tiss_subset_tumor <- RunTSNE(object = tiss_subset_tumor, dims.use = 1:n.pcs, see
 
 Visualize TSNE colroed by cluster
 ```{r}
-pdf(file = paste(dir, "plot_out/NI04/tumor_tsne.pdf", sep = ""))
+pdf(file = paste(dir, "plot_out/NI04/NI04_tumor_tsne.pdf", sep = ""))
 TSNEPlot(object = tiss_subset_tumor, do.label = T)
 dev.off()
 ```
@@ -104,7 +117,7 @@ Cluster Occ by patient
 tab.1 <- table(tiss_subset_tumor@meta.data$patient_id, tiss_subset_tumor@meta.data$res.0.9)
 occ_score <- apply(tab.1, 2, max)/colSums(tab.1)
 # Plot mixing score
-pdf(file = paste(dir, "plot_out/NI04/tumor_clusocc_bargraph.pdf", sep = ""))
+pdf(file = paste(dir, "plot_out/NI04/NI04_tumor_clusocc_bargraph.pdf", sep = ""))
 par(las=3);barplot(sort(occ_score), xlab="Cluster", ylab="Patient max Ncells/Total cells", ylim=c(0,1));abline(h=0.7, col="red")
 dev.off()
 ```

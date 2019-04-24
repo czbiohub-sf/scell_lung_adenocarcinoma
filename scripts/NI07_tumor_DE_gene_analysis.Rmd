@@ -20,6 +20,7 @@ library(plotly)
 library(ggridges)
 library(reshape)
 library(gridExtra)
+library(ggrepel)
 ```
 
 Read in tumor object
@@ -56,302 +57,353 @@ seurat.to.ipa <- function(df, score.column, divide.by.column, gene.column, divid
 }
 ```
 
-Calculate the DE genes for every tumor cluster
-```{r}
-de_by_cluster <- FindAllMarkers(tiss_subset_tumor)
-write.csv(de_by_cluster, file = paste(dir, "data_out/NI07/NI07_tumor_clusters_DEgenes.csv", sep = ""))
-```
-
-Calculate the DE genes between different treatment responses (naive, grouped_pr and grouped_pd)
 ```{r}
 # set the ident of the object to the "analysis" column
 unique(tiss_subset_tumor@ident) # check current ident
 tiss_subset_tumor <- SetIdent(tiss_subset_tumor, ident.use = tiss_subset_tumor@meta.data$analysis)
 unique(tiss_subset_tumor@ident) # check current ident
+```
 
+Calculate the pairwise comparisons between treatment groups of naive vs pr
+```{r}
+# calculate the pairwise comparision of naive vs pr
+naive_v_pr <- FindMarkers(object = tiss_subset_tumor, ident.1 = "naive", ident.2 = "grouped_pr")
+write.csv(naive_v_pr, file = paste(dir, "data_out/NI07/NI07_naive_v_pr_DEgenes.csv", sep = ""))
+# naive_v_pr <- read.csv(file = paste(dir, "data_out/NI07/NI07_naive_v_pr_DEgenes.csv", sep = ""), row.names = 1)
+
+# calculate the pairwise comparision of naive vs pd
+naive_v_pd <- FindMarkers(object = tiss_subset_tumor, ident.1 = "naive", ident.2 = "grouped_pd")
+write.csv(naive_v_pd, file = paste(dir, "data_out/NI07/NI07_naive_v_pd_DEgenes.csv", sep = ""))
+# naive_v_pd <- read.csv(file = paste(dir, "data_out/NI07/NI07_naive_v_pd_DEgenes.csv", sep = ""), row.names = 1)
+
+# calculate the pairwise comparision of pr vs pd
+pr_v_pd <- FindMarkers(object = tiss_subset_tumor, ident.1 = "grouped_pr", ident.2 = "grouped_pd")
+write.csv(pr_v_pd, file = paste(dir, "data_out/NI07/NI07_pr_v_pd_DEgenes.csv", sep = ""))
+# pr_v_pd <- read.csv(file = paste(dir, "data_out/NI07/NI07_pr_v_pd_DEgenes.csv", sep = ""), row.names = 1)
+```
+
+Volcano Plots
+```{r}
+# Naive vs PR
+mutateddf <- mutate(naive_v_pr, sig=ifelse(naive_v_pr$p_val_adj<0.1, "p_val_adj<0.1", "Not Sig")) #Will have different colors depending on significance
+rownames(mutateddf) <- rownames(naive_v_pr)
+input <- cbind(gene=rownames(mutateddf ), mutateddf ) #convert the rownames to a column
+volc = ggplot(input, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
+    geom_point(aes(col=sig)) + #add points colored by significance
+    scale_color_manual(values=c("black", "red")) + 
+    ggtitle("Naive vs PR") 
+# adding text for the top 20 genes
+naive_vs_pr_volc <- volc + geom_text_repel(data=head(input, 20), aes(label=gene)) +  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + theme(legend.title = element_blank(), legend.position = "top") + scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.1"))
+# save volcano plot
+ggsave(naive_vs_pr_volc, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
+
+# Naive vs PD
+mutateddf <- mutate(naive_v_pd, sig=ifelse(naive_v_pd$p_val_adj<0.1, "p_val_adj<0.1", "Not Sig")) #Will have different colors depending on significance
+rownames(mutateddf) <- rownames(naive_v_pd)
+input <- cbind(gene=rownames(mutateddf ), mutateddf ) #convert the rownames to a column
+volc = ggplot(input, aes(avg_logFC, -log10(p_val_adj))) +
+    geom_point(aes(col=sig)) + #add points colored by significance
+    scale_color_manual(values=c("black", "red")) + 
+    ggtitle("Naive vs PD") 
+# adding text for the top 20 genes
+naive_vs_pd_volc <- volc + geom_text_repel(data=head(input, 20), aes(label=gene)) +  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + theme(legend.title = element_blank(), legend.position = "top") + scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.1"))
+# save volcano plot
+ggsave(naive_vs_pd_volc, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
+
+# PR vs PD
+mutateddf <- mutate(pr_v_pd, sig=ifelse(pr_v_pd$p_val_adj<0.1, "p_val_adj<0.1", "Not Sig")) #Will have different colors depending on significance
+rownames(mutateddf) <- rownames(pr_v_pd)
+input <- cbind(gene=rownames(mutateddf ), mutateddf ) #convert the rownames to a column
+volc = ggplot(input, aes(avg_logFC, -log10(p_val_adj))) +
+    geom_point(aes(col=sig)) + #add points colored by significance
+    scale_color_manual(values=c("black", "red")) + 
+    ggtitle("PR vs PD") 
+# adding text for the top 20 genes
+pr_vs_pd_volc <- volc + geom_text_repel(data=head(input, 20), aes(label=gene)) +  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + theme(legend.title = element_blank(), legend.position = "top") + scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.1"))
+# save volcano plot
+ggsave(pr_vs_pd_volc, filename = paste(dir,"plot_out/NI07/NI07_pr_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
+
+```
+
+
+Calculate the DE genes between different treatment responses (naive, grouped_pr and grouped_pd)
+```{r}
 # find diff. expressed genes with wilcox test
-analysis_markers <- FindAllMarkers(tiss_subset_tumor)
-write.csv(analysis_markers, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes.csv", sep = ""))
-
-# Group the DE genes and add the number of patients with nonzero expressing cells and the highest contributing patient's occupancy
-groups <- as.character(unique(analysis_markers$cluster))
-for(i in 1:nrow(analysis_markers)){
-  message(paste(round(i/nrow(analysis_markers),2)*100,"% of genes completed"))
-  gene <- as.character(analysis_markers$gene)[i]
-  gene.vec <- tiss_subset_tumor@data[gene,]
-    for(j in 1:length(groups)){
-      cells <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$analysis==groups[j])]
-      all.no.zero.cells <- names(which(gene.vec[cells] !=0 )) # Set threshold
-      tab.1 <- table(as.character(tiss_subset_tumor@meta.data[all.no.zero.cells,"patient_id"]))
-      high.pat.per <- tab.1[which(tab.1==max(tab.1))[1]]/length(all.no.zero.cells)
-      all.pat.length <- length(tab.1)
-      analysis_markers[i,paste(groups[j],"pt.occupancy")] <- high.pat.per
-      analysis_markers[i,paste(groups[j],"n.nonzero.pts")] <- all.pat.length
-    }
-}
-write.csv(analysis_markers, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_with_pt_occ.csv", sep = ""))
-
-# Break DE genes into analysis groups
-markers.pd <- filter(analysis_markers, cluster == "grouped_pd" & `grouped_pd pt.occupancy` < .80) 
-markers.pr <- filter(analysis_markers, cluster == "grouped_pr" & `grouped_pr pt.occupancy` < .80) 
-markers.naive <- filter(analysis_markers, cluster == "naive" & `naive pt.occupancy` < .80) 
-
-write.csv(markers.pd, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_pd.csv", sep = ""))
-write.csv(markers.pr, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_pr.csv", sep = ""))
-write.csv(markers.naive, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_naive.csv", sep = ""))
+# analysis_markers <- FindAllMarkers(tiss_subset_tumor)
+# write.csv(analysis_markers, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes.csv", sep = ""))
+# 
+# # Group the DE genes and add the number of patients with nonzero expressing cells and the highest contributing patient's occupancy
+# groups <- as.character(unique(analysis_markers$cluster))
+# for(i in 1:nrow(analysis_markers)){
+#   message(paste(round(i/nrow(analysis_markers),2)*100,"% of genes completed"))
+#   gene <- as.character(analysis_markers$gene)[i]
+#   gene.vec <- tiss_subset_tumor@data[gene,]
+#     for(j in 1:length(groups)){
+#       cells <- row.names(tiss_subset_tumor@meta.data)[which(tiss_subset_tumor@meta.data$analysis==groups[j])]
+#       all.no.zero.cells <- names(which(gene.vec[cells] !=0 )) # Set threshold
+#       tab.1 <- table(as.character(tiss_subset_tumor@meta.data[all.no.zero.cells,"patient_id"]))
+#       high.pat.per <- tab.1[which(tab.1==max(tab.1))[1]]/length(all.no.zero.cells)
+#       all.pat.length <- length(tab.1)
+#       analysis_markers[i,paste(groups[j],"pt.occupancy")] <- high.pat.per
+#       analysis_markers[i,paste(groups[j],"n.nonzero.pts")] <- all.pat.length
+#     }
+# }
+# write.csv(analysis_markers, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_with_pt_occ.csv", sep = ""))
+# 
+# # Break DE genes into analysis groups
+# markers.pd <- filter(analysis_markers, cluster == "grouped_pd" & `grouped_pd pt.occupancy` < .80) 
+# markers.pr <- filter(analysis_markers, cluster == "grouped_pr" & `grouped_pr pt.occupancy` < .80) 
+# markers.naive <- filter(analysis_markers, cluster == "naive" & `naive pt.occupancy` < .80) 
+# 
+# write.csv(markers.pd, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_pd.csv", sep = ""))
+# write.csv(markers.pr, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_pr.csv", sep = ""))
+# write.csv(markers.naive, file = paste(dir, "data_out/NI07/NI07_response_group_DEgenes_naive.csv", sep = ""))
 ```
 
 Top PD genes breakdown
 ```{r}
 # break down to top 20 sorted by pct_diff
-markers.pd.1 <- markers.pd
-markers.pd.1$pct_diff <- markers.pd.1$pct.1 - markers.pd.1$pct.2
-markers.pd.1$pct_diff <- as.numeric(markers.pd.1$pct_diff)
-markers.pd.1 <- markers.pd.1[order(markers.pd.1$pct_diff, decreasing = TRUE), ]
-top_20_pd <- top_n(x = markers.pd.1, n = 20, wt = pct_diff)
-
-pd.de.genes <- FetchData(tiss_subset_tumor, c(top_20_pd$gene, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
-colnames(tiss_subset_tumor@meta.data)
-pd.de.genes1 <- colnames(pd.de.genes)[c(1:20)]
-temp <- pd.de.genes[,c(grep("nGene", colnames(pd.de.genes)):ncol(pd.de.genes))]
-
-# Plot jitter plot of PD vs PR vs naive for top 50 DE genes
-pd.plot.lists.box <- list()
-for(i in pd.de.genes1){
-  a <- as.data.frame(pd.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.1 <- cbind(a, temp) ; rm(a)
-  pd.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, colour = analysis)) + geom_boxplot(color = "black", outlier.shape = NULL) + geom_jitter(position=position_jitter(0.2), alpha = 1/4) + ggtitle(i)
-}
-
-# Plot jitter plot/boxplot of PD vs PR vs naive for top 50 DE genes by patient
-pd.plot.lists.pt.box <- list()
-for(i in pd.de.genes1){
-  a <- as.data.frame(pd.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.2 <- cbind(a, temp) ; rm(a)
-  pd.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
-      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
-      geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
-      xlab("Group") +
-      ylab(paste(i,"Gene Expression")) +
-      guides(colour = FALSE) +
-      guides(fill = FALSE) + 
-      ggtitle(i)
-}
-
-# Plot ridge plot of PD vs PR vs naive for top 50 DE genes
-pd.plot.lists.ridge <- list()
-for(i in pd.de.genes1){
-  a <- as.data.frame(pd.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.3 <- cbind(a, temp) ; rm(a)
-  pd.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
-}
-
-# Plot ridge plot of PD vs PR vs naive for top 50 DE genes by patient
-pd.plot.lists.ridge.pt <- list()
-for(i in pd.de.genes1){
-  a <- as.data.frame(pd.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.4 <- cbind(a, temp) ; rm(a)
-  pd.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
-}
-
-# save by patient ridgeplots
-pdf(file = paste(dir, "plot_out/NI07/NI07_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
-dev.off()
+# markers.pd.1 <- markers.pd
+# markers.pd.1$pct_diff <- markers.pd.1$pct.1 - markers.pd.1$pct.2
+# markers.pd.1$pct_diff <- as.numeric(markers.pd.1$pct_diff)
+# markers.pd.1 <- markers.pd.1[order(markers.pd.1$pct_diff, decreasing = TRUE), ]
+# top_20_pd <- top_n(x = markers.pd.1, n = 20, wt = pct_diff)
+# 
+# pd.de.genes <- FetchData(tiss_subset_tumor, c(top_20_pd$gene, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
+# colnames(tiss_subset_tumor@meta.data)
+# pd.de.genes1 <- colnames(pd.de.genes)[c(1:20)]
+# temp <- pd.de.genes[,c(grep("nGene", colnames(pd.de.genes)):ncol(pd.de.genes))]
+# 
+# # Plot jitter plot of PD vs PR vs naive for top 50 DE genes
+# pd.plot.lists.box <- list()
+# for(i in pd.de.genes1){
+#   a <- as.data.frame(pd.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.1 <- cbind(a, temp) ; rm(a)
+#   pd.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, colour = analysis)) + geom_boxplot(color = "black", outlier.shape = NULL) + geom_jitter(position=position_jitter(0.2), alpha = 1/4) + ggtitle(i)
+# }
+# 
+# # Plot jitter plot/boxplot of PD vs PR vs naive for top 50 DE genes by patient
+# pd.plot.lists.pt.box <- list()
+# for(i in pd.de.genes1){
+#   a <- as.data.frame(pd.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.2 <- cbind(a, temp) ; rm(a)
+#   pd.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
+#       geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+#       geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
+#       xlab("Group") +
+#       ylab(paste(i,"Gene Expression")) +
+#       guides(colour = FALSE) +
+#       guides(fill = FALSE) + 
+#       ggtitle(i)
+# }
+# 
+# # Plot ridge plot of PD vs PR vs naive for top 50 DE genes
+# pd.plot.lists.ridge <- list()
+# for(i in pd.de.genes1){
+#   a <- as.data.frame(pd.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.3 <- cbind(a, temp) ; rm(a)
+#   pd.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+# }
+# 
+# # Plot ridge plot of PD vs PR vs naive for top 50 DE genes by patient
+# pd.plot.lists.ridge.pt <- list()
+# for(i in pd.de.genes1){
+#   a <- as.data.frame(pd.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.4 <- cbind(a, temp) ; rm(a)
+#   pd.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
+# }
+# 
+# # save by patient ridgeplots
+# pdf(file = paste(dir, "plot_out/NI07/NI07_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+# marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
+# dev.off()
 
 ```
 
 Top PR DE Genes breakdown
 ```{r}
 # break down to top 20 sorted by pct_diff
-markers.pr.1 <- markers.pr
-markers.pr.1$pct_diff <- markers.pr.1$pct.1 - markers.pr.1$pct.2
-markers.pr.1$pct_diff <- as.numeric(markers.pr.1$pct_diff)
-markers.pr.1 <- markers.pr.1[order(markers.pr.1$pct_diff, decreasing = TRUE), ]
-top_20_pr <- top_n(x = markers.pr.1, n = 20, wt = pct_diff)
-
-pr.de.genes <- FetchData(tiss_subset_tumor, c(top_20_pr$gene, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site'))
-
-pr.de.genes1 <- colnames(pr.de.genes)[c(1:20)]
-temp <- pr.de.genes[,c(grep("nGene", colnames(pr.de.genes)):ncol(pr.de.genes))]
-
-
-# Plot jitter plot of pr vs PR vs naive for top 50 DE genes
-pr.plot.lists.box <- list()
-for(i in pr.de.genes1){
-  a <- as.data.frame(pr.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.1 <- cbind(a, temp) ; rm(a)
-  pr.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, fill = analysis)) + geom_jitter(aes(colour = analysis), alpha = 1/4) + ggtitle(i)
-}
-
-# Plot jitter plot/boxplot of pr vs PR vs naive for top 50 DE genes by patient
-pr.plot.lists.pt.box <- list()
-for(i in pr.de.genes1){
-  a <- as.data.frame(pr.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.2 <- cbind(a, temp) ; rm(a)
-  pr.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
-      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
-      geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
-      xlab("Group") +
-      ylab(paste(i,"Gene Expression")) +
-      guides(colour = FALSE) +
-      guides(fill = FALSE) + 
-      ggtitle(i)
-}
-
-# Plot ridge plot of pr vs PR vs naive for top 50 DE genes
-pr.plot.lists.ridge <- list()
-for(i in pr.de.genes1){
-  a <- as.data.frame(pr.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.3 <- cbind(a, temp) ; rm(a)
-  pr.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
-}
-
-# Plot ridge plot of pr vs PR vs naive for top 50 DE genes by patient
-pr.plot.lists.ridge.pt <- list()
-for(i in pr.de.genes1){
-  a <- as.data.frame(pr.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.4 <- cbind(a, temp) ; rm(a)
-  pr.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
-}
-
-# save by patient ridgeplots
-pdf(file = paste(dir, "plot_out/NI07/NI07_pr_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-marrangeGrob(grobs=pr.plot.lists.ridge.pt, nrow=1, ncol=1)
-dev.off()
+# markers.pr.1 <- markers.pr
+# markers.pr.1$pct_diff <- markers.pr.1$pct.1 - markers.pr.1$pct.2
+# markers.pr.1$pct_diff <- as.numeric(markers.pr.1$pct_diff)
+# markers.pr.1 <- markers.pr.1[order(markers.pr.1$pct_diff, decreasing = TRUE), ]
+# top_20_pr <- top_n(x = markers.pr.1, n = 20, wt = pct_diff)
+# 
+# pr.de.genes <- FetchData(tiss_subset_tumor, c(top_20_pr$gene, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site'))
+# 
+# pr.de.genes1 <- colnames(pr.de.genes)[c(1:20)]
+# temp <- pr.de.genes[,c(grep("nGene", colnames(pr.de.genes)):ncol(pr.de.genes))]
+# 
+# 
+# # Plot jitter plot of pr vs PR vs naive for top 50 DE genes
+# pr.plot.lists.box <- list()
+# for(i in pr.de.genes1){
+#   a <- as.data.frame(pr.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.1 <- cbind(a, temp) ; rm(a)
+#   pr.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, fill = analysis)) + geom_jitter(aes(colour = analysis), alpha = 1/4) + ggtitle(i)
+# }
+# 
+# # Plot jitter plot/boxplot of pr vs PR vs naive for top 50 DE genes by patient
+# pr.plot.lists.pt.box <- list()
+# for(i in pr.de.genes1){
+#   a <- as.data.frame(pr.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.2 <- cbind(a, temp) ; rm(a)
+#   pr.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
+#       geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+#       geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
+#       xlab("Group") +
+#       ylab(paste(i,"Gene Expression")) +
+#       guides(colour = FALSE) +
+#       guides(fill = FALSE) + 
+#       ggtitle(i)
+# }
+# 
+# # Plot ridge plot of pr vs PR vs naive for top 50 DE genes
+# pr.plot.lists.ridge <- list()
+# for(i in pr.de.genes1){
+#   a <- as.data.frame(pr.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.3 <- cbind(a, temp) ; rm(a)
+#   pr.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+# }
+# 
+# # Plot ridge plot of pr vs PR vs naive for top 50 DE genes by patient
+# pr.plot.lists.ridge.pt <- list()
+# for(i in pr.de.genes1){
+#   a <- as.data.frame(pr.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.4 <- cbind(a, temp) ; rm(a)
+#   pr.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
+# }
+# 
+# # save by patient ridgeplots
+# pdf(file = paste(dir, "plot_out/NI07/NI07_pr_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+# marrangeGrob(grobs=pr.plot.lists.ridge.pt, nrow=1, ncol=1)
+# dev.off()
 ```
 
 Top Naive DE Genes breakdown
 ```{r}
-
-# break down to top 20 sorted by pct_diff
-markers.naive.1 <- markers.naive
-markers.naive.1$pct_diff <- markers.naive.1$pct.1 - markers.naive.1$pct.2
-markers.naive.1$pct_diff <- as.numeric(markers.naive.1$pct_diff)
-markers.naive.1 <- markers.naive.1[order(markers.naive.1$pct_diff, decreasing = TRUE), ]
-top_20_naive <- top_n(x = markers.naive.1, n = 20, wt = pct_diff)
-
-naive.de.genes <- FetchData(tiss_subset_tumor, c(top_20_naive, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site'))
-
-naive.de.genes1 <- colnames(naive.de.genes)[c(1:50)]
-temp <- naive.de.genes[,c(grep("nGene", colnames(naive.de.genes)):ncol(naive.de.genes))]
-
-
-# Plot jitter plot of naive vs naive vs naive for top 50 DE genes
-naive.plot.lists.box <- list()
-for(i in naive.de.genes1){
-  a <- as.data.frame(naive.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.1 <- cbind(a, temp) ; rm(a)
-  naive.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, fill = analysis)) + geom_jitter(aes(colour = analysis), alpha = 1/4) + ggtitle(i)
-}
-
-# Plot jitter plot/boxplot of naive vs naive vs naive for top 50 DE genes by patient
-naive.plot.lists.pt.box <- list()
-for(i in naive.de.genes1){
-  a <- as.data.frame(naive.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.2 <- cbind(a, temp) ; rm(a)
-  naive.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
-      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
-      geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
-      xlab("Group") +
-      ylab(paste(i,"Gene Expression")) +
-      guides(colour = FALSE) +
-      guides(fill = FALSE) + 
-      ggtitle(i)
-}
-
-# Plot ridge plot of naive vs naive vs naive for top 50 DE genes
-naive.plot.lists.ridge <- list()
-for(i in naive.de.genes1){
-  a <- as.data.frame(naive.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.3 <- cbind(a, temp) ; rm(a)
-  naive.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
-}
-
-# Plot ridge plot of naive vs naive vs naive for top 50 DE genes by patient
-naive.plot.lists.ridge.pt <- list()
-for(i in naive.de.genes1){
-  a <- as.data.frame(naive.de.genes[,i])
-  colnames(a) <- "gene"
-  temp.4 <- cbind(a, temp) ; rm(a)
-  naive.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
-}
-
-# save by patient ridgeplots
-pdf(file = paste(dir, "plot_out/NI07/NI07_naive_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-marrangeGrob(grobs=naive.plot.lists.ridge.pt, nrow=1, ncol=1)
-dev.off()
+# # break down to top 20 sorted by pct_diff
+# markers.naive.1 <- markers.naive
+# markers.naive.1$pct_diff <- markers.naive.1$pct.1 - markers.naive.1$pct.2
+# markers.naive.1$pct_diff <- as.numeric(markers.naive.1$pct_diff)
+# markers.naive.1 <- markers.naive.1[order(markers.naive.1$pct_diff, decreasing = TRUE), ]
+# top_20_naive <- top_n(x = markers.naive.1, n = 20, wt = pct_diff)
+# 
+# naive.de.genes <- FetchData(tiss_subset_tumor, c(top_20_naive, 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site'))
+# 
+# naive.de.genes1 <- colnames(naive.de.genes)[c(1:50)]
+# temp <- naive.de.genes[,c(grep("nGene", colnames(naive.de.genes)):ncol(naive.de.genes))]
+# 
+# 
+# # Plot jitter plot of naive vs naive vs naive for top 50 DE genes
+# naive.plot.lists.box <- list()
+# for(i in naive.de.genes1){
+#   a <- as.data.frame(naive.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.1 <- cbind(a, temp) ; rm(a)
+#   naive.plot.lists.box[[i]] <- ggplot(temp.1, aes(x = analysis, y = gene, fill = analysis)) + geom_jitter(aes(colour = analysis), alpha = 1/4) + ggtitle(i)
+# }
+# 
+# # Plot jitter plot/boxplot of naive vs naive vs naive for top 50 DE genes by patient
+# naive.plot.lists.pt.box <- list()
+# for(i in naive.de.genes1){
+#   a <- as.data.frame(naive.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.2 <- cbind(a, temp) ; rm(a)
+#   naive.plot.lists.pt.box[[i]] <- ggplot(temp.2, aes(x = analysis, y = gene, color = patient_id, fill = patient_id))  + 
+#       geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+#       geom_boxplot(fill = "white", outlier.colour = NA, position = position_dodge(width=0.9)) +
+#       xlab("Group") +
+#       ylab(paste(i,"Gene Expression")) +
+#       guides(colour = FALSE) +
+#       guides(fill = FALSE) + 
+#       ggtitle(i)
+# }
+# 
+# # Plot ridge plot of naive vs naive vs naive for top 50 DE genes
+# naive.plot.lists.ridge <- list()
+# for(i in naive.de.genes1){
+#   a <- as.data.frame(naive.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.3 <- cbind(a, temp) ; rm(a)
+#   naive.plot.lists.ridge[[i]] <- ggplot(temp.3, aes(x = gene, y = analysis, fill = analysis)) + geom_density_ridges() + ylab("Group") + xlab(paste(i,"Gene Expression")) + ggtitle(paste(i,"Expression per Group")) + guides(colour = FALSE, fill = FALSE)
+# }
+# 
+# # Plot ridge plot of naive vs naive vs naive for top 50 DE genes by patient
+# naive.plot.lists.ridge.pt <- list()
+# for(i in naive.de.genes1){
+#   a <- as.data.frame(naive.de.genes[,i])
+#   colnames(a) <- "gene"
+#   temp.4 <- cbind(a, temp) ; rm(a)
+#   naive.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
+# }
+# 
+# # save by patient ridgeplots
+# pdf(file = paste(dir, "plot_out/NI07/NI07_naive_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+# marrangeGrob(grobs=naive.plot.lists.ridge.pt, nrow=1, ncol=1)
+# dev.off()
 ```
 
 Create a Heatmap of the top 20 genes from each reponse group
 ```{r}
-top_20 <- rbind(markers.pd.1[(1:20),(6:7)], markers.pr.1[(1:20),(6:7)], markers.naive.1[(1:20),(6:7)])
-
-tiss_subset_tumor <- SetIdent(tiss_subset_tumor, ident.use = tiss_subset_tumor@meta.data$analysis)
-pdf(file = paste(dir, "plot_out/NI07/NI07_top20_DEgenes_per_group.pdf", sep=""))
-DoHeatmap(tiss_subset_tumor, genes.use = top_20$gene, slim.col.label = TRUE, use.scaled = FALSE, group.order = c("naive", "grouped_pr", "grouped_pd"))
-dev.off()
+# top_20 <- rbind(markers.pd.1[(1:20),(6:7)], markers.pr.1[(1:20),(6:7)], markers.naive.1[(1:20),(6:7)])
+# 
+# tiss_subset_tumor <- SetIdent(tiss_subset_tumor, ident.use = tiss_subset_tumor@meta.data$analysis)
+# pdf(file = paste(dir, "plot_out/NI07/NI07_top20_DEgenes_per_group.pdf", sep=""))
+# DoHeatmap(tiss_subset_tumor, genes.use = top_20$gene, slim.col.label = TRUE, use.scaled = FALSE, group.order = c("naive", "grouped_pr", "grouped_pd"))
+# dev.off()
 ```
 
 Begin IPA Analysis
 ```{r}
-# load Seurat Function for IPA Analysis
-source(file = paste(dir, "/scripts/seurat_to_IPA.R", sep = ""))
-# filter the indiviudal lists to only include genes with >= 1 average log fold change
-markers.pd.1.1 <- filter(markers.pd.1, avg_logFC >= 1)
-markers.pr.1.1 <- filter(markers.pr.1, avg_logFC >= 1)
-markers.naive.1.1 <- filter(markers.naive.1, avg_logFC >= 1)
-# combine all filtered lists into one
-all_markers_sorted <- rbind(markers.pd.1.1, markers.pr.1.1, markers.naive.1.1)
-# Format analysis markers for IPA
-analysis_markers_ipa <- seurat.to.ipa(df = all_markers_sorted, score.column = "avg_logFC", divide.by.column = "cluster", gene.column = "gene", divide.append = "NI07")
-# analysis_markers_ipa <- as.data.frame(analysis_markers_ipa)
-write.table(analysis_markers_ipa, file = paste(dir, "data_out/NI07/NI07_analysis_markers_for_ipa.txt", sep = ""), row.names = T, quote=F, sep="\t")
+# # load Seurat Function for IPA Analysis
+# source(file = paste(dir, "/scripts/seurat_to_IPA.R", sep = ""))
+# # filter the indiviudal lists to only include genes with >= 1 average log fold change
+# markers.pd.1.1 <- filter(markers.pd.1, avg_logFC >= 1)
+# markers.pr.1.1 <- filter(markers.pr.1, avg_logFC >= 1)
+# markers.naive.1.1 <- filter(markers.naive.1, avg_logFC >= 1)
+# # combine all filtered lists into one
+# all_markers_sorted <- rbind(markers.pd.1.1, markers.pr.1.1, markers.naive.1.1)
+# # Format analysis markers for IPA
+# analysis_markers_ipa <- seurat.to.ipa(df = all_markers_sorted, score.column = "avg_logFC", divide.by.column = "cluster", gene.column = "gene", divide.append = "NI07")
+# # analysis_markers_ipa <- as.data.frame(analysis_markers_ipa)
+# write.table(analysis_markers_ipa, file = paste(dir, "data_out/NI07/NI07_analysis_markers_for_ipa.txt", sep = ""), row.names = T, quote=F, sep="\t")
 ```
-
-```{r}
-b
-```
-
 
 Calculate the Sig of GOIs between the Three Groups
 ```{r}
-# top_20_data <- read.csv(file = paste(dir, "data_out/NI07/NI07_top_20_data.csv", sep = ""), row.names = 1)
-top_20_data <- FetchData(tiss_subset_tumor, c(top_20$gene, "analysis", "patient_id", "sample_name"))
-# write.csv(top_20_data, file = paste(dir, "data_out/NI07/NI07_top_20_data.csv", sep = ""), row.names = TRUE)
-
-
-# create dummy output
-test_df <- data.frame(colnames(top_20_data)[1:60])
-rownames(test_df) <- test_df$genes
-colnames(test_df) <- "genes"
-test_df$PDvsPR <- 0
-test_df$PDvsNaive <- 0
-test_df$PRvsNaive <- 0
+# # top_20_data <- read.csv(file = paste(dir, "data_out/NI07/NI07_top_20_data.csv", sep = ""), row.names = 1)
+# top_20_data <- FetchData(tiss_subset_tumor, c(top_20$gene, "analysis", "patient_id", "sample_name"))
+# # write.csv(top_20_data, file = paste(dir, "data_out/NI07/NI07_top_20_data.csv", sep = ""), row.names = TRUE)
 # 
-for(i in 1:nrow(test_df)){
-  a <- pairwise.wilcox.test(x = top_20_data[,i], g = top_20_data$analysis)
-  b <- as.data.frame(a$p.value)
-  test_df[i,2] <- b[1,1]
-  test_df[i,3] <- b[2,1]
-  test_df[i,4] <- b[2,2]
-}
-
- i=1 
-
-pairwise.wilcox.test(x = top_20_data$TUBA1A, g = top_20_data$analysis)
-
+# 
+# # create dummy output
+# test_df <- data.frame(colnames(top_20_data)[1:60])
+# rownames(test_df) <- test_df$genes
+# colnames(test_df) <- "genes"
+# test_df$PDvsPR <- 0
+# test_df$PDvsNaive <- 0
+# test_df$PRvsNaive <- 0
+# # 
+# for(i in 1:nrow(test_df)){
+#   a <- pairwise.wilcox.test(x = top_20_data[,i], g = top_20_data$analysis)
+#   b <- as.data.frame(a$p.value)
+#   test_df[i,2] <- b[1,1]
+#   test_df[i,3] <- b[2,1]
+#   test_df[i,4] <- b[2,2]
+# }
+# 
+#  i=1 
+# 
+# pairwise.wilcox.test(x = top_20_data$TUBA1A, g = top_20_data$analysis)
 ```
 
 
