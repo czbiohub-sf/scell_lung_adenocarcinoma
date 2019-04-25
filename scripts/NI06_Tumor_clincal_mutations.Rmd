@@ -20,7 +20,7 @@ library(pheatmap)
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/NI04_tumor_seurat_object.RData", sep=""))
-cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells_4.1.19.csv", sep = ""))
+cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells.4.19.19.csv", sep = ""))
 rownames(cell_mutation_tab) <- cell_mutation_tab$cell
 cell_mutation_tab$tumorCell_bool <- NULL
 ```
@@ -34,7 +34,7 @@ sub_cell_mutation_tab <- cell_mutation_tab[tumor_cells, ]
 # Append tumor cluster number and sample_name to sub_cell_mutation_tab from tiss_subset_tumor metadata
 # rename cell column to cell_id and then join to metadata columns of interest 
 colnames(sub_cell_mutation_tab)[1] <- "cell_id"
-sub_cell_mutation_tab <- left_join(x = sub_cell_mutation_tab, y = tiss_subset_tumor@meta.data[,c("sample_name", "tumor_seurat_cluster", "cell_id", "patient_id")], by = "cell_id")
+sub_cell_mutation_tab <- left_join(x = sub_cell_mutation_tab, y = tiss_subset_tumor@meta.data[,c("tumor_seurat_cluster", "cell_id", "patient_id")], by = "cell_id")
 # add back rownames
 rownames(sub_cell_mutation_tab) <- sub_cell_mutation_tab$cell_id
 ```
@@ -56,7 +56,7 @@ colnames(clus.mat) <- c("tumor_cluster", "coverage", "mutation", "cov_mut_percen
 Query cells to find clincal mutations given a set of criteria
 ```{r}
 # Find Patients for which there is coverage but not clincal mutation
-cov_nomut <- filter(sub_cell_mutation_tab, coverage_to_ROI !=0, clinical_mutation_found_bool ==0)
+cov_nomut <- filter(sub_cell_mutation_tab, coverage_to_ROI !=0, clinical_mutation_found_bool == 0)
 table(cov_nomut$tumor_seurat_cluster, cov_nomut$patient)
 length(cov_nomut$cell_id)
 
