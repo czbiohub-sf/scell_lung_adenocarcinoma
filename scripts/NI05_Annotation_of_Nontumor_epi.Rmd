@@ -19,7 +19,7 @@ load(file=paste(dir,"Data_input/NI03_epithelial_annotated_tumor.RData", sep=""))
 
 Look for clincal mutation found in normal classified cells
 ```{r}
-cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells_4.1.19.csv", sep = ""))
+cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells.4.19.19.csv", sep = ""))
 rownames(cell_mutation_tab) <- cell_mutation_tab$cell
 cell_mutation_tab$tumorCell_bool <- NULL
 
@@ -112,6 +112,12 @@ Visualize TSNE colroed by cluster
 pdf(file = paste(dir, "plot_out/NI05/tumor_tsne.pdf", sep = ""))
 TSNEPlot(object = tiss_subset_normalepi, do.label = T)
 dev.off()
+```
+
+Find which cluster G22_B003776 is found in
+```{r}
+grep(x = tiss_subset_normalepi@meta.data$cell_id, pattern = "G22_B003776") #480th row
+tiss_subset_normalepi@meta.data[480,] # found in cluster 3
 ```
 
 Cluster Occ by patient
@@ -212,6 +218,7 @@ for(i in 1:nrow(mat_clus_dis)){
 dist.clus <- as.dist(mat_clus_dis)
 ```
 
+Plot and save Dendrogram
 ```{r Hierarchical clusterting}
 # Convert to clustering object
 tree.clus <- hclust(dist.clus, "ward.D2")
@@ -241,9 +248,10 @@ Create dotplots of the top markers displayed above
 ```{r}
 markers.small  <- tiss.markers.epi %>% group_by(cluster) %>% top_n(5, avg_logFC)
 genes_to_check <- markers.small$gene
-DotPlot(object = tiss_subset_normalepi, genes.plot = genes_to_check)
+DotPlot(object = tiss_subset_normalepi, genes.plot = genes_to_check, x.lab.rot = TRUE)
 ```
 
+ID cell types using cell markers
 ```{r}
 # Cell markers
 s.muscle <- c('CNN1','SUSD5','ACTC1','ASB2','KCNA5','LDB3','MYOCD','ELN','ACTG2','ACTA2')
@@ -253,20 +261,27 @@ club <- c('GABRP','CCKAR','HP','KCNK2','UPK3A','CLDN10','PON1','SCGB1A1','BPIFB1
 ciliated <- c('CDHR3','FOXJ1','RGS22','MAPK15','SPEF2','CCDC153')
 at2 <- c('NAPSA','CHIA','SFTPC','SFTPB','MUC1','SFTPA1','SFTPA2')
 at1 <- c('IGFBP2','COL4A3','PDPN','AGER','CAV1','CDKN2B','RTKN2')
+ionocytes <- c('ATP6V1C2','ATP6V0D2','CFTR','FOXI1','ASCL3')
 basal <- c('KRT17','KRT5','SYT8','FHL2','MMP1')
 heptaocyte <- c('ALB')
 all_epi_markers <- c(s.muscle, neuro.e, glial, club, ciliated, at2, at1, basal, heptaocyte)
 
 DotPlot(object = tiss_subset_normalepi, genes.plot = all_epi_markers, x.lab.rot = T)
-DotPlot(object = tiss_subset_normalepi, genes.plot = s.muscle, x.lab.rot = T)
+DotPlot(object = tiss_subset_normalepi, genes.plot = s.muscle, x.lab.rot = T) # non
 DotPlot(object = tiss_subset_normalepi, genes.plot = neuro.e, x.lab.rot = T) # cluster 9 ASCL1
 DotPlot(object = tiss_subset_normalepi, genes.plot = glial, x.lab.rot = T) # none
-DotPlot(object = tiss_subset_normalepi, genes.plot = club, x.lab.rot = T) # cluster 3
-DotPlot(object = tiss_subset_normalepi, genes.plot = ciliated, x.lab.rot = T) # cluster 15
-DotPlot(object = tiss_subset_normalepi, genes.plot = at2, x.lab.rot = T) # cluster 0, 2, 8, 12, 13
-DotPlot(object = tiss_subset_normalepi, genes.plot = at1, x.lab.rot = T) # cluster 1
+DotPlot(object = tiss_subset_normalepi, genes.plot = club, x.lab.rot = T) # cluster 1
+DotPlot(object = tiss_subset_normalepi, genes.plot = ciliated, x.lab.rot = T) # cluster 6 and 16
+DotPlot(object = tiss_subset_normalepi, genes.plot = at2, x.lab.rot = T) # cluster 0, 11, 12
+DotPlot(object = tiss_subset_normalepi, genes.plot = at1, x.lab.rot = T) # cluster 2
+DotPlot(object = tiss_subset_normalepi, genes.plot = ionocytes, x.lab.rot = T) # cluster 13
 DotPlot(object = tiss_subset_normalepi, genes.plot = basal, x.lab.rot = T) # cluster 14
 DotPlot(object = tiss_subset_normalepi, genes.plot = heptaocyte, x.lab.rot = T) # cluster 7
+```
+
+Create table of how many cells belong to each cluster assignment
+```{r}
+table(tiss_subset_normalepi@meta.data$res.0.3)
 ```
 
 Set Metadata Column for Cluster IDs
@@ -274,9 +289,27 @@ Set Metadata Column for Cluster IDs
 tiss_subset_normalepi@meta.data$normalepi_seurat_cluster <- tiss_subset_normalepi@meta.data$res.0.3
 ```
 
+Annotate the normal epi cells
+```{r}
+# enumerate current cluster IDs and the labels for them
+cluster.ids <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)
+annotation <- c("alveolar type 2 cell", "club cell", "alveolar type 1 cell", "unknown stroma", "unknown stroma", "unknown stroma", "ciliated cell", "unknown stroma", "hepatocyte", "unknown stroma", "unknown stroma", "alveolar type 2 cell", "alveolar type 2 cell", "ionocyte", "basal cell", "unknown stroma", "ciliated cell")
+tiss_subset_normalepi@meta.data[,'norm_epi_annotation'] <- plyr::mapvalues(x = tiss_subset_normalepi@meta.data$res.0.3, from = cluster.ids, to = annotation)
+
+# save annotation column with cell_id
+write.csv(tiss_subset_normalepi@meta.data[, c(6, 64)], paste(dir, "data_out/NI05/NI05_norm_epi_annotations.csv", sep = ""))
+```
+
+Plot tSNE with annoations
+```{r}
+pdf(file = paste(dir, "plot_out/NI05/NI05_norm_epi_annotated_tsne.csv", sep = ""))
+TSNEPlot(object = tiss_subset_normalepi, group.by='norm_epi_annotation')
+dev.off()
+```
+
 Save object
 ```{r}
-save(tiss_subset_normalepi, file = paste(dir, "Data_input/NI05_normalepi_seurat_object.RData", sep = ""))
+save(tiss_subset_normalepi, file = paste(dir, "Data_input/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
 ```
 
 

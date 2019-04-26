@@ -18,7 +18,7 @@ Clear environment and load filtered Seurat object
 ```{r}
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/Main_Seurat_object_filtered.RData", sep=""))
+load(file=paste(dir,"Data_input/02_Main_Seurat_object_filtered.RData", sep=""))
 ```
 
 Drop any samples with 10 or less cells
@@ -36,7 +36,7 @@ tiss_subset
 
 Save subseted Seurat object
 ```{r}
-save(tiss_subset, file=paste(dir,"Data_input/Main_Seurat_object_filtered_and_subset.RData", sep=""))
+save(tiss_subset, file=paste(dir,"Data_input/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
 ```
 
 Normalize and scale the data
@@ -183,8 +183,8 @@ tiss_nonimmune <- SubsetData(tiss_subset, cells.use = nonimmune_cells)
 
 Save Processed Subset Seurat Object
 ```{r}
-save(tiss_subset, file=paste(dir,"Data_input/Main_Seurat_object_filtered_and_subset.RData", sep=""))
-save(tiss_immune, file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
-save(tiss_nonimmune, file=paste(dir,"Data_input/Nonimmune_Seurat_object.RData", sep=""))
+save(tiss_subset, file=paste(dir,"Data_input/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
+save(tiss_immune, file=paste(dir,"Data_input/S03_Immuune_Seurat_object.RData", sep=""))
+save(tiss_nonimmune, file=paste(dir,"Data_input/S03_Nonimmune_Seurat_object.RData", sep=""))
 ```
 
