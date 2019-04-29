@@ -255,7 +255,7 @@ pr_vs_pd_volc.1 <- volc + geom_text_repel(data=head(pr.1, 20), aes(label=gene), 
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 # save volcano plot
-ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_pr_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
+ggsave(pr_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_pr_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
 pd_pr.de.genes <- FetchData(tiss_subset_tumor, c(pr.1$gene[1:20], pd.1$gene[1:20], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
 pd_pr.de.genes1 <- colnames(pd_pr.de.genes)[c(1:40)]
@@ -278,11 +278,12 @@ dev.off()
 Create a Heatmap of the top genes identified different between the groups
 ```{r}
 # genes from navie vs pr/pd
-naive_v_pr_pd_genes <- unique(c(input_naive_pr.1$gene[1:20], input_naive_pd.1$gene[1:20]))
+naive_v_pr_pd_genes <- unique(c(input_naive_pr.1$gene[1:50], input_naive_pd.1$gene[1:50]))
 # genes from pr vs pd
-pr_v_pd_genes <- unique(c(pr.1$gene[1:20], pd.1$gene[1:20]))
+pr_v_pd_genes <- unique(c(pr.1$gene[1:50], pd.1$gene[1:50]))
 # all identified genes
 all_id_genes <- unique(c(naive_v_pr_pd_genes, pr_v_pd_genes))
+write.csv(x = all_id_genes, file = paste(dir, "data_out/NI07/NI07_topgenes_id.csv", sep = ""))
 # check ident
 unique(tiss_subset_tumor@ident)
 # change ident to analysis group
