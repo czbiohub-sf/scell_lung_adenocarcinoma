@@ -17,8 +17,9 @@ Read in mutation table
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/NI04_tumor_seurat_object.RData", sep=""))
-mutation_table <- read.csv(file = paste(dir, "Data_input/geneCellMutationCounts1.csv", sep = ""), header = T, row.names = 1)
+mutation_table <- read.csv(file = paste(dir, "Data_input/geneCellMutationCounts_3.27.19.csv", sep = ""), header = T, row.names = 1)
 head(mutation_table)
+setdiff(rownames(mutation_table), rownames(tiss_subset_tumor@meta.data))
 ```
 
 ```{r}
@@ -69,8 +70,10 @@ Add Metadata to normalized mutation table
 total_mutations_table$cell_id <- rownames(total_mutations_table)
 total_mutations_table_wmetadata <- left_join(total_mutations_table, tiss_subset_tumor@meta.data, by = 'cell_id')
 rownames(total_mutations_table_wmetadata) <- total_mutations_table_wmetadata$cell_id
-colnames(total_mutations_table_wmetadata)[1] <- "total_mutations_score"
 
+table(is.na(total_mutations_table_wmetadata$cell_id))
+
+total_mutations_table_wmetadata[is.na(total_mutations_table_wmetadata$cell_id),]
 ```
 
 Total Mutations detected by Group
