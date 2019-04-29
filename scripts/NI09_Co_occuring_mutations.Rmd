@@ -1,0 +1,15 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Read in data
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+sum_tab <- read.csv(file = paste(dir, "data_out/NI06/NI06_mutation_summary_table.csv", sep = ""))
+mut_of_int <- read.csv(file = paste(dir, "Data_input/mutations_of_interest.csv", sep = ""))
+```
+
+
+
