@@ -278,8 +278,13 @@ write.table(t.ipa, paste(dir, "data_out/IM04/Differentially_expressed_genes_Tcel
 
 ```{r}
 temp <- FindMarkers(t.cell.tiss, ident.1 = 4, ident.2 = 5)
+temp <- temp[order(temp$avg_logFC, decreasing = T),]
+temp.2 <- temp[which(temp$pct.1 > 0.75),]
 
 
+genes <- c("CD4","TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CXCL13","CXCR5", "IL7R")
+a <- VlnPlot(t.cell.tiss, features.plot = genes, do.return = T)
+a
 
 
 t.cell.tiss
