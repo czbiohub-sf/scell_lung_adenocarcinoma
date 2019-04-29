@@ -124,7 +124,5 @@ ggplot(data=subset(total_mutations_table_wmetadata, !is.na(primary_or_metastaic)
       guides(colour=guide_legend(title="Response Group")) +
       guides(fill = FALSE)
 dev.off()
-
-
 ```
 
