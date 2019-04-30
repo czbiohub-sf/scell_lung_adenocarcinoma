@@ -11,5 +11,87 @@ sum_tab <- read.csv(file = paste(dir, "data_out/NI06/NI06_mutation_summary_table
 mut_of_int <- read.csv(file = paste(dir, "gene_lists/mutations_of_interest.csv", sep = ""))
 ```
 
+Subset genes and sample names
+```{r}
+clinical.mut <- as.character(mut_of_int$Gene_Symbol[grep("Clinically", mut_of_int$Gene_Source)])
+tier.mut <- as.character(mut_of_int$Gene_Symbol[grep("Tier", mut_of_int$Gene_Source)])
+samples <- as.character(sum_tab[,1]) # If sample ID is not the first column than this wont work.. )
+```
 
 
+Create tables to summarize data 
+This will be a binary table for clinical mutations
+```{r}
+mat.clinical <- as.data.frame(matrix(nrow=length(samples), ncol=length(clinical.mut)))
+row.names(mat.clinical) <- samples
+colnames(mat.clinical) <-   clinical.mut
+mat.clinical
+```
+
+This will be a table for the number of other Tier 1 mutations summarized by gene
+```{r}
+mat.tier <- as.data.frame(matrix(nrow=length(samples), ncol=length(tier.mut)))
+row.names(mat.tier) <- samples
+colnames(mat.tier) <-   tier.mut 
+mat.tier
+```
+
+
+Loop over each sample and populate each table 
+
+First the clinical mutations 
+```{r}
+for(i in 1:length(samples)){
+  # Separate text in mutations column 
+  muts <- as.character(sum_tab[i,"mutations"])
+  muts <- unlist(strsplit(muts, "/"))
+  # Remove leading/trailing whitespace
+  muts <- trimws(muts, "both")
+  # Count clinical mutations for every gene in the clinical.mut vector
+  for(j in 1:length(clinical.mut)){
+    a <- muts %in% clinical.mut[j]
+    if (length(which(a==T))!=0) {mat.clinical[i,j] <- 1} else {mat.clinical[i,j] <- 0}
+  }
+}
+mat.clinical
+```
+```{r}
+i = 1
+
+```
+
+Second, count the tier1 COSMIC mutations for each gene in tier.mut
+```{r}
+for(i in 1:length(samples)){
+  # Separate text in mutations column 
+  muts <- as.character(sum_tab[i,"mutations"])
+  muts <- unlist(strsplit(muts, "/"))
+  # Remove leading/trailing whitespace
+  muts <- trimws(muts, "both")
+  # Count non-synonymous mutations for every gene in the tier.mut vector
+  for(j in 1:length(tier.mut)){
+    # Subset gene name 
+    gene <- tier.mut[j]
+    # Find all occurences of that gene in the mutations of that sample 
+    submuts <- muts[grep(gene, muts)]
+    # Remove any text befoer the space 
+    submuts <- sub(".*? (.+)", "\\1", submuts)
+    # Remove synonymous mutations 
+    submuts
+    
+    a <- muts %in% clinical.mut[j]
+    if (length(which(a==T))!=0) {mat.clinical[i,j] <- 1} else {mat.clinical[i,j] <- 0}
+  }
+}
+
+
+j = 28
+mat.clinical
+```
+
+
+```{r}
+grep("EGFR",tier.mut)
+muts
+
+```
