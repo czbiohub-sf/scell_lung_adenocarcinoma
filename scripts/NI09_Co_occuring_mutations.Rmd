@@ -71,6 +71,10 @@ for(i in 1:length(samples)){
     gene <- tier.mut[j]
     # Find all occurences of that gene in the mutations of that sample 
     submuts <- muts[grep(gene, muts)]
+    # Make sure they are all unique
+    submuts <- unique(submuts)
+    # Remove mutations that are in the clinical category 
+    submuts <- submuts[which((submuts %in% clinical.mut)==F)]
     # Remove any text befoer the space 
     submuts <- sub(".*? (.+)", "\\1", submuts)
     # Remove synonymous mutations 
