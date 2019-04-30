@@ -6,6 +6,11 @@ KRAS G12C,Clinically Reported
 ALK--EML4,Clinically Reported
 BRAF V600E,Clinically Reported
 ROS1--CD74,Clinically Reported
+EGFR,Clinical Importance
+KRAS,Clinical Importance
+ALK,Clinical Importance
+BRAF,Clinical Importance
+ROS1,Clinical Importance
 STRN,Tier 1 COSMIC
 TFG,Tier 1 COSMIC
 TPR,Tier 1 COSMIC
