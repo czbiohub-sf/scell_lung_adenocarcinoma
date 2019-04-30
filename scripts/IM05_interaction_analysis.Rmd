@@ -449,6 +449,7 @@ names(list.interacting.pairs) <- names(list.sig.means)
 
 Plot agreement between cell types across each condition 
 ```{r}
+require(UpSetR)
 # Crate a list for the given cell type 
 list.venn <- list()
 for(i in 1:length(list.interacting.pairs[[1]])){
@@ -472,8 +473,7 @@ for(k in 1:nrow(mat.temp)){
 # Store mat.temp 
 list.venn[[i]] <- mat.temp
 # Plot mat temp as upsetR plot 
-paste(dir,"plot_out/IM05/Number_of_MF_interactions_across_groups.pdf", sep="")
-pdf(paste("/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/upset_plots/Upset_plot_Myeloid_", names(list.interacting.pairs[[1]])[i], ".pdf", sep=""))
+pdf(paste(dir,"plot_out/IM05/Upset_plot_Myeloid_",names(list.interacting.pairs[[1]])[i],".pdf", sep=""))
 upset(as.data.frame(mat.temp))
 dev.off()
 # Plot mat temp as heatmap
@@ -495,7 +495,7 @@ p <-                  ggplot(data = df, aes(x=X1, y=X2, fill=as.factor(value))) 
                       theme(strip.placement = "outside") + 
                       ggtitle(names(list.interacting.pairs[[1]])[i])
 # Save 
-ggsave(filename = paste("/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/gene_heatmaps/Heatmap_Myeloid_", names(list.interacting.pairs[[1]])[i], ".pdf", sep=""), plot = p, width = 10, height = 10)
+ggsave(filename = paste(dir,"plot_out/IM05/Heatmap_plot_Myeloid_",names(list.interacting.pairs[[1]])[i],".pdf", sep=""), plot = p, width = 10, height = 10)
 p
 }
 names(list.venn) <- names(list.interacting.pairs[[1]])
@@ -503,10 +503,22 @@ names(list.venn) <- names(list.interacting.pairs[[1]])
 
 
 
+```{r}
+t.cells <- row.names(tiss_immune_lung@meta.data)[which(tiss_immune_lung@meta.data$immune_subtype_annotation=="T-cells")]
+t.cell.tiss <- SubsetData(tiss_immune_lung, cells.use = t.cells)
+mf.cells <- row.names(tiss_immune_lung@meta.data)[which(tiss_immune_lung@meta.data$immune_subtype_annotation=="MF-Monocytes")]
+mf.cell.tiss <- SubsetData(tiss_immune_lung, cells.use = mf.cells)
+```
 
+```{r}
+t.cell.tiss <- SetIdent(t.cell.tiss, ident.use = t.cell.tiss@meta.data$analysis)
+VlnPlot(t.cell.tiss, "TNFRSF10B")
+```
 
-
-
+```{r}
+mf.cell.tiss <- SetIdent(mf.cell.tiss, ident.use = t.cell.tiss@meta.data$analysis)
+VlnPlot(mf.cell.tiss, "TNFSF10")
+```
 
 
 
