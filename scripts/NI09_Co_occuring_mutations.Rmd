@@ -77,11 +77,14 @@ for(i in 1:length(samples)){
     # Remove any text befoer the space 
     submuts <- sub(".*? (.+)", "\\1", submuts)
     # Remove synonymous mutations 
-    submuts
-    
-    a <- muts %in% clinical.mut[j]
-    if (length(which(a==T))!=0) {mat.clinical[i,j] <- 1} else {mat.clinical[i,j] <- 0}
-  }
+    # Get first and last character (which should be the aminoacid)
+    first <- substring(submuts,1,1)
+    last <- substring(submuts,nchar(submuts),nchar(submuts))
+    # Compare the two vectors and select the ones that are FALSE. TRUE are synonymous
+    non.syn.submuts <- submuts[which((first == last)==F)]
+    # Count non-synonymous
+     mat.tier[i,j] <- length(non.syn.submuts)
+    }
 }
 
 
