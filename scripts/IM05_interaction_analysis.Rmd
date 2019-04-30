@@ -386,17 +386,17 @@ names(list.igraph) <- c("naive", "grouped_pr", "grouped_pd")
 Plot Myeloid interactions (Myeloid--ligand) to all other cell types as boxplots across conditions 
 ```{r}
 # New dataframe with neoplastic interaction counts 
-a <-  cbind(as.data.frame(list_counts_symmetric$naive["Myeloid",]), 
-      row.names(as.data.frame(list_counts_symmetric$naive["Myeloid",])), 
-      rep("Naive", length(list_counts_symmetric$naive["Myeloid",])))
+a <-  cbind(as.data.frame(list_counts_symmetric$naive["MF.Monocytes",]), 
+      row.names(as.data.frame(list_counts_symmetric$naive["MF.Monocytes",])), 
+      rep("Naive", length(list_counts_symmetric$naive["MF.Monocytes",])))
 colnames(a) <- c("counts", "cell", "group")
-b <-  cbind(as.data.frame(list_counts_symmetric$grouped_pr["Myeloid",]), 
-      row.names(as.data.frame(list_counts_symmetric$grouped_pr["Myeloid",])), 
-      rep("PR", length(list_counts_symmetric$grouped_pr["Myeloid",])))
+b <-  cbind(as.data.frame(list_counts_symmetric$grouped_pr["MF.Monocytes",]), 
+      row.names(as.data.frame(list_counts_symmetric$grouped_pr["MF.Monocytes",])), 
+      rep("PR", length(list_counts_symmetric$grouped_pr["MF.Monocytes",])))
 colnames(b) <- c("counts", "cell", "group")
-c <-  cbind(as.data.frame(list_counts_symmetric$grouped_pd["Myeloid",]), 
-      row.names(as.data.frame(list_counts_symmetric$grouped_pd["Myeloid",])), 
-      rep("PD", length(list_counts_symmetric$grouped_pd["Myeloid",])))
+c <-  cbind(as.data.frame(list_counts_symmetric$grouped_pd["MF.Monocytes",]), 
+      row.names(as.data.frame(list_counts_symmetric$grouped_pd["MF.Monocytes",])), 
+      rep("PD", length(list_counts_symmetric$grouped_pd["MF.Monocytes",])))
 colnames(c) <- c("counts", "cell", "group")
 mat.neo <-  rbind(a,b,c)
 rm(a,b,c)
@@ -408,8 +408,9 @@ p <-  ggplot(data=mat.neo, aes(x=cell, y=counts, group=group)) +
       #labs(x = "Giver", y = "Receiver") + 
       labs(x = "", y = "") + 
       theme(strip.placement = "outside") + 
-      ggtitle("Number of possible Myeloid cell interactions")
-ggsave(filename = "/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/Number_of_Myeloid_interactions_across_groups.pdf", plot = p, width = 10, height = 7)
+      ggtitle("Number of possible MF.monocytes interactions")
+
+ggsave(filename = paste(dir,"plot_out/IM05/Number_of_MF_interactions_across_groups.pdf", sep=""), plot = p, width = 10, height = 7)
 p
 ```
 
@@ -423,14 +424,14 @@ venn diagrams between naive, PD and PR samples
 ```{r}
 list.interacting.pairs <- list()
 # Get all other cell types 
-types <- colnames(list.sig.means[[1]])[grep("Myeloid_", colnames(list.sig.means[[1]]))]
+types <- colnames(list.sig.means[[1]])[grep("MF.Monocytes_", colnames(list.sig.means[[1]]))]
 types <- do.call(rbind, strsplit(types, "_"))[,2]
 
 for(i in 1:length(list.sig.means)){
   temp <- list.sig.means[[i]]
   # Subset only neoplastic cell interactions 
   # in which the neoplastic cells are the ones expressing the ligand
-  temp <- cbind(temp$interacting_pair, temp$id_cp_interaction,temp[,grep("Myeloid_", colnames(temp))])
+  temp <- cbind(temp$interacting_pair, temp$id_cp_interaction,temp[,grep("MF.Monocytes_", colnames(temp))])
   # Create temporary list to hold each cell type 
   list.temp <- list()
     for(k in 1:length(types)){
@@ -471,6 +472,7 @@ for(k in 1:nrow(mat.temp)){
 # Store mat.temp 
 list.venn[[i]] <- mat.temp
 # Plot mat temp as upsetR plot 
+paste(dir,"plot_out/IM05/Number_of_MF_interactions_across_groups.pdf", sep="")
 pdf(paste("/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/upset_plots/Upset_plot_Myeloid_", names(list.interacting.pairs[[1]])[i], ".pdf", sep=""))
 upset(as.data.frame(mat.temp))
 dev.off()

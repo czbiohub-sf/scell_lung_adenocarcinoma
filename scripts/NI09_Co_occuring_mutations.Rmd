@@ -69,8 +69,11 @@ for(i in 1:length(samples)){
   for(j in 1:length(tier.mut)){
     # Subset gene name 
     gene <- tier.mut[j]
+    # Split mutations to gene and mutation 
+    muts.t <- do.call(rbind,strsplit(muts, " "))
     # Find all occurences of that gene in the mutations of that sample 
-    submuts <- muts[grep(gene, muts)]
+    submuts <- muts[which(muts.t[,1]==gene)]
+    # submuts <- muts[grep(gene, muts)]
     # Make sure they are all unique
     submuts <- unique(submuts)
     # Remove mutations that are in the clinical category 
@@ -87,5 +90,8 @@ for(i in 1:length(samples)){
      mat.tier[i,j] <- length(non.syn.submuts)
     }
 }
-mat.tier
+# Binarize to plot and check 
+mat.tier.b <- mat.tier
+mat.tier.b[mat.tier.b !=0] <- 1
+heatmap.2(as.matrix(mat.tier.b), trace="n", Rowv = F, Colv = F)
 ```
