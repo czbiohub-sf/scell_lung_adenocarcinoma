@@ -55,10 +55,6 @@ for(i in 1:length(samples)){
 }
 mat.clinical
 ```
-```{r}
-i = 1
-
-```
 
 Second, count the tier1 COSMIC mutations for each gene in tier.mut
 ```{r}
@@ -86,15 +82,5 @@ for(i in 1:length(samples)){
      mat.tier[i,j] <- length(non.syn.submuts)
     }
 }
-
-
-j = 28
-mat.clinical
-```
-
-
-```{r}
-grep("EGFR",tier.mut)
-muts
-
+mat.tier
 ```
