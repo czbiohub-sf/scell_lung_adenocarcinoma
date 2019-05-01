@@ -74,6 +74,7 @@ for(i in 1:nrow(naive_v_pr.1)){
     }  
 }
 write.csv(naive_v_pr.1, file = paste(dir, "data_out/NI07/NI07_naive_v_pr_DEgenes_with_pt_occ.csv", sep = ""))
+naive_v_pr.1 <- read.csv(file = paste(dir, "data_out/NI07/NI07_naive_v_pr_DEgenes_with_pt_occ.csv", sep = ""), row.names = 1)
 
 # naive vs pd
 naive_v_pd.1 <- naive_v_pd
@@ -94,6 +95,7 @@ for(i in 1:nrow(naive_v_pd.1)){
     }  
 }
 write.csv(naive_v_pd.1, file = paste(dir, "data_out/NI07/NI07_naive_v_pd_DEgenes_with_pt_occ.csv", sep = ""))
+naive_v_pd.1 <- read.csv(file = paste(dir, "data_out/NI07/NI07_naive_v_pd_DEgenes_with_pt_occ.csv", sep = ""), row.names = 1)
 
 # pr vs pd
 pr_v_pd.1 <- pr_v_pd
@@ -114,6 +116,7 @@ for(i in 1:nrow(pr_v_pd.1)){
     }
 }
 write.csv(pr_v_pd.1, file = paste(dir, "data_out/NI07/NI07_pr_v_pd_DEgenes_with_pt_occ.csv", sep = ""))
+pr_v_pd.1 <- read.csv(file = paste(dir, "data_out/NI07/NI07_pr_v_pd_DEgenes_with_pt_occ.csv", sep = ""), row.names = 1)
 ```
 
 Naive vs PR plotting
@@ -125,8 +128,8 @@ rownames(naive_v_pr.2) <- naive_v_pr.2$gene
 # change avglogFC to positive number
 naive_v_pr.2$avg_logFC <- naive_v_pr.2$avg_logFC * -1 
 # filter out any genes that are explained by less than 6 patients contributing
-hist(naive_v_pr.2$`grouped_pr n.nonzero.pts`) # set threshold for 3 or more patients
-naive_v_pr.2 <- filter(naive_v_pr.2, naive_v_pr.2$`grouped_pr n.nonzero.pts` > 3)
+hist(naive_v_pr.2$grouped_pr.n.nonzero.pts) # set threshold for 3 or more patients
+naive_v_pr.2 <- filter(naive_v_pr.2, naive_v_pr.2$grouped_pr.n.nonzero.pts > 3)
 rownames(naive_v_pr.2) <- naive_v_pr.2$gene
 #Will have different colors depending on significance
 mutateddf <- mutate(naive_v_pr.2, sig = ifelse(naive_v_pr.2$p_val_adj < 0.05, "p_val_adj<0.05", "NS")) 
@@ -134,7 +137,7 @@ rownames(mutateddf) <- mutateddf$gene
 input_naive_pr <- mutateddf # input_naive_pr is sorted by pval_adjust
 input_naive_pr.1 <- input_naive_pr[order(input_naive_pr$avg_logFC, decreasing = TRUE), ] # input_naive_pr.1 is sorted by avg_logFC
 # save sorted gene lists
-write.csv(x = input_naive_pr.1, file = paste(dir, "data_out/NI07/NI07_pr_genes_prvnaive_analysis.csv", sep = ""))
+# write.csv(x = input_naive_pr.1, file = paste(dir, "data_out/NI07/NI07_pr_genes_prvnaive_analysis.csv", sep = ""))
 volc = ggplot(input_naive_pr, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
     geom_point(aes(col=sig)) + #add points colored by significance
     scale_color_manual(values=c("black", "red")) + 
@@ -145,7 +148,7 @@ naive_vs_pr_volc.1 <- volc + geom_text_repel(data=head(input_naive_pr.1, 20), ae
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 # save volcano plot
-ggsave(naive_vs_pr_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
+# ggsave(naive_vs_pr_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
 pr.de.genes <- FetchData(tiss_subset_tumor, c(input_naive_pr.1$gene[1:50], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
 pr.de.genes1 <- colnames(pr.de.genes)[c(1:50)]
@@ -159,9 +162,9 @@ for(i in pr.de.genes1){
   pr.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
 }
 # save patient ridge plots
-pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pr_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-marrangeGrob(grobs=pr.plot.lists.ridge.pt, nrow=1, ncol=1)
-dev.off()
+# pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pr_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+# marrangeGrob(grobs=pr.plot.lists.ridge.pt, nrow=1, ncol=1)
+# dev.off()
 ```
 
 Naive vs PD plotting
@@ -173,8 +176,8 @@ rownames(naive_v_pd.2) <- naive_v_pd.2$gene
 # change avglogFC to positive number
 naive_v_pd.2$avg_logFC <- naive_v_pd.2$avg_logFC * -1 
 # filter out any genes that are explained by less than 6 patients contributing
-hist(naive_v_pd.2$`grouped_pd n.nonzero.pts`) # set threshold for 6 or more patients
-naive_v_pd.2 <- filter(naive_v_pd.2, naive_v_pd.2$`grouped_pd n.nonzero.pts` > 6)
+hist(naive_v_pd.2$grouped_pd.n.nonzero.pts) # set threshold for 6 or more patients
+naive_v_pd.2 <- filter(naive_v_pd.2, naive_v_pd.2$grouped_pd.n.nonzero.pts > 6)
 rownames(naive_v_pd.2) <- naive_v_pd.2$gene
 #Will have different colors depending on significance
 mutateddf <- mutate(naive_v_pd.2, sig = ifelse(naive_v_pd.2$p_val_adj < 0.05, "p_val_adj<0.05", "NS")) 
@@ -182,7 +185,7 @@ rownames(mutateddf) <- mutateddf$gene
 input_naive_pd <- mutateddf # input_naive_pd is sorted by pval_adjust
 input_naive_pd.1 <- input_naive_pd[order(input_naive_pd$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
 # save sorted gene lists
-write.csv(x = input_naive_pd.1, file = paste(dir, "data_out/NI07/NI07_pd_genes_pdvnaive_analysis.csv", sep = ""))
+# write.csv(x = input_naive_pd.1, file = paste(dir, "data_out/NI07/NI07_pd_genes_pdvnaive_analysis.csv", sep = ""))
 # create volcano plot
 volc = ggplot(input_naive_pd, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
     geom_point(aes(col=sig)) + #add points colored by significance
@@ -194,7 +197,7 @@ naive_vs_pd_volc.1 <- volc + geom_text_repel(data=head(input_naive_pd.1, 20), ae
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 # save volcano plot
-ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
+# ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
 pd.de.genes <- FetchData(tiss_subset_tumor, c(input_naive_pd.1$gene[1:50], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
 pd.de.genes1 <- colnames(pd.de.genes)[c(1:50)]
@@ -208,9 +211,16 @@ for(i in pd.de.genes1){
   pd.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
 }
 # save patient ridge plots
-pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
-dev.off()
+# pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+# marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
+# dev.off()
+
+# save IDO1 alone
+ggsave(plot = pd.plot.lists.ridge.pt$IDO1, filename = paste(dir, "plot_out/NI07/NI07_IDO1.pdf", sep = ""))
+# save CRABP2 alone
+ggsave(plot = pd.plot.lists.ridge.pt$CRABP2, filename = paste(dir, "plot_out/NI07/NI07_CRABP2.pdf", sep = ""))
+# save CRABP2 alone
+ggsave(plot = pd.plot.lists.ridge.pt$GPR87, filename = paste(dir, "plot_out/NI07/NI07_GPR87.pdf", sep = ""))
 ```
 
 PR vs PD plotting
@@ -224,12 +234,12 @@ pd <- filter(pr_v_pd.2, avg_logFC < 0)
 rownames(pr) <- pr$gene
 rownames(pd) <- pd$gene
 # check the hist to set threshold for filtering out any genes that are explained by few number of patients
-hist(pr$`grouped_pr n.nonzero.pts`) # threshold at > 3 patients
-hist(pd$`grouped_pd n.nonzero.pts`) # threshold at > 6 patients
+hist(pr$grouped_pr.n.nonzero.pts) # threshold at > 3 patients
+hist(pd$grouped_pd.n.nonzero.pts) # threshold at > 6 patients
 # set thresholds for 
-pr <- filter(pr, pr$`grouped_pr n.nonzero.pts` > 3)
+pr <- filter(pr, pr$grouped_pr.n.nonzero.pts > 3)
 rownames(pr) <- pr$gene
-pd <- filter(pd, pd$`grouped_pd n.nonzero.pts` > 6)
+pd <- filter(pd, pd$grouped_pd.n.nonzero.pts > 6)
 rownames(pd) <- pd$gene
 # save pr and pd sorted by avglogFC
 pr.1 <- pr[order(pr$avg_logFC, decreasing = TRUE), ]
@@ -241,8 +251,8 @@ mutateddf <- mutate(pr_v_pd.3, sig = ifelse(pr_v_pd.3$p_val_adj < 0.05, "p_val_a
 rownames(mutateddf) <- mutateddf$gene
 input_pr_pd <- mutateddf # input_pr_pd is sorted by pval_adjust
 # save sorted gene lists
-write.csv(x = pr.1, file = paste(dir, "data_out/NI07/NI07_pr_genes_prvpd_analysis.csv", sep = ""))
-write.csv(x = pd.1, file = paste(dir, "data_out/NI07/NI07_pd_genes_prvpd_analysis.csv", sep = ""))
+# write.csv(x = pr.1, file = paste(dir, "data_out/NI07/NI07_pr_genes_prvpd_analysis.csv", sep = ""))
+# write.csv(x = pd.1, file = paste(dir, "data_out/NI07/NI07_pd_genes_prvpd_analysis.csv", sep = ""))
 # sorted by avg_logFC
 volc = ggplot(input_pr_pd, aes(avg_logFC, -log10(p_val_adj))) +
     geom_point(aes(col=sig)) + #add points colored by significance
@@ -255,7 +265,7 @@ pr_vs_pd_volc.1 <- volc + geom_text_repel(data=head(pr.1, 20), aes(label=gene), 
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 # save volcano plot
-ggsave(pr_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_pr_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
+# ggsave(pr_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_pr_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
 pd_pr.de.genes <- FetchData(tiss_subset_tumor, c(pr.1$gene[1:25], pd.1$gene[1:25], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
 pd_pr.de.genes1 <- colnames(pd_pr.de.genes)[c(1:50)]
@@ -269,9 +279,14 @@ for(i in pd_pr.de.genes1){
   pd.pr.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
 }
 # save patient ridge plots
-pdf(file = paste(dir, "plot_out/NI07/NI07_pr_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
-dev.off()
+# pdf(file = paste(dir, "plot_out/NI07/NI07_pr_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+# marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
+# dev.off()
+
+ggsave(pd.pr.plot.lists.ridge.pt$SUSD2, filename = paste(dir, "plot_out/NI07/NI07_SUSD2.pdf", sep = ""))
+ggsave(pd.pr.plot.lists.ridge.pt$PDE4C, filename = paste(dir, "plot_out/NI07/NI07_PDE4C.pdf", sep = ""))
+ggsave(pd.pr.plot.lists.ridge.pt$DKK1, filename = paste(dir, "plot_out/NI07/NI07_DKK1.pdf", sep = ""))
+ggsave(pd.pr.plot.lists.ridge.pt$GJB3, filename = paste(dir, "plot_out/NI07/NI07_GJB3.pdf", sep = ""))
 ```
 
 

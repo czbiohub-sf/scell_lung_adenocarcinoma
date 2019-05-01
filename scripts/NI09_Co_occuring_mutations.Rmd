@@ -90,8 +90,64 @@ for(i in 1:length(samples)){
      mat.tier[i,j] <- length(non.syn.submuts)
     }
 }
+```
+
+Plot the Heatmaps for Clinically Reported Genes
+```{r}
+# Binarize to plot and check 
+mat.clinical.b <- mat.clinical
+mat.clinical.b[mat.clinical.b !=0] <- 1
+# filter the rows that have a column sum of zero
+mat.clinical.b.f <- mat.clinical.b
+mat.clinical.b.f$sample <- rownames(mat.clinical.b.f)
+mat.clinical.b.f <- mat.clinical.b.f[,colSums(mat.clinical.b.f[,1:7]) > 0]
+# set up data for heatmap
+heat.mat.clinical <- mat.clinical.b.f
+heat.mat.clinical.m <- melt(heat.mat.clinical)
+# plot
+ggplot(heat.mat.clinical.m, aes(sample, variable)) +
+    geom_tile(aes(fill = value),colour = "black") + 
+    scale_fill_gradient(low = "white", high = "black") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Plot the Heatmaps for Cosmic Tier 1 Genes
+```{r}
 # Binarize to plot and check 
 mat.tier.b <- mat.tier
 mat.tier.b[mat.tier.b !=0] <- 1
-heatmap.2(as.matrix(mat.tier.b), trace="n", Rowv = F, Colv = F)
+# filter the rows that have a col sum of zero
+mat.teir.b.f <- mat.tier.b
+mat.teir.b.f$sample <- rownames(mat.teir.b.f)
+mat.teir.b.f <- mat.teir.b.f[,colSums(mat.teir.b.f[,1:41]) > 0]
+# set up data for heatmap
+heat.mat.tier <- mat.teir.b.f
+heat.mat.tier.m <- melt(heat.mat.tier)
+# plot
+ggplot(heat.mat.tier.m, aes(sample, variable)) +
+    geom_tile(aes(fill = value),colour = "black") + 
+    scale_fill_gradient(low = "white", high = "black") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
+
+Map clincal and tier one mutations together
+```{r}
+mat.clinical.b.f$sample <- NULL
+mat.teir.b.f$sample <- NULL
+all.mat <- cbind(mat.clinical.b.f, mat.teir.b.f)
+# filter out any patients without mutations
+all.mat.f <- all.mat[rowSums(all.mat) > 0, ]
+# set up data for heatmap
+heat.all.mat <- all.mat.f
+heat.all.mat$sample <- rownames(heat.all.mat)
+heat.all.mat.m <- melt(heat.all.mat)
+# plot
+pdf(file = paste(dir, "plot_out/NI09/NI09_comutation_summary_heatmap.pdf", sep = ""))
+ggplot(heat.all.mat.m, aes(sample, variable)) +
+    geom_tile(aes(fill = value),colour = "black") + 
+    scale_fill_gradient(low = "white", high = "black") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+dev.off()
+```
+
+

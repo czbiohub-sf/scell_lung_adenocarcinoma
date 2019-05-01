@@ -1,0 +1,67 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(devtools)
+library(ggsignif)
+library(ggpubr)
+library(viridis)
+library(plotly)
+library(ggridges)
+library(reshape)
+library(gridExtra)
+library(ggrepel)
+```
+
+Read in tumor object
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file = paste(dir, "Data_input/NI04_tumor_seurat_object.RData", sep = ""))
+```
+
+Identify genes known from diff to AT2 cell type
+```{r}
+# Visualize the AT2 Differentiation Signature (PMCID: PMC2644235)
+diff_genes <- c("SFTPC", "PGC", "SFTPB", "LAMP3", "LPL", "IGF2", "IL1RL1", "NR4A2", "HIF3A", "MAOA", "ADH1B", "SEPP1", "SCNN1A", "CLDN18", "AQP4")
+tiss_subset_tumor <- SetAllIdent(tiss_subset_tumor, id = "analysis")
+# make a heatmap
+DoHeatmap(tiss_subset_tumor, genes.use = diff_genes, slim.col.label = TRUE, use.scaled = FALSE)
+# calculate the pval 
+AT2_diff <- FetchData(tiss_subset_tumor, c(diff_genes, 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site'))
+AT2_diff$AT2_diff_mean <- rowMeans(AT2_diff[c(diff_genes)], na.rm=TRUE)
+AT2_diff$cell_name <- rownames(AT2_diff)
+
+AT2_diff_test <- pairwise.wilcox.test(x = AT2_diff$AT2_diff_mean, g = AT2_diff$analysis)
+AT2_diff_test <- as.data.frame(AT2_diff_test$p.value)
+
+ggplot(AT2_diff, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot(outlier.shape = NA) + geom_jitter(aes(colour = analysis), alpha = 1/4) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("AT2 Differentiation Signature Expression per Group") + ggtitle("AT2 Differentiation Signature Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 6.3, annotations = '1.08e-188	') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 7.3, annotations = '5.20e-12') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 5.3, annotations = '3.45e-130')
+```
+
+```{r}
+# make a heatmap
+DoHeatmap(tiss_subset_tumor, genes.use = c("TTF1","NAPSA"), slim.col.label = TRUE, use.scaled = FALSE)
+# calculate the pval 
+Hist_markers <- FetchData(tiss_subset_tumor, c('TTF1','NAPSA', 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site'))
+Hist_markers$Hist_markers_mean <- rowMeans(Hist_markers[c('TTF1','NAPSA')], na.rm=TRUE)
+Hist_markers$cell_name <- rownames(Hist_markers)
+
+Hist_markers_test <- pairwise.wilcox.test(x = Hist_markers$Hist_markers_mean, g = Hist_markers$analysis)
+Hist_markers_test <- as.data.frame(Hist_markers_test$p.value)
+
+ggplot(Hist_markers, aes(x = analysis, y = Hist_markers_mean, fill = analysis)) + geom_boxplot(outlier.shape = NA) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Histology Markers Signature Expression per Group") + ggtitle("Histology Markers Signature Expression per Group") 
+#+ geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 6.3, annotations = '1.08e-188	') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 7.3, annotations = '5.20e-12') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 5.3, annotations = '3.45e-130')
+
+```
+
+
+
+
+
+

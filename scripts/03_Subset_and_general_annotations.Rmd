@@ -12,6 +12,7 @@ library(tidyverse)
 library(gridExtra)
 library(ggridges)
 library(ggplot2)
+library(ggExtra)
 ```
 
 Clear environment and load filtered Seurat object 
@@ -152,6 +153,24 @@ tiss_subset@meta.data[,'immune_annotation'] <- plyr::mapvalues(x = tiss_subset@i
 # MAke a table 
 table(tiss_subset@meta.data$immune_annotation)
 ```
+
+```{r}
+pdf(file = paste(dir,"plot_out/S03/main_tSNE_immune_annotation.pdf", sep=""),5,5)
+TSNEPlot(object = tiss_subset, do.label = FALSE, group.by = 'immune_annotation')
+dev.off()
+
+pdf(file = paste(dir,"plot_out/S03/annotaion_count.pdf", sep=""), width = 2.36, height = 1.18)
+ggplot(tiss_subset@meta.data, aes(immune_annotation)) + geom_bar() + 
+  coord_flip() + theme(legend.position = "bottom") + xlab("annotation") +
+  ylab("count")
+dev.off()
+
+pdf(file = paste(dir,"plot_out/S03/reads_vs_genes.pdf", sep=""))
+p <- ggplot(tiss_subset@meta.data, aes(x = nGene, y = nReads)) + geom_point() + theme_bw() + scale_y_log10()
+dev.off()
+# m <- ggMarginal(p, type = "histogram")
+```
+
 
 Generate immune and nonimmune cell lists
 ```{r}
