@@ -17,9 +17,9 @@ Read in mutation table
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/NI04_tumor_seurat_object.RData", sep=""))
-mutation_table <- read.csv(file = paste(dir, "Data_input/geneCellMutationCounts_3.27.19.csv", sep = ""), header = T, row.names = 1)
+mutation_table <- read.csv(file = paste(dir, "Data_input/geneCellMutationCounts_2.27.19.csv", sep = ""), header = T, row.names = 1)
 head(mutation_table)
-setdiff(rownames(mutation_table), rownames(tiss_subset_tumor@meta.data))
+length(intersect(rownames(mutation_table), rownames(tiss_subset_tumor@meta.data)))
 ```
 
 ```{r}
@@ -70,15 +70,10 @@ Add Metadata to normalized mutation table
 total_mutations_table$cell_id <- rownames(total_mutations_table)
 total_mutations_table_wmetadata <- left_join(total_mutations_table, tiss_subset_tumor@meta.data, by = 'cell_id')
 rownames(total_mutations_table_wmetadata) <- total_mutations_table_wmetadata$cell_id
-
-table(is.na(total_mutations_table_wmetadata$cell_id))
-
-total_mutations_table_wmetadata[is.na(total_mutations_table_wmetadata$cell_id),]
 ```
 
 Total Mutations detected by Group
 ```{r}
-
 pr_mutation_table <- filter(total_mutations_table_wmetadata, analysis == 'grouped_pr')
 pd_mutation_table <- filter(total_mutations_table_wmetadata, analysis == 'grouped_pd')
 naive_mutation_table <- filter(total_mutations_table_wmetadata, analysis == 'naive')
@@ -97,24 +92,26 @@ ggplot(total_mutations_table_wmetadata, aes(x = analysis, y = total_mutations_sc
     ggtitle("Distribution of Mutation Scores per Cell") + 
     geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 45, annotations = '< 2e-16') + 
     geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 50, annotations = '< 2e-16') + 
-    geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 40, annotations = '0.023')
+    geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 40, annotations = '0.023') +
+    scale_x_discrete(labels = c("naive" = "TN", "grouped_pr" = "PER", "grouped_pd" = "PD"), limits=c("naive","grouped_pr","grouped_pd"))
 dev.off()
 
 pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_group_ridgeplot.pdf", sep = ""))
 ggplot(total_mutations_table_wmetadata, aes(x = total_mutations_score, y = analysis, fill = analysis)) + geom_density_ridges(alpha=.7) + 
-    ylab("Group") + xlab("Mutation Score") + scale_y_discrete(labels = c("Progressor", "Presister", "Naive")) + 
+    ylab("Group") + xlab("Mutation Score") + scale_y_discrete(labels = c("PD", "PER", "TN")) + 
     theme(legend.position = "none") + theme(axis.title.y = element_blank())
 dev.off()
 
 pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_group_and_patient.pdf", sep = ""))
 ggplot(total_mutations_table_wmetadata, aes(x = analysis, y = total_mutations_score, color = patient_id)) +
-      geom_point(position = position_jitterdodge(dodge.width=0.9)) +
-      geom_boxplot(outlier.colour = NA, position = position_dodge(width=0.9)) +
-      xlab("Group") +
-      ylab("Mutation Score") +
-      ggtitle("Distribution of Mutation Scores per Cell") +
-      guides(colour=guide_legend(title="Response Group")) +
-      guides(fill = FALSE, color = FALSE)
+    geom_point(position = position_jitterdodge(dodge.width=0.9)) +
+    geom_boxplot(outlier.colour = NA, position = position_dodge(width=0.9)) +
+    xlab("Group") +
+    ylab("Mutation Score") +
+    ggtitle("Distribution of Mutation Scores per Cell") +
+    guides(colour=guide_legend(title="Response Group")) +
+    guides(fill = FALSE, color = FALSE) +
+    scale_x_discrete(labels = c("naive" = "TN", "grouped_pr" = "PER", "grouped_pd" = "PD"), limits=c("naive","grouped_pr","grouped_pd"))
 dev.off()
 
 pdf(file = paste(dir, "plot_out/NI08/NI08_total_muts_by_primvsmet.pdf", sep = ""))

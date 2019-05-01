@@ -55,13 +55,12 @@ Hist_markers$cell_name <- rownames(Hist_markers)
 Hist_markers_test <- pairwise.wilcox.test(x = Hist_markers$Hist_markers_mean, g = Hist_markers$analysis)
 Hist_markers_test <- as.data.frame(Hist_markers_test$p.value)
 
-ggplot(Hist_markers, aes(x = analysis, y = Hist_markers_mean, fill = analysis)) + geom_boxplot(outlier.shape = NA) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Histology Markers Signature Expression per Group") + ggtitle("Histology Markers Signature Expression per Group") 
+ggplot(Hist_markers, aes(x = analysis, y = Hist_markers_mean, fill = analysis)) + geom_boxplot(outlier.shape = NA) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Histology Markers Signature Expression per Group") + ggtitle("Histology Markers Signature Expression per Group") + geom_jitter(aes(colour = analysis), alpha = 1/3)
 #+ geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 6.3, annotations = '1.08e-188	') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 7.3, annotations = '5.20e-12') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 5.3, annotations = '3.45e-130')
 
 ```
 
-
-
-
-
+```{r}
+table(tiss_subset_tumor@meta.data$analysis, tiss_subset_tumor@meta.data$sample_name)
+```
 

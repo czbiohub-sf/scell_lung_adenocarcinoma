@@ -144,14 +144,15 @@ volc = ggplot(input_naive_pr, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot 
     ggtitle("Naive vs PR") 
 
 naive_vs_pr_volc.1 <- volc + geom_text_repel(data=head(input_naive_pr.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+  geom_text_repel(data=head(input_naive_pr, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 # save volcano plot
-# ggsave(naive_vs_pr_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
+ggsave(naive_vs_pr_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
-pr.de.genes <- FetchData(tiss_subset_tumor, c(input_naive_pr.1$gene[1:50], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
-pr.de.genes1 <- colnames(pr.de.genes)[c(1:50)]
+pr.de.genes <- FetchData(tiss_subset_tumor, c(input_naive_pr.1$gene[1:20], input_naive_pr$gene[1:20], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
+pr.de.genes1 <- colnames(pr.de.genes)[c(1:40)]
 temp <- pr.de.genes[,c(grep("nGene", colnames(pr.de.genes)):ncol(pr.de.genes))]
 # Plot ridge plot of pr vs PR vs naive for top 50 DE genes by patient
 pr.plot.lists.ridge.pt <- list()
@@ -162,9 +163,9 @@ for(i in pr.de.genes1){
   pr.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
 }
 # save patient ridge plots
-# pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pr_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-# marrangeGrob(grobs=pr.plot.lists.ridge.pt, nrow=1, ncol=1)
-# dev.off()
+pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pr_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+marrangeGrob(grobs=pr.plot.lists.ridge.pt, nrow=1, ncol=1)
+dev.off()
 ```
 
 Naive vs PD plotting
@@ -193,16 +194,17 @@ volc = ggplot(input_naive_pd, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot 
     ggtitle("Naive vs PD") 
 
 naive_vs_pd_volc.1 <- volc + geom_text_repel(data=head(input_naive_pd.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+  geom_text_repel(data=head(input_naive_pd, 20), aes(label=gene), point.padding = 1, box.padding = .3)
   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 # save volcano plot
-# ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
+ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
-pd.de.genes <- FetchData(tiss_subset_tumor, c(input_naive_pd.1$gene[1:50], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
-pd.de.genes1 <- colnames(pd.de.genes)[c(1:50)]
+pd.de.genes <- FetchData(tiss_subset_tumor, c(input_naive_pd.1$gene[1:20], input_naive_pd$gene[1:20],  'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
+pd.de.genes1 <- colnames(pd.de.genes)[c(1:40)]
 temp <- pd.de.genes[,c(grep("nGene", colnames(pd.de.genes)):ncol(pd.de.genes))]
-# Plot ridge plot of PD vs PR vs naive for top 50 DE genes by patient
+# Plot ridge plot of PD vs PR vs naive for top 40 DE genes by patient
 pd.plot.lists.ridge.pt <- list()
 for(i in pd.de.genes1){
   a <- as.data.frame(pd.de.genes[,i])
@@ -211,15 +213,13 @@ for(i in pd.de.genes1){
   pd.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
 }
 # save patient ridge plots
-# pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-# marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
-# dev.off()
+pdf(file = paste(dir, "plot_out/NI07/NI07_naive_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
+dev.off()
 
-# save IDO1 alone
+# save GOIs alone
 ggsave(plot = pd.plot.lists.ridge.pt$IDO1, filename = paste(dir, "plot_out/NI07/NI07_IDO1.pdf", sep = ""))
-# save CRABP2 alone
 ggsave(plot = pd.plot.lists.ridge.pt$CRABP2, filename = paste(dir, "plot_out/NI07/NI07_CRABP2.pdf", sep = ""))
-# save CRABP2 alone
 ggsave(plot = pd.plot.lists.ridge.pt$GPR87, filename = paste(dir, "plot_out/NI07/NI07_GPR87.pdf", sep = ""))
 ```
 
@@ -261,14 +261,16 @@ volc = ggplot(input_pr_pd, aes(avg_logFC, -log10(p_val_adj))) +
 
 pr_vs_pd_volc.1 <- volc + geom_text_repel(data=head(pr.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
   geom_text_repel(data=head(pd.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+  geom_text_repel(data=head(pr, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+  geom_text_repel(data=head(pd, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 # save volcano plot
-# ggsave(pr_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_pr_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
+ggsave(pr_vs_pd_volc.1, filename = paste(dir,"plot_out/NI07/NI07_pr_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
-pd_pr.de.genes <- FetchData(tiss_subset_tumor, c(pr.1$gene[1:25], pd.1$gene[1:25], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
-pd_pr.de.genes1 <- colnames(pd_pr.de.genes)[c(1:50)]
+pd_pr.de.genes <- FetchData(tiss_subset_tumor, c(pr.1$gene[1:20], pr$gene[1:20], pd.1$gene[1:20], pd$gene[1:20], 'nGene','nReads','analysis','patient_id', 'sample_name', 'biopsy_site', 'pfs_over_under'))
+pd_pr.de.genes1 <- colnames(pd_pr.de.genes)[c(1:80)]
 temp <- pd_pr.de.genes[,c(grep("nGene", colnames(pd_pr.de.genes)):ncol(pd_pr.de.genes))]
 # Plot ridge plot of PD vs PR vs naive for top 50 DE genes by patient
 pd.pr.plot.lists.ridge.pt <- list()
@@ -279,10 +281,12 @@ for(i in pd_pr.de.genes1){
   pd.pr.plot.lists.ridge.pt[[i]] <- ggplot(temp.4, aes(x = gene, y = analysis, fill = patient_id)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab(paste(i,"Gene Expression")) + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
 }
 # save patient ridge plots
-# pdf(file = paste(dir, "plot_out/NI07/NI07_pr_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
-# marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
-# dev.off()
+pdf(file = paste(dir, "plot_out/NI07/NI07_pr_v_pd_rideplots_by_patient.pdf", sep = ""), onefile = TRUE)
+marrangeGrob(grobs=pd.plot.lists.ridge.pt, nrow=1, ncol=1)
+dev.off()
 
+# save GOIs alone
+ggsave(pd.pr.plot.lists.ridge.pt$IGFBP3, filename = paste(dir, "plot_out/NI07/NI07_IGFBP3.pdf", sep = ""))
 ggsave(pd.pr.plot.lists.ridge.pt$SUSD2, filename = paste(dir, "plot_out/NI07/NI07_SUSD2.pdf", sep = ""))
 ggsave(pd.pr.plot.lists.ridge.pt$PDE4C, filename = paste(dir, "plot_out/NI07/NI07_PDE4C.pdf", sep = ""))
 ggsave(pd.pr.plot.lists.ridge.pt$DKK1, filename = paste(dir, "plot_out/NI07/NI07_DKK1.pdf", sep = ""))
@@ -293,27 +297,29 @@ ggsave(pd.pr.plot.lists.ridge.pt$GJB3, filename = paste(dir, "plot_out/NI07/NI07
 Create a Heatmap of the top genes identified different between the groups
 ```{r}
 # genes from navie vs pr/pd
-naive_v_pr_pd_genes <- unique(c(input_naive_pr.1$gene[1:20], input_naive_pd.1$gene[1:20]))
+naive_v_pr_pd_genes <- unique(c(input_naive_pr.1$gene[1:20], input_naive_pr$gene[1:20], input_naive_pd.1$gene[1:20], input_naive_pd$gene[1:20]))
 # genes from pr vs pd
-pr_v_pd_genes <- unique(c(pr.1$gene[1:20], pd.1$gene[1:20]))
+pr_v_pd_genes <- unique(c(pr.1$gene[1:20], pr$gene[1:20], pd.1$gene[1:20], pd$gene[1:20]))
 # all identified genes
-all_id_genes <- unique(c(naive_v_pr_pd_genes, pr_v_pd_genes))
+all_id_genes <- unique(c(input_naive_pr.1$gene[1:20], input_naive_pr$gene[1:20], pr.1$gene[1:20], pr$gene[1:20], input_naive_pd.1$gene[1:20], input_naive_pd$gene[1:20], pd.1$gene[1:20], pd$gene[1:20]))
 write.csv(x = all_id_genes, file = paste(dir, "data_out/NI07/NI07_topgenes_id.csv", sep = ""))
 # check ident
 unique(tiss_subset_tumor@ident)
 # change ident to analysis group
 tiss_subset_tumor <- SetIdent(tiss_subset_tumor, ident.use = tiss_subset_tumor@meta.data$analysis)
+# Reorder analysis column factor 
+tiss_subset_tumor@meta.data$analysis <- factor(tiss_subset_tumor@meta.data$analysis, levels=c("naive", "grouped_pr", "grouped_pd"))
 # save heatmap of genes
 pdf(file = paste(dir, "plot_out/NI07/NI07_top20_DEgenes_per_group.pdf", sep=""))
-DoHeatmap(tiss_subset_tumor, genes.use = all_id_genes, slim.col.label = TRUE, use.scaled = FALSE, group.order = c("naive", "grouped_pr", "grouped_pd"))
+DoHeatmap(tiss_subset_tumor, genes.use = all_id_genes, slim.col.label = TRUE, use.scaled = TRUE, group.order = c("naive", "grouped_pr", "grouped_pd"))
 dev.off()
 # changes from naive to pr/pd
 pdf(file = paste(dir, "plot_out/NI07/NI07_top20_DEgenes_naive_to_pr_pd.pdf", sep=""))
-DoHeatmap(tiss_subset_tumor, genes.use = naive_v_pr_pd_genes, slim.col.label = TRUE, use.scaled = FALSE, group.order = c("naive", "grouped_pr", "grouped_pd"))
+DoHeatmap(tiss_subset_tumor, genes.use = naive_v_pr_pd_genes, slim.col.label = TRUE, use.scaled = TRUE, group.order = c("naive", "grouped_pr", "grouped_pd"))
 dev.off()
 # changes between pr and pd
 pdf(file = paste(dir, "plot_out/NI07/NI07_top20_DEgenes_pr_vs_pd.pdf", sep=""))
-DoHeatmap(tiss_subset_tumor, genes.use = pr_v_pd_genes, slim.col.label = TRUE, use.scaled = FALSE, group.order = c("naive", "grouped_pr", "grouped_pd"))
+DoHeatmap(tiss_subset_tumor, genes.use = pr_v_pd_genes, slim.col.label = TRUE, use.scaled = T, group.order = c("naive", "grouped_pr", "grouped_pd"))
 dev.off()
 ```
 
