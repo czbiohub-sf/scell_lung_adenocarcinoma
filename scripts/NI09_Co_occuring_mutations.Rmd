@@ -9,6 +9,7 @@ Read in data
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 sum_tab <- read.csv(file = paste(dir, "data_out/NI06/NI06_mutation_summary_table.csv", sep = ""))
 mut_of_int <- read.csv(file = paste(dir, "gene_lists/mutations_of_interest.csv", sep = ""))
+load(file = paste(dir, "Data_input/NI04_tumor_seurat_object.RData", sep = ""))
 mut_of_int
 ```
 
@@ -39,7 +40,6 @@ mat.tier
 
 
 Loop over each sample and populate each table 
-
 First the clinical mutations 
 ```{r}
 for(i in 1:length(samples)){
@@ -133,7 +133,6 @@ ggplot(heat.mat.tier.m, aes(sample, variable)) +
 
 Map clincal and tier one mutations together
 Currently TIER1 genes are sorted on their mutation count 
-To do: Sort samples 
 ```{r}
 mat.clinical.b.f$sample <- NULL
 mat.teir.b.f$sample <- NULL
@@ -153,6 +152,12 @@ genes.all <- c(colnames(heat.all.mat)[1:6],genes.1)
 heat.all.mat.m <- melt(heat.all.mat)
 # Reorder gene column 
 heat.all.mat.m$variable <- factor(heat.all.mat.m$variable, levels=genes.all)
+#order samples by analysis group
+sample.ordered <- c(unique(tiss_subset_tumor@meta.data$sample_name[which(tiss_subset_tumor@meta.data$analysis=="naive")]),
+unique(tiss_subset_tumor@meta.data$sample_name[which(tiss_subset_tumor@meta.data$analysis=="grouped_pr")]),
+unique(tiss_subset_tumor@meta.data$sample_name[which(tiss_subset_tumor@meta.data$analysis=="grouped_pd")]))
+# set sample levels
+heat.all.mat.m$sample <- factor(heat.all.mat.m$sample, levels=sample.ordered)
 # plot
 pdf(file = paste(dir, "plot_out/NI09/NI09_comutation_summary_heatmap.pdf", sep = ""))
 ggplot(heat.all.mat.m, aes(sample, variable)) +
