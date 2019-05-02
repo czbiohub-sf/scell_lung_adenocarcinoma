@@ -8,7 +8,7 @@ Myeloid
 
 Load immune workspace
 ```{r}
-rm(list=ls())
+# rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
 ```
@@ -101,6 +101,12 @@ t.cell.tiss <- RunTSNE(object = t.cell.tiss, dims.use = n.pcs.min:n.pcs.max, see
 TSNEPlot(object = t.cell.tiss, do.label = T)
 ```
 
+# Plot TSNE and save 
+```{r}
+pdf(paste(dir, "plot_out/IM04/TCell_TSNE_manuscript.pdf",sep=""), 5,5)
+TSNEPlot(object = t.cell.tiss, do.label = F)
+dev.off()
+```
 
 ```{r}
 t.cell.tiss <- BuildClusterTree(t.cell.tiss) 
@@ -127,7 +133,7 @@ tab.1 <- melt(tab.1)
 tab.1$Var.1 <- as.factor(tab.1$Var.1)
 fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
                            stat="identity")
-ggsave(filename = paste(dir, "plot_out/IM04/Tcell_fraction_of_each_response_group_TSNE_clusters.pdf",sep=""), plot = fraction.plot,width = 7,height = 7)
+ggsave(filename = paste(dir, "plot_out/IM04/Tcell_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
 fraction.plot
 ```
 
@@ -152,10 +158,10 @@ balloonplot(tab.1, main ="Patient ID vs Treatment response", xlab ="", ylab="",
 
 Plot top genes annotate by reponse
 ```{r}
-genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "MKI67", "FOXP3","CTLA4", "IL2RA", "PDCD1")
-DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
-VlnPlot(t.cell.tiss, features.plot = genes)
-DotPlot(t.cell.tiss, genes.plot = genes)
+genes <- c("CD4","CTLA4","PDCD1","FOXP3","IL2RA", "CXCL13", "CXCR5", "TOP2A", "CD8A")
+a <- VlnPlot(t.cell.tiss, features.plot = genes, do.return = T, point.size.use = 0)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells.pdf",sep=""),plot = a,width = 10,height = 10)
+a
 ```
 
 Find all cluster markers 
@@ -268,41 +274,4 @@ t.ipa <- seurat.to.ipa(df = markers, score.column = "avg_logFC",divide.by.column
                         gene.column = "gene", divide.append = "lung_t_cell")
 # # Write table 
 write.table(t.ipa, paste(dir, "data_out/IM04/Differentially_expressed_genes_Tcell_clusters_LUNG.txt",sep=""), row.names = T, quote=F, sep="\t")
-```
-
-
-
-
-
-
-
-```{r}
-temp <- FindMarkers(t.cell.tiss, ident.1 = 4, ident.2 = 5)
-temp <- temp[order(temp$avg_logFC, decreasing = T),]
-temp.2 <- temp[which(temp$pct.1 > 0.75),]
-
-
-genes <- c("CD4","TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CXCL13","CXCR5", "IL7R")
-a <- VlnPlot(t.cell.tiss, features.plot = genes, do.return = T)
-a
-
-
-t.cell.tiss
-
-genes <- c("TGFB1", "CXCR5","CCL19", "CCL21")
-VlnPlot(tiss_immune, features.plot = genes, x.lab.rot = T)
-
-
-temp <- cbind(tiss_immune@data["CD80",], tiss_immune@data["CD86",],tiss_immune@data["CD274",])
-temp <- as.data.frame(temp)
-temp <- cbind(temp, as.data.frame(tiss_immune@meta.data$analysis), as.data.frame(tiss_immune@meta.data$immune_subtype_annotation))
-colnames(temp) <- c("CD80", "CD86", "CD274", "response", "cell.type")
-temp <- melt(temp)
-
-
-bp <- ggplot(temp, aes(x=response, y=value, group=response)) + 
-  geom_boxplot(aes(fill=response)) + facet_grid( variable ~ cell.type)
-
-table(tiss_immune@meta.data$analysis, tiss_immune@meta.data$immune_subtype_annotation)
-
 ```

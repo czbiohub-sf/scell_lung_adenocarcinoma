@@ -130,7 +130,10 @@ ggplot(heat.mat.tier.m, aes(sample, variable)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
+
 Map clincal and tier one mutations together
+Currently TIER1 genes are sorted on their mutation count 
+To do: Sort samples 
 ```{r}
 mat.clinical.b.f$sample <- NULL
 mat.teir.b.f$sample <- NULL
@@ -140,12 +143,21 @@ all.mat.f <- all.mat[rowSums(all.mat) > 0, ]
 # set up data for heatmap
 heat.all.mat <- all.mat.f
 heat.all.mat$sample <- rownames(heat.all.mat)
+# Order genes 
+# the ordering assumes that the first column of tier1 genes is column 7. If that is not the case the 7 needs to be adjusted
+genes.1 <- names(sort(colSums(heat.all.mat[,c(7:(ncol(heat.all.mat)-1))]), decreasing = F))
+# Combine with "clinical" genes
+# the ordering assumes that the last column of clinical genes is column 6. If that is not the case the 6 needs to be adjusted
+genes.all <- c(colnames(heat.all.mat)[1:6],genes.1)
+# Melt data frame 
 heat.all.mat.m <- melt(heat.all.mat)
+# Reorder gene column 
+heat.all.mat.m$variable <- factor(heat.all.mat.m$variable, levels=genes.all)
 # plot
 pdf(file = paste(dir, "plot_out/NI09/NI09_comutation_summary_heatmap.pdf", sep = ""))
 ggplot(heat.all.mat.m, aes(sample, variable)) +
     geom_tile(aes(fill = value),colour = "black") + 
-    scale_fill_gradient(low = "white", high = "black") +
+    scale_fill_gradient(low = "white", high = "grey60") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 dev.off()
 ```

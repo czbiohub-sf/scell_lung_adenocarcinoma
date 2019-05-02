@@ -274,17 +274,19 @@ free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Ne
 # Map free annotation to cluster numbers and store as immune_subtype_annotation
 tiss_immune@meta.data[,'immune_subtype_annotation'] <- plyr::mapvalues(x = tiss_immune@meta.data$immune.subcluster.ids, from = cluster.ids, to = free_annotation)
 # Plot 
-pdf(paste(dir,"plot_out/IM01/Immune_cells_free_annotation_on_TSNE.pdf", sep=""),10,10)
+pdf(paste(dir,"plot_out/IM01/Immune_cells_free_annotation_on_TSNE.pdf", sep=""),width = 10,height = 10)
 TSNEPlot(object = tiss_immune, do.label = TRUE, pt.size = 0.5, group.by='immune_subtype_annotation', label.size = 6)
-TSNEPlot(object = tiss_immune, do.label = F, pt.size = 0.5, group.by='immune_subtype_annotation', label.size = 6)
+TSNEPlot(object = tiss_immune, do.label = F, pt.size = 0.5, group.by='immune_subtype_annotation')
+DimPlot
 dev.off()
 ```
 # Barplot of all immune cell counts 
 ```{r}
 table.temp <- as.data.frame(table(tiss_immune@meta.data$immune_subtype_annotation))
+table.temp$Var1 <- factor(table.temp$Var1,levels = as.character(table.temp$Var1[order(table.temp$Freq,decreasing=F)]))
 p <-  ggplot(data=table.temp, aes(x=Var1, y=Freq)) +
       geom_bar(stat="identity") + coord_flip()
-ggsave(paste(dir,"plot_out/IM01/Immune_cell_counts.pdf", sep=""), width = 10, height = 7)
+ggsave(paste(dir,"plot_out/IM01/Immune_cell_counts.pdf", sep=""), width = 90, height = 90, units = "mm")
 table.temp
 ```
 

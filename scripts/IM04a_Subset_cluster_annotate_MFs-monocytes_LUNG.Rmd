@@ -126,6 +126,12 @@ mf.cell.tiss <- RunTSNE(object = mf.cell.tiss, dims.use = n.pcs.min:n.pcs.max, s
 TSNEPlot(object = mf.cell.tiss, do.label = T)
 ```
 
+# Plot TSNE and save 
+```{r}
+pdf(paste(dir, "plot_out/IM04/MF_TSNE_manuscript.pdf",sep=""), 5,5)
+TSNEPlot(object = mf.cell.tiss, do.label = F)
+dev.off()
+```
 
 # Plot TSNE with analysis colors 
 ```{r}
@@ -138,6 +144,14 @@ mf.cell.tiss <- SetIdent(mf.cell.tiss,ident.use = mf.cell.tiss@meta.data$res.0.3
 tab.1 <- table(mf.cell.tiss@meta.data$res.0.3, mf.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
+```
+
+```{r}
+tab.1 <- prop.table(table(mf.cell.tiss@meta.data$res.0.3, mf.cell.tiss@meta.data$analysis), margin = 1)
+tab.1 <- melt(tab.1)
+p <- ggplot(tab.1, aes(fill=Var.2, y=value, x=Var.1)) + 
+    geom_bar( stat="identity", position="fill")
+ggsave(filename = paste(dir, "plot_out/IM04/MF_TSNE_clusters_by_treatment_manuscript.pdf",sep=""),plot = p, width = 7,height = 5)
 ```
 
 ```{r}
@@ -203,9 +217,9 @@ write.table(mf.cell.markers, paste(dir, "data_out/IM04/MFs_DE_genes_between_subc
 Plot top genes 
 ```{r}
 # Violin plot 
-genes <- c("IDO1","CXCL9","CXCL10","CXCL11", "GBP1", "GBP5", "ANKRD22", "CD80", "CD86")
-a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T)
-ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_MFs.pdf",sep=""),plot = a,width = 10,height = 7)
+genes <- c("IDO1","WARS","CXCL9","CXCL10","CXCL11", "GBP1", "GBP4", "GBP5", "ANKRD22")
+a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T, point.size.use = 0)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_MFs.pdf",sep=""),plot = a,width = 10,height = 10)
 a
 ```
 Plot top genes 
