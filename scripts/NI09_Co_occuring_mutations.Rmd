@@ -142,6 +142,10 @@ all.mat.f <- all.mat[rowSums(all.mat) > 0, ]
 # set up data for heatmap
 heat.all.mat <- all.mat.f
 heat.all.mat$sample <- rownames(heat.all.mat)
+#order samples by analysis group
+sample.ordered <- c("LT_S34", "LT_S43", "LT_S49", "LT_S50", "LT_S51", "LT_S56", "LT_S67", "LT_S66", "LT_S65", "LT_S69", "LT_S74", "LT_S75", "LT_S45", "LT_S52", "LT_S55", "LT_S01", "LT_S42", "LT_S11", "LT_S13", "LT_S41", "LT_S71", "LT_S57", "LT_S82", "LT_S53", "LT_S05", "LT_S07", "LT_S08", "LT_S16", "LT_S48", "LT_S63", "LT_S58", "LT_S79", "LT_S80", "LT_S78", "LT_S21", "LT_S23", "LT_S28", "LT_S47", "LT_S54", "LT_S72")
+# set sample levels
+heat.all.mat$sample <- factor(heat.all.mat$sample, levels = sample.ordered)
 # Order genes 
 # the ordering assumes that the first column of tier1 genes is column 7. If that is not the case the 7 needs to be adjusted
 genes.1 <- names(sort(colSums(heat.all.mat[,c(7:(ncol(heat.all.mat)-1))]), decreasing = F))
@@ -152,18 +156,18 @@ genes.all <- c(colnames(heat.all.mat)[1:6],genes.1)
 heat.all.mat.m <- melt(heat.all.mat)
 # Reorder gene column 
 heat.all.mat.m$variable <- factor(heat.all.mat.m$variable, levels=genes.all)
-#order samples by analysis group
-sample.ordered <- c(unique(tiss_subset_tumor@meta.data$sample_name[which(tiss_subset_tumor@meta.data$analysis=="naive")]),
-unique(tiss_subset_tumor@meta.data$sample_name[which(tiss_subset_tumor@meta.data$analysis=="grouped_pr")]),
-unique(tiss_subset_tumor@meta.data$sample_name[which(tiss_subset_tumor@meta.data$analysis=="grouped_pd")]))
-# set sample levels
-heat.all.mat.m$sample <- factor(heat.all.mat.m$sample, levels=sample.ordered)
+
+heat.all.mat.m$sample
 # plot
 pdf(file = paste(dir, "plot_out/NI09/NI09_comutation_summary_heatmap.pdf", sep = ""))
 ggplot(heat.all.mat.m, aes(sample, variable)) +
     geom_tile(aes(fill = value),colour = "black") + 
     scale_fill_gradient(low = "white", high = "grey60") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(heat.all.mat.m, aes(x = sample, y = variable)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
 dev.off()
 ```
 
