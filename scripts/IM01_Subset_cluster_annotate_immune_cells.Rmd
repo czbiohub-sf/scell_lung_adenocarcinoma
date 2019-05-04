@@ -305,4 +305,5 @@ table.temp
 Save immune cell workspace 
 ```{r}
 save(tiss_immune, file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+tiss_immune@meta.data$immune_subtype_annotation
 ```
