@@ -215,6 +215,21 @@ ggplot(tab1) +
   geom_bar(position = "fill")
 ```
 
+Patient occupancy per cell type 
+```{r}
+# Barplot of patients per cluster 
+tab1 <- table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$immune_subtype_annotation)
+# 
+tab1 <- melt((apply(tab1, MARGIN = 2, max)/colSums(tab1))*100)
+tab1$cell.type <- row.names(tab1)
+# 
+tab1$cell.type <- factor(tab1$cell.type,levels = as.character(table.temp$Var1[order(table.temp$Freq,decreasing=F)]))
+p <-  ggplot(data=tab1, aes(x=cell.type, y=value)) +
+      geom_bar(stat="identity") + coord_flip()
+ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), width = 90, height = 90, units = "mm")
+```
+
+
 Calculate and plot average expression of broad cell type specific gene sets 
 ```{r}
 library(ggridges)
