@@ -1,10 +1,8 @@
 ---
-title: "Untitled"
+title: "T-cell Liver"
 output: html_document
 ---
 
-More detailed Immune phenotyping of different immune cell types
-Myeloid 
 
 Load immune workspace
 ```{r}
@@ -13,7 +11,7 @@ dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
 ```
 
-Subset Myeloid
+Subset cells
 ```{r}
 t.cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$immune_subtype_annotation == "T-cells")]
 length(t.cells)
@@ -32,7 +30,7 @@ dev.off()
 
 Subset Myeloid only within Lung 
 ```{r}
-t.cells <- row.names(t.cell.tiss@meta.data)[which(t.cell.tiss@meta.data$biopsy_site == "Lung")]
+t.cells <- row.names(t.cell.tiss@meta.data)[which(t.cell.tiss@meta.data$biopsy_site == "Liver")]
 length(t.cells)
 t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
 ```
@@ -105,7 +103,7 @@ TSNEPlot(object = t.cell.tiss, do.label = T)
 
 # Plot TSNE and save 
 ```{r}
-pdf(paste(dir, "plot_out/IM04/TCell_TSNE_manuscript.pdf",sep=""), 5,5)
+pdf(paste(dir, "plot_out/IM04/TCell_TSNE_manuscript_Liver.pdf",sep=""), 5,5)
 TSNEPlot(object = t.cell.tiss, do.label = F)
 dev.off()
 ```
