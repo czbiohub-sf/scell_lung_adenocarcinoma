@@ -47,7 +47,7 @@ for(i in 1:length(unique(meta.temp$analysis))){
 vec.temp <- meta.temp[meta.temp$analysis==unique(meta.temp$analysis)[i],"immune_subtype_annotation"]
 # Convert to counts and calculate 95% CI 
 # Store in list 
-table.temp <- ?freqCI(vec.temp, level = c(.95))
+table.temp <- freqCI(vec.temp, level = c(.95))
 prop.table.error[[i]] <- print(table.temp, percent = TRUE, digits = 3)
 # 
 }

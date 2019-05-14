@@ -65,6 +65,7 @@ Find variable genes
 ```{r}
 mf.cell.tiss <- FindVariableGenes(object = mf.cell.tiss, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 1, num.bin = 20, 
                                           binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
+length(mf.cell.tiss@var.genes)
 ```
 
 Unsupervised clustering of Myeloid cells
