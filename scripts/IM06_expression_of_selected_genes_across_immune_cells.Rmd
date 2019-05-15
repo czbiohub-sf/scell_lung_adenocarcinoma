@@ -1,0 +1,49 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+Load immune workspace
+```{r}
+rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+```
+
+Subset cells
+```{r}
+t.cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$immune_subtype_annotation == "T-cells")]
+length(t.cells)
+t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
+t.cells <- row.names(t.cell.tiss@meta.data)[which(t.cell.tiss@meta.data$biopsy_site == "Lung")]
+length(t.cells)
+t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
+```
+
+Select genes 
+```{r}
+genes <- c("PDCD1", "IDO1", "CTLA4", "CD4", "CD8A", "CD68")
+```
+
+
+Subset 
+```{r}
+temp <- FetchData(tiss_immune, c(genes, 'analysis','immune_subtype_annotation', 'biopsy_site'))
+```
+
+Plot for each gene
+```{r}
+list.ggplot <- list()
+for(i in 1:length(genes)){
+  a <- which(colnames(temp)==genes[i])
+  temp.1 <- melt(cbind(as.data.frame(temp[,a]),as.data.frame(temp$analysis),as.data.frame(temp$immune_subtype_annotation) ))
+  colnames(temp.1) <- c("treatment", "type", "var", "value")
+  # Remove all zeros 
+  temp.2 <- temp.1[which(temp.1$value!=0),]
+  list.ggplot[[i]] <- ggplot(temp.2, aes(x = value, y = treatment, fill = type)) + 
+  geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + 
+  xlab(paste(genes[i],"Gene Expression"))
+  ggsave(plot = list.ggplot[[i]], filename = paste(dir,"plot_out/IM06/",genes[i],".pdf", sep=""))
+}
+
+```
