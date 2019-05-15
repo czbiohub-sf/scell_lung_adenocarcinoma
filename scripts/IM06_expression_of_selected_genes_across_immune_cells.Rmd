@@ -44,17 +44,10 @@ for(i in 1:length(genes)){
   geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + 
   xlab(paste(genes[i],"Gene Expression")) + facet_wrap(~type) + 
   geom_density_ridges(jittered_points = TRUE)
-  ggsave(plot = list.ggplot[[i]], filename = paste(dir,"plot_out/IM06/",genes[i],".pdf", sep=""))
+  ggsave(plot = list.ggplot[[i]], filename = paste(dir,"plot_out/IM06/",genes[i],".pdf", sep=""), width = 10, height = 7)
 }
 
 ```
 ```{r}
 
-  
-  
-
-    )
-
- 
-    
 ```
