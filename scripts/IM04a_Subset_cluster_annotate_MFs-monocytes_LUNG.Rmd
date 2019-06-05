@@ -148,11 +148,15 @@ balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
 ```
 
 ```{r}
+require(reshape)
 tab.1 <- prop.table(table(mf.cell.tiss@meta.data$res.0.3, mf.cell.tiss@meta.data$analysis), margin = 1)
 tab.1 <- melt(tab.1)
-p <- ggplot(tab.1, aes(fill=Var.2, y=value, x=Var.1)) + 
-    geom_bar( stat="identity", position="fill")
-ggsave(filename = paste(dir, "plot_out/IM04/MF_TSNE_clusters_by_treatment_manuscript.pdf",sep=""),plot = p, width = 7,height = 5)
+tab.1$Var.1 <- as.factor(tab.1$Var.1)
+fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
+                           stat="identity" , position=position_dodge())
+ggsave(filename = paste(dir, "plot_out/IM04/MF_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
+fraction.plot
+
 ```
 
 ```{r}
@@ -187,7 +191,9 @@ Plot top genes
 require(tidyverse)
 mf.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 mf.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
+pdf(paste(dir, "plot_out/IM04/Heatmap_markers_of_MFcell_clusters.pdf",sep=""), 7,7)
 DoHeatmap(mf.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
+dev.off()
 # DoHeatmap(mf.cell.tiss, genes.use = c("CD8A", "CD4", "PDCD1", "CD3E", "TOP2A"), slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, use.scaled = F)
 ```
 
@@ -218,7 +224,7 @@ write.table(mf.cell.markers, paste(dir, "data_out/IM04/MFs_DE_genes_between_subc
 Plot top genes 
 ```{r}
 # Violin plot 
-genes <- c("IDO1","WARS","CXCL9","CXCL10","CXCL11", "GBP1", "GBP4", "GBP5", "ANKRD22")
+genes <- c("IDO1","WARS","CXCL10","GBP5", "ANKRD22", "THBS1", "PTX3", "MARCO", "CCL13", "IL1B")
 a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T, point.size.use = 0)
 ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_MFs.pdf",sep=""),plot = a,width = 10,height = 10)
 a
@@ -281,3 +287,11 @@ t.ipa <- seurat.to.ipa(df = markers, score.column = "avg_logFC",divide.by.column
 write.table(t.ipa, paste(dir, "data_out/IM04/Differentially_expressed_genes_MFcell_clusters_LUNG.txt",sep=""), row.names = T, quote=F, sep="\t")
 ```
 
+
+Plot top genes 
+```{r}
+# Violin 
+genes <- c("TGFB1", "IL10", "IL1B", "TNF", "IL6", "IL12A", "IL12B")
+a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T, point.size.use = 1)
+
+```
