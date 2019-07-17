@@ -9,7 +9,9 @@ Read in data
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 sum_tab <- read.csv(file = paste(dir, "data_out/NI06/NI06_mutation_summary_table.csv", sep = ""))
 mut_of_int <- read.csv(file = paste(dir, "gene_lists/mutations_of_interest.csv", sep = ""))
-load(file = paste(dir, "Data_input/NI04_tumor_seurat_object.RData", sep = ""))
+load(file = paste(dir, "Data_input/NI04_epithelial_annotated_tumor_mut.RData", sep = ""))
+cov_table_by_cell <- read.csv(file = paste(dir, "Data_input/coverage_ratios_by_cell.csv", sep = ""), row.names = 1)
+sample_by_gene_tab <- read.csv(file = paste(dir, "Data_input/gene_x_sample_ratios.csv", sep = ""), row.names = 1)
 mut_of_int
 ```
 
@@ -100,7 +102,7 @@ mat.clinical.b[mat.clinical.b !=0] <- 1
 # filter the rows that have a column sum of zero
 mat.clinical.b.f <- mat.clinical.b
 mat.clinical.b.f$sample <- rownames(mat.clinical.b.f)
-mat.clinical.b.f <- mat.clinical.b.f[,colSums(mat.clinical.b.f[,1:7]) > 0]
+mat.clinical.b.f <- mat.clinical.b.f[,colSums(mat.clinical.b.f[,1:15]) > 0]
 # set up data for heatmap
 heat.mat.clinical <- mat.clinical.b.f
 heat.mat.clinical.m <- melt(heat.mat.clinical)
@@ -110,6 +112,30 @@ ggplot(heat.mat.clinical.m, aes(sample, variable)) +
     scale_fill_gradient(low = "white", high = "black") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
+
+
+Investiate the ROIs reported from clinical and COSMIC ROIs
+```{r}
+sample_by_gene_tab
+sample.ordered <- c("LT_S34", "LT_S43", "LT_S49", "LT_S50", "LT_S51", "LT_S56", "LT_S67", "LT_S66", "LT_S65", "LT_S69", "LT_S74", "LT_S75", "LT_S45", "LT_S52", "LT_S55", "LT_S01", "LT_S42", "LT_S11", "LT_S13", "LT_S41", "LT_S71", "LT_S57", "LT_S82", "LT_S53", "LT_S05", "LT_S07", "LT_S08", "LT_S16", "LT_S48", "LT_S63", "LT_S58", "LT_S79", "LT_S80", "LT_S78", "LT_S21", "LT_S23", "LT_S28", "LT_S47", "LT_S54", "LT_S72")
+sample_by_gene_tab <- sample_by_gene_tab[,c(sample.ordered)]
+sample_by_gene_tab_filtered <- sample_by_gene_tab[rowSums(sample_by_gene_tab) > 0, colSums(sample_by_gene_tab) > 0]
+pheatmap(mat = sample_by_gene_tab_filtered, cluster_cols = FALSE, cluster_rows = TRUE, color = viridis(10))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Plot the Heatmaps for Cosmic Tier 1 Genes
 ```{r}
@@ -156,7 +182,6 @@ genes.all <- c(colnames(heat.all.mat)[1:6],genes.1)
 heat.all.mat.m <- melt(heat.all.mat)
 # Reorder gene column 
 heat.all.mat.m$variable <- factor(heat.all.mat.m$variable, levels=genes.all)
-
 heat.all.mat.m$sample
 # plot
 pdf(file = paste(dir, "plot_out/NI09/NI09_comutation_summary_heatmap.pdf", sep = ""))
@@ -164,11 +189,43 @@ ggplot(heat.all.mat.m, aes(sample, variable)) +
     geom_tile(aes(fill = value),colour = "black") + 
     scale_fill_gradient(low = "white", high = "grey60") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
 ggplot(heat.all.mat.m, aes(x = sample, y = variable)) + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
 dev.off()
 ```
 
+
+
+```{r}
+grep(pattern = "D15_B002078", x = tiss_subset_tumor@meta.data$cell_id)
+```
+
+
+Coverage of ROI by cell
+```{r}
+head(cov_table_by_cell)
+dim(cov_table_by_cell_tumor)
+# subset to only tumor cells
+cov_table_by_cell_tumor <- cov_table_by_cell[tiss_subset_tumor@meta.data$cell_id, ]
+dim(cov_table_by_cell_tumor)
+```
+
+```{r}
+# Find cells of different conditions (0 = no mutant reads/ WT reads, Inf = mutant read(s) no WT read(s), NaN = no coverage)
+table(is.na(cov_table_by_cell_tumor))
+table(is.nan(as.matrix(cov_table_by_cell_tumor)))
+table(is.infinite(as.matrix(cov_table_by_cell_tumor)))
+grep(pattern = "FALSE", x = cov_table_by_cell_tumor)
+colnames(cov_table_by_cell_tumor)
+hist(as.matrix(cov_table_by_cell_tumor))
+nnzero(cov_table_by_cell_tumor, na.counted = NA)
+
+```
+
+```{r}
+library(RColorBrewer)
+breaksList = seq(0, 1, by = 10)
+test <- pheatmap(mat = cov_table_by_cell_tumor, cluster_rows = FALSE, labels_col = FALSE, labels_row = FALSE)
+ggsave(plot = test, filename = "/home/rstudio/test.pdf")
+```
 

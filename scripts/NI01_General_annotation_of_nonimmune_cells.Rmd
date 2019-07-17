@@ -137,3 +137,28 @@ Save Processed Subset Seurat Object
 save(tiss_nonimmune, file=paste(dir,"Data_input/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
 ```
 
+Save annotatoins to main seurat object
+```{r}
+load(file=paste(dir,"Data_input/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
+load(file=paste(dir,"Data_input/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
+colnames(tiss_nonimmune@meta.data)
+colnames(tiss_subset@meta.data)
+
+tiss_subset@meta.data <- left_join(tiss_subset@meta.data, tiss_nonimmune@meta.data[,c(6,60)], by = 'cell_id')
+table(tiss_subset@meta.data$nonimmune_general_annotation)
+tiss_subset@meta.data$general_annotation <- tiss_subset@meta.data$nonimmune_general_annotation
+tiss_subset@meta.data$general_annotation[is.na(tiss_subset@meta.data$general_annotation)] <- "immune"
+table(tiss_subset@meta.data$general_annotation)
+# replace Endo/Fibro/Hepta/Melano/Ukn without "stroma"
+tiss_subset@meta.data$general_annotation <- gsub(pattern = "Endothelial", replacement = "Stroma", x = tiss_subset@meta.data$general_annotation)
+tiss_subset@meta.data$general_annotation <- gsub(pattern = "Fibroblast", replacement = "Stroma", x = tiss_subset@meta.data$general_annotation)
+tiss_subset@meta.data$general_annotation <- gsub(pattern = "Hepatocyte", replacement = "Stroma", x = tiss_subset@meta.data$general_annotation)
+tiss_subset@meta.data$general_annotation <- gsub(pattern = "Melanocytes", replacement = "Stroma", x = tiss_subset@meta.data$general_annotation)
+tiss_subset@meta.data$general_annotation <- gsub(pattern = "Unknown", replacement = "Stroma", x = tiss_subset@meta.data$general_annotation)
+rownames(tiss_subset@meta.data) <- tiss_subset@meta.data$cell_id
+save(tiss_subset, file = paste(dir,"Data_input/S03_Main_Seurat_object_filtered_and_subset_annotated.RData", sep=""))
+
+pdf(file = paste(dir, "plot_out/NI01/NI01_main_tSNE_with_anno.pdf", sep = ""), width = 7, height = 5)
+TSNEPlot(tiss_subset, group.by = 'general_annotation', do.label = FALSE, pt.size = 0.5, colors.use = c("orchid3", "palegreen4","sandybrown"))
+dev.off()
+```

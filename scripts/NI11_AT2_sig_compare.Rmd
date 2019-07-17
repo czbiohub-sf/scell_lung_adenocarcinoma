@@ -1,0 +1,92 @@
+---
+title: "AT2 Compare Between Datasets and Groups"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(Seurat)
+library(matrixStats)
+```
+
+```{r}
+# load dropseq data from 	Vieira Braga FA, Kar G, Berg M, Carpaij OA et al. A cellular census of human lungs identifies novel cell states in health and in asthma. Nat Med 2019 Jun 17. PMID: 31209336
+dropseq_metadat <- read.csv(file = "/myVolume/scell_lung_adenocarcinoma/Data_input/GSE130148_barcodes_cell_types.txt", header = TRUE, sep = "\t")
+rownames(dropseq_metadat) <- dropseq_metadat$cell.barcode
+load(file = paste(dir, "Data_input/GSE130148_raw_counts.RData", sep = ""))
+head(raw_counts)
+```
+
+Create Seurat object for Dropseq Data
+```{r}
+dropseq_data <- CreateSeuratObject(raw.data = raw_counts, meta.data = dropseq_metadat)
+```
+
+Assign AT2 signature
+```{r}
+AT2_sig_genes <- c("SFTPC", "PGC", "SFTPB", "LAMP3", "LPL", "IL1RL1", "NR4A2", "HIF3A", "MAOA", "ADH1B", "SEPP1", "SCNN1A", "CLDN18", "AQP4")
+```
+
+Pull data for dropseq AT2s
+```{r}
+table(dropseq_data@meta.data$celltype)
+# subset only Typle 2 cells
+
+dropseq_type2 <- filter(dropseq_data@meta.data, celltype == "Type 2")
+rownames(dropseq_type2) <- dropseq_type2$cell.barcode
+table(dropseq_type2$GEO_Sample)
+
+dropseq_Type2 <- SubsetData(object = dropseq_data, cells.use = dropseq_type2$cell.barcode)
+dropseq_at2exp <- FetchData(dropseq_Type2, vars.all = AT2_sig_genes)
+dropseq_at2exp_mean <- colMeans(dropseq_at2exp)
+```
+
+Pull data for scRNAseq non cancer AT2s
+```{r}
+# Fetch Data for AT2 Sig in Normal AT2 Cells
+normal_at2 <- filter(tiss_nonimmune_epi@meta.data, epi_anno_final == "alveolar type 2 cell")
+normal_at2_sub <- SubsetData(tiss_nonimmune_epi, cells.use = normal_at2$cell_id)
+
+norm_at2exp <- FetchData(normal_at2_sub, vars.all = AT2_sig_genes)
+norm_at2exp_mean <- colMeans(norm_at2exp)
+```
+
+Pull data for scRNAseq for cancer groups
+```{r}
+tumor_at2exp <- FetchData(tiss_subset_tumor, c('analysis', AT2_sig_genes))
+TN_at2exp <- filter(tumor_at2exp, analysis == 'naive')
+TN_at2exp$analysis <- NULL
+TN_at2exp_mean <- colMeans(TN_at2exp)
+
+PER_at2exp <- filter(tumor_at2exp, analysis == 'grouped_pr')
+PER_at2exp$analysis <- NULL
+PER_at2exp_mean <- colMeans(PER_at2exp)
+
+PD_at2exp <- filter(tumor_at2exp, analysis == 'grouped_pd')
+PD_at2exp$analysis <- NULL
+PD_at2exp_mean <- colMeans(PD_at2exp)
+```
+
+
+```{r}
+cor.test(dropseq_at2exp_mean, norm_at2exp_mean, method = "pearson") #0.6756 p-value = 0.008001
+cor.test(dropseq_at2exp_mean, TN_at2exp_mean, method = "pearson") #-0.0733 p-value = 0.8032
+cor.test(dropseq_at2exp_mean, PER_at2exp_mean, method = "pearson") #0.1147 p-value = 0.6962
+cor.test(dropseq_at2exp_mean, PD_at2exp_mean, method = "pearson") #-0.2086 p-value = 0.474
+
+plot(log(dropseq_at2exp_mean), log(norm_at2exp_mean))
+plot(log(dropseq_at2exp_mean), log(TN_at2exp_mean))
+plot(log(dropseq_at2exp_mean), log(PER_at2exp_mean))
+plot(log(dropseq_at2exp_mean), log(PD_at2exp_mean))
+
+cor.test(dropseq_at2exp_mean, norm_at2exp_mean, method = "spearman") #0.8373626  p-value = 0.0002774
+cor.test(dropseq_at2exp_mean, TN_at2exp_mean, method = "spearman") #0.4989011 p-value = 0.07214
+cor.test(dropseq_at2exp_mean, PER_at2exp_mean, method = "spearman") #0.5076923 p-value = 0.06669
+cor.test(dropseq_at2exp_mean, PD_at2exp_mean, method = "spearman") #0.2351648 p-value = 0.4175
+
+barplot(c(-0.0733, 0.1147, -0.2086, 0.6756))
+barplot(c(0.4989011, 0.5076923, 0.2351648, 0.8373626))
+```
+
+
+
