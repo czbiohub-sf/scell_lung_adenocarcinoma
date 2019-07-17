@@ -154,15 +154,7 @@ ggplot(endo_markers, aes(x = res.0.1, y = FLT1)) + geom_boxplot(aes(fill = analy
 
 
 ```{r}
-fibroblast_sub <- SetAllIdent(fibroblast_sub, id = "res.0.3")
-VlnPlot(fibroblast_sub, "TGFB1")
-VlnPlot(fibroblast_sub, "TNF")
-VlnPlot(fibroblast_sub, "IL6")
-```
-
-
-```{r}
-VlnPlot(fibroblast_sub, "SERPINE1")
+save(endo_sub, file = paste(dir, "Data_input/objects/NI12_endo_subset_object.RData", sep = ""))
 ```
 
 

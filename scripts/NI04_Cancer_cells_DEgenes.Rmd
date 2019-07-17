@@ -361,6 +361,8 @@ ggsave(PD_only_volc.1, filename = paste(dir,"plot_out/NI04/pr_vs_pd_pdonly_volca
 ```
 
 
+
+
 Subset TH226 samples for longitudial analysis
 ```{r}
 # subset out Patient TH226 (samples 52, 57 and 82)
@@ -601,6 +603,13 @@ squamous_vln <- ggplot(squamous_sig, aes(x = analysis, y = squamous_mean, fill =
 ggsave(squamous_vln, filename = paste(dir, "plot_out/NI04/TH226_analysis/TH226_squamous_sig.pdf", sep = ""), height = 10, width = 5)
 ```
 
+```{r}
+save(tiss_subset_tumor2, file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
+```
 
 
+```{r}
+VlnPlot(tiss_subset_tumor2, "SELENBP1")
+VlnPlot(tiss_subset_tumor2, "AXIN2")
+```
 

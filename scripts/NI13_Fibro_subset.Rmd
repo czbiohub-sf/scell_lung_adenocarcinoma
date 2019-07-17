@@ -363,7 +363,9 @@ ggplot(clus_7, aes(x = res.0.3, y = clus_7mean)) + geom_boxplot(outlier.shape = 
 DoHeatmap(object = fibroblast_sub, genes.use = c("MRC1", "CD164", "IL18", "CD9", "TGM2"), use.scaled = FALSE, slim.col.label = TRUE)
 ```
 
-
+```{r}
+save(fibroblast_sub, file = paste(dir, "Data_input/objects/NI13_fibro_subset_object.RData", sep = ""))
+```
 
 
 
