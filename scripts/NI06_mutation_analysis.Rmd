@@ -1,0 +1,88 @@
+---
+title: "Mutation Analysis"
+output: html_notebook
+---
+
+load libraries
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(Seurat)
+library(pheatmap)
+library(viridis)
+library(reshape2)
+library(dplyr)
+```
+
+load seurat object and mutation dataframes
+```{r}
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
+cov_by_goi <- read.csv(file = paste(dir, "Data_input/mutation_input/coverage_x_sample_cerebra_7.23.csv", sep = ""), row.names = 1)
+cov_by_roi <- read.csv(file = paste(dir, "Data_input/mutation_input/coverage_x_sample_cerebra_ROI_7.23.csv", sep = ""), row.names = 1)
+```
+
+Find ROIs and fusions within ROI table
+```{r}
+cov_by_roi_f <- cov_by_roi[,c(1:37)] #drop non-tumor sample
+cov_by_roi_main <- cov_by_roi_f[c("EGFR_L858R", "EGFR_K745_A750>T", "EGFR_E709_T710>D", "KRAS_G12A", "KRAS_G12C", "KRAS_G12S", "KRAS_G12F", "KRAS_G12V", "KRAS_G13D", "KRAS_G13V", "KRAS_Q61H", "KRAS_Q61K", "KRAS_C185S", "BRAF_V600E"), ]
+pheatmap(mat = cov_by_roi_main, cluster_cols = FALSE, cluster_rows = FALSE, color = viridis(10))
+
+cov_by_roi_fusions <- cov_by_roi_f[c("ALK--EML4", "ROS1--CD74"), ]
+#replace all numbers above 1 with 1
+cov_by_roi_fusions[ cov_by_roi_fusions > 1 ] <- 1
+pheatmap(mat = cov_by_roi_fusions, cluster_cols = FALSE, cluster_rows = FALSE, color = viridis(10))
+```
+
+```{r}
+cov_by_goi$gene <- rownames(cov_by_goi)
+cov_by_goi_a <- cov_by_goi %>% arrange(desc(rowSums(cov_by_goi[1:37])))
+rownames(cov_by_goi_a) <- cov_by_goi_a$gene
+cov_by_goi_a$gene <- NULL
+
+pheatmap(mat = cov_by_goi_a, cluster_cols = FALSE, cluster_rows = FALSE, color = viridis(10))
+```
+
+Combine above tables
+```{r}
+combo_1 <- rbind(cov_by_roi_main, cov_by_roi_fusions, cov_by_goi_a)
+pheatmap(mat = combo_1, cluster_cols = FALSE, cluster_rows = FALSE, color = viridis(10))
+```
+
+Sort samples by treatment timepoint and patient id
+```{r}
+samples_used <- as.data.frame(colnames(combo_1))
+colnames(samples_used) <- "sample_name"
+sample_meta <- left_join(samples_used, tiss_subset_tumor2@meta.data[,c("sample_name", "analysis", "patient_id", "biopsy_date", "biopsy_site", "primary_or_metastaic")])
+sample_meta_unique <- unique(sample_meta)
+
+sample_meta_sorted <- sample_meta_unique %>% arrange(desc(analysis))
+
+sample.ordered <- sample_meta_sorted$sample_name
+
+combo_1 <- combo_1[,c(sample.ordered)]
+
+pheatmap(mat = combo_1, cluster_cols = FALSE, cluster_rows = FALSE, color = viridis(10))
+```
+
+Add annotation column
+```{r}
+anno_col <- sample_meta_unique[,c("sample_name", "biopsy_site", "primary_or_metastaic", "analysis")]
+rownames(anno_col) <- anno_col$sample_name
+anno_col$sample_name <- NULL
+pheatmap(mat = combo_1, cluster_cols = FALSE, cluster_rows = FALSE, annotation_col = anno_col)
+```
+
+Flip the table
+```{r}
+combo_1t <- as.data.frame(t(combo_1))
+
+pdf(file = paste(dir, "plot_out/NI06/mutation_table.pdf", sep = ""))
+pheatmap(mat = combo_1t, cluster_cols = FALSE, cluster_rows = FALSE, annotation_row = anno_col, angle_col = 270)
+dev.off()
+```
+
+
+
+
+

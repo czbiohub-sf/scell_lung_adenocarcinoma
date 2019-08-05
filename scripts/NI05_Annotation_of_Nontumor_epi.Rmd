@@ -334,6 +334,7 @@ Plot tSNE with annoations
 pdf(file = paste(dir, "plot_out/NI05/NI05_norm_epi_annotated_tsne.csv", sep = ""))
 TSNEPlot(object = tiss_subset_normalepi, group.by='norm_epi_annotation')
 dev.off()
+TSNEPlot(object = tiss_subset_normalepi, group.by='biopsy_site')
 ```
 
 Save object
