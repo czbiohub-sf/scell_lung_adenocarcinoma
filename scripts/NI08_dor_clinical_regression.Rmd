@@ -1,0 +1,180 @@
+---
+title: "Regression of Clinical Outcomes to Sigs"
+output: html_notebook
+---
+
+```{r}
+library(Seurat)
+library(DAAG)
+library(tidyverse)
+library(relaimpo)
+library(bootstrap)
+```
+
+Read in tumor object
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
+
+#Read in depth of response clinical outcomes
+dor_meta <- read.csv(file = paste(dir, "Data_input/csv_files/depthofresponse_tn.csv", sep = ""))
+dor_meta
+```
+
+subset tumor seurat obeject to TN only
+```{r}
+tn_samples <- filter(tiss_subset_tumor2@meta.data, analysis == "naive")
+tn_seurat <- SubsetData(tiss_subset_tumor2, cells.use = tn_samples$cell_id)
+rownames(tn_seurat@meta.data) <- tn_seurat@meta.data$cell_id
+```
+
+```{r}
+tn_seurat@meta.data <- merge(dor_meta[,c(2:3)], tn_seurat@meta.data, by = "sample_name")
+rownames(tn_seurat@meta.data) <- tn_seurat@meta.data$cell_id
+```
+
+
+Investigate each Signature found from grouped analysis:
+1. Alveolar Sig
+2. Kynurenine Sig
+3. Plasminogen Sig
+4. Serpine1
+5. Gap Junction Sig
+
+1. Alveolar Sig
+```{r}
+DOR_Alveolar <- as.data.frame(FetchData(object = tn_seurat, vars.all = c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")))
+DOR_Alveolar$cell_id <- rownames(DOR_Alveolar)
+DOR_Alveolar <- merge(tn_seurat@meta.data, DOR_Alveolar, by = "cell_id")
+rownames(DOR_Alveolar) <- DOR_Alveolar$cell_id
+```
+
+2. Kynurenine Sig
+```{r}
+DOR_Kynurenine <- as.data.frame(FetchData(object = tn_seurat, vars.all = c('IDO1', 'KYNU', 'QPRT')))
+DOR_Kynurenine$cell_id <- rownames(DOR_Kynurenine)
+DOR_Kynurenine <- merge(tn_seurat@meta.data, DOR_Kynurenine, by = "cell_id")
+rownames(DOR_Kynurenine) <- DOR_Kynurenine$cell_id
+```
+
+3. Plasminogen Sig
+```{r}
+DOR_Plasminogen <- as.data.frame(FetchData(object = tn_seurat, vars.all = c('ANXA2', 'PLAT', 'PLAU', 'PLAUR')))
+DOR_Plasminogen$cell_id <- rownames(DOR_Plasminogen)
+DOR_Plasminogen <- merge(tn_seurat@meta.data, DOR_Plasminogen, by = "cell_id")
+rownames(DOR_Plasminogen) <- DOR_Plasminogen$cell_id
+```
+
+4. Serpine1
+```{r}
+DOR_SERPINE1 <- as.data.frame(FetchData(object = tn_seurat, vars.all = c('SERPINE1')))
+DOR_SERPINE1$cell_id <- rownames(DOR_SERPINE1)
+DOR_SERPINE1 <- merge(tn_seurat@meta.data, DOR_SERPINE1, by = "cell_id")
+rownames(DOR_SERPINE1) <- DOR_SERPINE1$cell_id
+```
+
+5. Gap Junction Sig
+```{r}
+DOR_GapJunction <- as.data.frame(FetchData(object = tn_seurat, vars.all = c('GJB3', 'GJB2', 'GJB4','GJB5')))
+DOR_GapJunction$cell_id <- rownames(DOR_GapJunction)
+DOR_GapJunction <- merge(tn_seurat@meta.data, DOR_GapJunction, by = "cell_id")
+rownames(DOR_GapJunction) <- DOR_GapJunction$cell_id
+```
+
+fit 1 = Alveolar Sig
+```{r}
+fit1 <- lm(dor ~ SFTPC +SFTPB + SFTPD + PGC + CLDN18 + AQP4 + SCGB3A1 + ABCA3 + GATA6 + `NKX2-1` + SFTA3 + IGFBP2+ HOPX + NAPSA + FOXA2 + AGER + LAMP1, data=DOR_Alveolar)
+summary(fit1) # show results
+
+# diagnostic plots
+plot(fit1)
+
+ggplot(DOR_Alveolar, aes(x = `NKX2-1`, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Alveolar, aes(x = IGFBP2, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Alveolar, aes(x = HOPX, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Alveolar, aes(x = NAPSA, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Alveolar, aes(x = FOXA2, y = dor, color = sample_name)) + geom_point()
+```
+
+fit2 = Kynurenine Sig
+```{r}
+fit2 <- lm(dor ~ IDO1 + KYNU + QPRT, data=DOR_Kynurenine)
+summary(fit2) # show results
+
+# diagnostic plots 
+plot(fit2)
+
+ggplot(DOR_Kynurenine, aes(x = IDO1, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Kynurenine, aes(x = KYNU, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Kynurenine, aes(x = QPRT, y = dor, color = sample_name)) + geom_point()
+```
+
+fit3 = Plasminogen Sig
+```{r}
+fit3 <- lm(dor ~ PLAU + PLAUR + PLAT + ANXA2, data=DOR_Plasminogen)
+summary(fit3) # show results
+
+# diagnostic plots 
+plot(fit3)
+
+ggplot(DOR_Plasminogen, aes(x = PLAU, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Plasminogen, aes(x = PLAUR, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Plasminogen, aes(x = PLAT, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_Plasminogen, aes(x = ANXA2, y = dor, color = sample_name)) + geom_point()
+```
+
+fit4 = SERPINE1
+```{r}
+fit4 <- lm(dor ~ SERPINE1, data=DOR_SERPINE1)
+summary(fit4) # show results
+
+# diagnostic plots 
+plot(fit4)
+
+ggplot(DOR_SERPINE1, aes(x = SERPINE1, y = dor, color = sample_name)) + geom_point()
+```
+
+fit5 = Gap Junction Sig
+```{r}
+fit5 <- lm(dor ~ GJB3 + GJB2 + GJB4 + GJB5, data=DOR_GapJunction)
+summary(fit5) # show results
+
+# diagnostic plots 
+plot(fit5)
+
+ggplot(DOR_GapJunction, aes(x = GJB2, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_GapJunction, aes(x = GJB3, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_GapJunction, aes(x = GJB4, y = dor, color = sample_name)) + geom_point()
+ggplot(DOR_GapJunction, aes(x = GJB5, y = dor, color = sample_name)) + geom_point()
+
+# K-fold cross-validation
+cv.lm(data = DOR_GapJunction, form.lm = fit5, m = 10, plotit = FALSE)
+# Assessing R2 shrinkage using 10-Fold Cross-Validation 
+# define functions 
+theta.fit <- function(x,y){lsfit(x,y)}
+theta.predict <- function(fit5,x){cbind(1,x)%*%fit5$coef} 
+
+# matrix of predictors
+X <- as.matrix(DOR_GapJunction[c("GJB3","GJB2","GJB4","GJB5")])
+# vector of predicted values
+y <- as.matrix(DOR_GapJunction[c("dor")]) 
+
+results <- crossval(X,y,theta.fit,theta.predict,ngroup=10)
+cor(y, fit5$fitted.values)**2 # raw R2 
+cor(y,results$cv.fit5)**2 # cross-validated R2
+
+# Calculate Relative Importance for Each Predictor
+calc.relimp(fit5,type = c("lmg","last","first","pratt"), rela=TRUE)
+# Bootstrap Measures of Relative Importance (1000 samples) 
+boot <- boot.relimp(fit5, b = 1000, type = c("lmg", "last", "first", "pratt"), rank = TRUE, diff = TRUE, rela = TRUE)
+booteval.relimp(boot) # print result
+plot(booteval.relimp(boot,sort=TRUE)) # plot result
+```
+
+```{r}
+table(tn_seurat@meta.data$biopsy_site, tn_seurat@meta.data$dor)
+table(tn_seurat@meta.data$sample_name, tn_seurat@meta.data$dor)
+```
+
+
