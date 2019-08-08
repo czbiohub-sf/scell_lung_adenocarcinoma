@@ -20,14 +20,18 @@ load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep 
 #Read in depth of response clinical outcomes
 dor_meta <- read.csv(file = paste(dir, "Data_input/csv_files/depthofresponse_tn.csv", sep = ""))
 dor_meta
+#correct misannoation in dor
+dor_meta$sample_name <- gsub(pattern = "LT_S57", replacement = "LT_S51", x = dor_meta$sample_name)
 ```
 
 subset tumor seurat obeject to TN only
 ```{r}
-tn_samples <- filter(tiss_subset_tumor2@meta.data, analysis == "naive")
+tn_samples <- filter(tiss_subset_tumor2@meta.data, sample_name == "LT_S34" | sample_name == "LT_S43" | sample_name == "LT_S45" | sample_name == "LT_S49" | sample_name == "LT_S52" | sample_name == "LT_S51" | sample_name == "LT_S56" | sample_name == "LT_S67" | sample_name == "LT_S69" | sample_name == "LT_S74" | sample_name == "LT_S75")
+
 tn_seurat <- SubsetData(tiss_subset_tumor2, cells.use = tn_samples$cell_id)
 rownames(tn_seurat@meta.data) <- tn_seurat@meta.data$cell_id
 ```
+
 
 ```{r}
 tn_seurat@meta.data <- merge(dor_meta[,c(2:3)], tn_seurat@meta.data, by = "sample_name")
@@ -148,33 +152,137 @@ ggplot(DOR_GapJunction, aes(x = GJB3, y = dor, color = sample_name)) + geom_poin
 ggplot(DOR_GapJunction, aes(x = GJB4, y = dor, color = sample_name)) + geom_point()
 ggplot(DOR_GapJunction, aes(x = GJB5, y = dor, color = sample_name)) + geom_point()
 
-# K-fold cross-validation
-cv.lm(data = DOR_GapJunction, form.lm = fit5, m = 10, plotit = FALSE)
-# Assessing R2 shrinkage using 10-Fold Cross-Validation 
-# define functions 
-theta.fit <- function(x,y){lsfit(x,y)}
-theta.predict <- function(fit5,x){cbind(1,x)%*%fit5$coef} 
-
-# matrix of predictors
-X <- as.matrix(DOR_GapJunction[c("GJB3","GJB2","GJB4","GJB5")])
-# vector of predicted values
-y <- as.matrix(DOR_GapJunction[c("dor")]) 
-
-results <- crossval(X,y,theta.fit,theta.predict,ngroup=10)
-cor(y, fit5$fitted.values)**2 # raw R2 
-cor(y,results$cv.fit5)**2 # cross-validated R2
-
-# Calculate Relative Importance for Each Predictor
-calc.relimp(fit5,type = c("lmg","last","first","pratt"), rela=TRUE)
-# Bootstrap Measures of Relative Importance (1000 samples) 
-boot <- boot.relimp(fit5, b = 1000, type = c("lmg", "last", "first", "pratt"), rank = TRUE, diff = TRUE, rela = TRUE)
-booteval.relimp(boot) # print result
-plot(booteval.relimp(boot,sort=TRUE)) # plot result
+# # K-fold cross-validation
+# cv.lm(data = DOR_GapJunction, form.lm = fit5, m = 10, plotit = FALSE)
+# # Assessing R2 shrinkage using 10-Fold Cross-Validation 
+# # define functions 
+# theta.fit <- function(x,y){lsfit(x,y)}
+# theta.predict <- function(fit5,x){cbind(1,x)%*%fit5$coef} 
+# 
+# # matrix of predictors
+# X <- as.matrix(DOR_GapJunction[c("GJB3","GJB2","GJB4","GJB5")])
+# # vector of predicted values
+# y <- as.matrix(DOR_GapJunction[c("dor")]) 
+# 
+# results <- crossval(X,y,theta.fit,theta.predict,ngroup=10)
+# cor(y, fit5$fitted.values)**2 # raw R2 
+# cor(y,results$cv.fit5)**2 # cross-validated R2
+# 
+# # Calculate Relative Importance for Each Predictor
+# calc.relimp(fit5,type = c("lmg","last","first","pratt"), rela=TRUE)
+# # Bootstrap Measures of Relative Importance (1000 samples) 
+# boot <- boot.relimp(fit5, b = 1000, type = c("lmg", "last", "first", "pratt"), rank = TRUE, diff = TRUE, rela = TRUE)
+# booteval.relimp(boot) # print result
+# plot(booteval.relimp(boot,sort=TRUE)) # plot result
 ```
 
 ```{r}
 table(tn_seurat@meta.data$biopsy_site, tn_seurat@meta.data$dor)
 table(tn_seurat@meta.data$sample_name, tn_seurat@meta.data$dor)
+table(tn_seurat@meta.data$sample_name)
 ```
+
+Bulkize the samples
+```{r}
+tn_seurat <- SetIdent(tn_seurat, ident.use = tn_seurat@meta.data$sample_name)
+table(tn_seurat@ident)
+sample.averages <- AverageExpression(object = tn_seurat)
+```
+
+To find DE genes between bulkized TN samples with low and high DOR, export table with groups
+```{r}
+# set up table 
+sample.averages.t <- as.data.frame(t(sample.averages))
+head(sample.averages.t)
+sample.averages.t$sample_name <- rownames(sample.averages.t)
+sample.averages.t <- left_join(sample.averages.t, dor_meta, by = "sample_name")
+rownames(sample.averages.t) <- sample.averages.t$sample_name
+
+length(colnames(sample.averages.t))
+DE_avg <- pairwise.wilcox.test(x = sample.averages.t$EGFR, g = sample.averages.t$dor_class)
+write.csv(sample.averages.t, file = "/myVolume/TN_bulkized_data.csv")
+```
+
+
+Bulkize fit analysis Alveolar
+```{r}
+Alveolar_sig <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+TN_Alveolar <- TN.sample.averages[Alveolar_sig, ]
+TN_Alveolar_mean <- as.data.frame(colMeans(TN_Alveolar))
+TN_Alveolar_mean$sample_name <- rownames(TN_Alveolar_mean)
+TN_Alveolar_mean <- left_join(TN_Alveolar_mean, dor_meta, by = "sample_name")
+rownames(TN_Alveolar_mean) <- TN_Alveolar_mean$sample_name
+
+TN_Alveolar_fit <- lm(dor ~ colMeans(TN_Alveolar), data= TN_Alveolar_mean)
+summary(TN_Alveolar_fit)
+
+ggp_TN_Alveolar <- ggplot(TN_Alveolar_mean, aes(x = colMeans(TN_Alveolar), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggsave(ggp_TN_Alveolar, filename = paste(dir, "plot_out/NI08/TN_Alveolar_bulkized.pdf", sep = ""))
+```
+
+Bulkize fit analysis Kynurenine
+```{r}
+Kynurenine_sig <- c('IDO1', 'KYNU', 'QPRT')
+TN_Kynurenine <- TN.sample.averages[Kynurenine_sig, ]
+TN_Kynurenine_mean <- as.data.frame(colMeans(TN_Kynurenine))
+TN_Kynurenine_mean$sample_name <- rownames(TN_Kynurenine_mean)
+TN_Kynurenine_mean <- left_join(TN_Kynurenine_mean, dor_meta, by = "sample_name")
+rownames(TN_Kynurenine_mean) <- TN_Kynurenine_mean$sample_name
+
+TN_Kynurenine_fit <- lm(dor ~ colMeans(TN_Kynurenine), data= TN_Kynurenine_mean)
+summary(TN_Kynurenine_fit)
+
+ggp_TN_Kynurenine <- ggplot(TN_Kynurenine_mean, aes(x = colMeans(TN_Kynurenine), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggsave(ggp_TN_Kynurenine, filename = paste(dir, "plot_out/NI08/TN_Kynurenine_bulkized.pdf", sep = ""))
+```
+
+Bulkize fit analysis Plasminogen
+```{r}
+Plasminogen_sig <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR')
+TN_Plasminogen <- TN.sample.averages[Plasminogen_sig, ]
+TN_Plasminogen_mean <- as.data.frame(colMeans(TN_Plasminogen))
+TN_Plasminogen_mean$sample_name <- rownames(TN_Plasminogen_mean)
+TN_Plasminogen_mean <- left_join(TN_Plasminogen_mean, dor_meta, by = "sample_name")
+rownames(TN_Plasminogen_mean) <- TN_Plasminogen_mean$sample_name
+
+TN_Plasminogen_fit <- lm(dor ~ colMeans(TN_Plasminogen), data= TN_Plasminogen_mean)
+summary(TN_Plasminogen_fit)
+
+ggp_TN_Plasminogen <- ggplot(TN_Plasminogen_mean, aes(x = colMeans(TN_Plasminogen), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggsave(ggp_TN_Plasminogen, filename = paste(dir, "plot_out/NI08/TN_Plasminogen_bulkized.pdf", sep = ""))
+```
+
+Bulkize fit analysis of SERPINE1
+```{r}
+TN_Serpine_sig <-  as.data.frame(t(TN.sample.averages["SERPINE1", ]))
+TN_Serpine_sig$sample_name <- rownames(TN_Serpine_sig)
+TN_Serpine_sig <- left_join(TN_Serpine_sig, dor_meta, by = "sample_name")
+rownames(TN_Serpine_sig) <- TN_Serpine_sig$sample_name
+
+TN_Serpine_fit <- lm(dor ~ SERPINE1, data= TN_Serpine_sig)
+summary(TN_Serpine_fit)
+
+ggp_TN_Serpine1 <- ggplot(TN_Serpine_sig, aes(x = SERPINE1, y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggsave(ggp_TN_Serpine1, filename = paste(dir, "plot_out/NI08/TN_Serpine1_bulkized.pdf", sep = ""))
+```
+
+Bulkize fit analysis GapJunction
+```{r}
+GapJunction_sig <- c('GJB3', 'GJB2', 'GJB4','GJB5')
+TN_GapJunction <- TN.sample.averages[GapJunction_sig, ]
+TN_GapJunction_mean <- as.data.frame(colMeans(TN_GapJunction))
+TN_GapJunction_mean$sample_name <- rownames(TN_GapJunction_mean)
+TN_GapJunction_mean <- left_join(TN_GapJunction_mean, dor_meta, by = "sample_name")
+rownames(TN_GapJunction_mean) <- TN_GapJunction_mean$sample_name
+
+TN_GapJunction_fit <- lm(dor ~ colMeans(TN_GapJunction), data= TN_GapJunction_mean)
+summary(TN_GapJunction_fit)
+
+ggp_TN_GapJunction <- ggplot(TN_GapJunction_mean, aes(x = colMeans(TN_GapJunction), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggsave(ggp_TN_GapJunction, filename = paste(dir, "plot_out/NI08/TN_GapJucion_bulkized.pdf", sep = ""))
+```
+
+
+
 
 
