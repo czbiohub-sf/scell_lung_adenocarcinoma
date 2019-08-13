@@ -1,0 +1,315 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(survival)
+library(survminer)
+library(dplyr)
+library(tidyverse)
+```
+
+Example output:
+```{r}
+data(ovarian)
+help(ovarian)
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv(futime, fustat) ~ rx, data = ovarian), 
+    xlab = "Days",
+    ylab = "Overall survival probability",
+    legend.title = "Rx Group",
+    legend.labs = c("1", "2"),
+    censor = TRUE)
+```
+
+Read in TCGA data
+```{r}
+luad_tcga <- read.csv(file = paste(dir, "Data_input/tcga_luad_counts.csv", sep = ""), row.names = 1)
+tcga_meta <- read.csv(file = paste(dir, "Data_input/tcga_luad_metadata.csv", sep = ""), row.names = 1)
+```
+
+Investigate colnames and data structure
+```{r}
+dim(luad_tcga)
+dim(tcga_meta)
+
+# drop the X in front of the barcodes so they match the metadata barcodes
+colnames(luad_tcga) <- gsub(pattern = "^X", replacement = "", x = colnames(luad_tcga))
+
+head(luad_tcga)
+head(tcga_meta)
+setdiff_meta_counts <- setdiff(colnames(luad_tcga), tcga_meta$barcode)
+luad_tcga[,setdiff_meta_counts]
+shared_meta_counts <- length(intersect(colnames(luad_tcga), tcga_meta$barcode))
+```
+
+Example output with TCGA, a simple example
+```{r}
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv(OS.time, OS) ~ gender, data = tcga_meta), 
+    xlab = "Days",
+    ylab = "Overall survival probability",
+    legend.title = "Rx Group",
+    censor = TRUE,
+    pval = TRUE)
+```
+
+```{r}
+Alveolar_sig <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+TCGA_Alveolar <- luad_tcga[Alveolar_sig, ]
+head(TCGA_Alveolar)
+dim(TCGA_Alveolar)
+TCGA_Alveolar_mean <- as.data.frame(colMeans(TCGA_Alveolar))
+colnames(TCGA_Alveolar_mean) <- "TCGA_Alveolar_mean"
+hist(TCGA_Alveolar_mean$TCGA_Alveolar_mean)
+summary(TCGA_Alveolar_mean$TCGA_Alveolar_mean)
+TCGA_Alveolar_mean$Alveolar_quartile <- ntile(TCGA_Alveolar_mean$TCGA_Alveolar_mean, 2)  
+TCGA_Alveolar_mean$barcode <- rownames(TCGA_Alveolar_mean)
+```
+
+```{r}
+luad_tcga_AlveolarSig <- left_join(tcga_meta, TCGA_Alveolar_mean, by = "barcode")
+head(luad_tcga_AlveolarSig)
+#subset to only stage III and IV
+luad_tcga_AlveolarSig <- filter(luad_tcga_AlveolarSig, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
+table(luad_tcga_AlveolarSig$ajcc_pathologic_tumor_stage)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Alveolar_quartile, data = luad_tcga_AlveolarSig), 
+    xlab = "Years",
+    ylab = "Overall survival probability",
+    legend.title = "Alveolar Expression Signature",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Alveolar_quartile, data = luad_tcga_AlveolarSig), 
+        times = 2)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Alveolar_quartile, data = luad_tcga_AlveolarSig), 
+    xlab = "Years",
+    ylab = "Progression free interval probability",
+    legend.title = "Alveolar Expression Signature",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Alveolar_quartile, data = luad_tcga_AlveolarSig), 
+        times = 2)
+```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga_AlveolarSig$OS.time, event = luad_tcga_AlveolarSig$OS)
+surv_object
+
+luad_tcga_AlveolarSig$Alveolar_quartile <- factor(luad_tcga_AlveolarSig$Alveolar_quartile)
+
+
+# Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Alveolar_quartile, 
+                   data = luad_tcga_AlveolarSig)
+ggforest(fit.coxph, data = luad_tcga_AlveolarSig)
+```
+
+```{r}
+Kynurenine_sig <- c('IDO1', 'KYNU', 'QPRT')
+TCGA_Kynurenine <- luad_tcga[Kynurenine_sig, ]
+head(TCGA_Kynurenine)
+TCGA_Kynurenine_mean <- as.data.frame(colMeans(TCGA_Kynurenine))
+colnames(TCGA_Kynurenine_mean) <- "TCGA_Kynurenine_mean"
+hist(TCGA_Kynurenine_mean$TCGA_Kynurenine_mean)
+summary(TCGA_Kynurenine_mean$TCGA_Kynurenine_mean)
+TCGA_Kynurenine_mean$Kynurenine_quartile <- ntile(TCGA_Kynurenine_mean$TCGA_Kynurenine_mean, 2)  
+TCGA_Kynurenine_mean$barcode <- rownames(TCGA_Kynurenine_mean)
+```
+
+```{r}
+luad_tcga_Kynurenine <- left_join(tcga_meta, TCGA_Kynurenine_mean, by = "barcode")
+luad_tcga_Kynurenine <- filter(luad_tcga_Kynurenine, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
+table(luad_tcga_Kynurenine$ajcc_pathologic_tumor_stage)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Kynurenine_quartile, data = luad_tcga_Kynurenine), 
+    xlab = "Years",
+    ylab = "Overall survival probability",
+    legend.title = "Kynurenine Expression Quartiles",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Kynurenine_quartile, data = luad_tcga_Kynurenine), 
+        times = 3)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Kynurenine_quartile, data = luad_tcga_Kynurenine), 
+    xlab = "Years",
+    ylab = "Progression free interval probability",
+    legend.title = "Kynurenine Expression Quartiles",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Kynurenine_quartile, data = luad_tcga_Kynurenine), 
+        times = 3)
+```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga_Kynurenine$OS.time, event = luad_tcga_Kynurenine$OS)
+surv_object
+
+luad_tcga_Kynurenine$Kynurenine_quartile <- factor(luad_tcga_Kynurenine$Kynurenine_quartile)
+
+
+# Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Kynurenine_quartile, 
+                   data = luad_tcga_Kynurenine)
+ggforest(fit.coxph, data = luad_tcga_Kynurenine)
+```
+
+
+
+```{r}
+Plasminogen_sig <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR')
+TCGA_Plasminogen <- luad_tcga[Plasminogen_sig, ]
+head(TCGA_Plasminogen)
+TCGA_Plasminogen_mean <- as.data.frame(colMeans(TCGA_Plasminogen))
+colnames(TCGA_Plasminogen_mean) <- "TCGA_Plasminogen_mean"
+hist(TCGA_Plasminogen_mean$TCGA_Plasminogen_mean)
+summary(TCGA_Plasminogen_mean$TCGA_Plasminogen_mean)
+TCGA_Plasminogen_mean$Plasminogen_quartile <- ntile(TCGA_Plasminogen_mean$TCGA_Plasminogen_mean, 4)
+TCGA_Plasminogen_mean$barcode <- rownames(TCGA_Plasminogen_mean)
+```
+
+```{r}
+luad_tcga_Plasminogen <- left_join(tcga_meta, TCGA_Plasminogen_mean, by = "barcode")
+luad_tcga_Plasminogen <- filter(luad_tcga_Plasminogen, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
+table(luad_tcga_Plasminogen$ajcc_pathologic_tumor_stage)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Plasminogen_quartile, data = luad_tcga_Plasminogen), 
+    xlab = "Years",
+    ylab = "Overall survival probability",
+    legend.title = "Plasminogen Expression Quartiles",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Plasminogen_quartile, data = luad_tcga_Plasminogen), 
+        times = 3)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Plasminogen_quartile, data = luad_tcga_Plasminogen), 
+    xlab = "Years",
+    ylab = "Progression free interval probability",
+    legend.title = "Plasminogen Expression Quartiles",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Plasminogen_quartile, data = luad_tcga_Plasminogen), 
+        times = 3)
+```
+
+```{r}
+Serpine_sig <-  luad_tcga["SERPINE1", ]
+TCGA_Serpine_sig <- as.data.frame(t(Serpine_sig))
+colnames(TCGA_Serpine_sig) <- "TCGA_SERPINE1"
+hist(TCGA_Serpine_sig$TCGA_SERPINE1)
+summary(TCGA_Serpine_sig$TCGA_SERPINE1)
+TCGA_Serpine_sig$SERPINE1_quartile <- ntile(TCGA_Serpine_sig$TCGA_SERPINE1, 4)
+TCGA_Serpine_sig$barcode <- rownames(TCGA_Serpine_sig)
+```
+
+```{r}
+luad_tcga_Serpine <- left_join(tcga_meta, TCGA_Serpine_sig, by = "barcode")
+luad_tcga_Serpine <- filter(luad_tcga_Serpine, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
+table(luad_tcga_Serpine$ajcc_pathologic_tumor_stage)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ SERPINE1_quartile, data = luad_tcga_Serpine), 
+    xlab = "Years",
+    ylab = "Overall survival probability",
+    legend.title = "SERPINE1 Expression Quartiles",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  SERPINE1_quartile, data = luad_tcga_Serpine), 
+        times = 3)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ SERPINE1_quartile, data = luad_tcga_Serpine), 
+    xlab = "Years",
+    ylab = "Progression free interval probability",
+    legend.title = "SERPINE1 Expression Quartiles",
+    censor = TRUE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  SERPINE1_quartile, data = luad_tcga_Serpine), 
+        times = 3)
+```
+
+```{r}
+GapJunction_sig <- c('GJB3', 'GJB2', 'GJB4','GJB5')
+TCGA_GapJunction <- luad_tcga[GapJunction_sig, ]
+head(TCGA_GapJunction)
+TCGA_GapJunction_mean <- as.data.frame(colMeans(TCGA_GapJunction))
+colnames(TCGA_GapJunction_mean) <- "TCGA_GapJunction_mean"
+hist(TCGA_GapJunction_mean$TCGA_GapJunction_mean)
+summary(TCGA_GapJunction_mean$TCGA_GapJunction_mean)
+TCGA_GapJunction_mean$GapJunction_quartile <- ntile(TCGA_GapJunction_mean$TCGA_GapJunction_mean, 4)
+TCGA_GapJunction_mean$barcode <- rownames(TCGA_GapJunction_mean)
+```
+
+```{r}
+luad_tcga_GapJunction <- left_join(tcga_meta, TCGA_GapJunction_mean, by = "barcode")
+luad_tcga_GapJunction <- filter(luad_tcga_GapJunction, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
+table(luad_tcga_GapJunction$ajcc_pathologic_tumor_stage)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile, data = luad_tcga_GapJunction), 
+    xlab = "Years",
+    ylab = "Overall survival probability",
+    legend.title = "Gap Junciton Expression Quartile",
+    censor = TRUE,
+    conf.int = FALSE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  GapJunction_quartile, data = luad_tcga_GapJunction), 
+        times = 3)
+
+survminer::ggsurvplot(
+    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ GapJunction_quartile, data = luad_tcga_GapJunction), 
+    xlab = "Years",
+    ylab = "Progression free interval probability",
+    legend.title = "Gap Junciton Expression Quartile",
+    censor = TRUE,
+    conf.int = FALSE,
+    pval = TRUE)
+
+summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  GapJunction_quartile, data = luad_tcga_GapJunction), 
+        times = 3)
+```
+
+
+COX REGRESSIONS
+
+Ovarian Example
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = ovarian$futime, event = ovarian$fustat)
+surv_object
+
+ovarian <- ovarian %>% mutate(age_group = ifelse(age >=50, "old", "young"))
+ovarian$age_group <- factor(ovarian$age_group)
+
+# Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ rx + resid.ds + age_group + ecog.ps, 
+                   data = ovarian)
+ggforest(fit.coxph, data = ovarian)
+```
+
+
+
+
+```
+
+
+

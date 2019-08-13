@@ -19,9 +19,11 @@ load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep 
 
 #Read in depth of response clinical outcomes
 dor_meta <- read.csv(file = paste(dir, "Data_input/csv_files/depthofresponse_tn.csv", sep = ""))
-dor_meta
 #correct misannoation in dor
 dor_meta$sample_name <- gsub(pattern = "LT_S57", replacement = "LT_S51", x = dor_meta$sample_name)
+dor_meta$dor <- gsub(pattern = ".12", replacement = ".46", x = dor_meta$dor)
+dor_meta$dor_class <- c("low", "low", "low", "low", "low", "high", "high", "high", "high", "high", "high")
+dor_meta
 ```
 
 subset tumor seurat obeject to TN only
@@ -34,7 +36,7 @@ rownames(tn_seurat@meta.data) <- tn_seurat@meta.data$cell_id
 
 
 ```{r}
-tn_seurat@meta.data <- merge(dor_meta[,c(2:3)], tn_seurat@meta.data, by = "sample_name")
+tn_seurat@meta.data <- merge(dor_meta[,c(2:4)], tn_seurat@meta.data, by = "sample_name")
 rownames(tn_seurat@meta.data) <- tn_seurat@meta.data$cell_id
 ```
 
@@ -201,6 +203,8 @@ rownames(sample.averages.t) <- sample.averages.t$sample_name
 length(colnames(sample.averages.t))
 DE_avg <- pairwise.wilcox.test(x = sample.averages.t$EGFR, g = sample.averages.t$dor_class)
 write.csv(sample.averages.t, file = "/myVolume/TN_bulkized_data.csv")
+TN.sample.averages <- sample.averages
+head(TN.sample.averages)
 ```
 
 
@@ -215,8 +219,10 @@ rownames(TN_Alveolar_mean) <- TN_Alveolar_mean$sample_name
 
 TN_Alveolar_fit <- lm(dor ~ colMeans(TN_Alveolar), data= TN_Alveolar_mean)
 summary(TN_Alveolar_fit)
+TN_Alveolar_mean$predlm <- predict(TN_Alveolar_fit)
 
-ggp_TN_Alveolar <- ggplot(TN_Alveolar_mean, aes(x = colMeans(TN_Alveolar), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggp_TN_Alveolar <- ggplot(TN_Alveolar_mean, aes(x = colMeans(TN_Alveolar), y = dor, color = dor_class)) + geom_point()
+
 ggsave(ggp_TN_Alveolar, filename = paste(dir, "plot_out/NI08/TN_Alveolar_bulkized.pdf", sep = ""))
 ```
 
@@ -232,7 +238,7 @@ rownames(TN_Kynurenine_mean) <- TN_Kynurenine_mean$sample_name
 TN_Kynurenine_fit <- lm(dor ~ colMeans(TN_Kynurenine), data= TN_Kynurenine_mean)
 summary(TN_Kynurenine_fit)
 
-ggp_TN_Kynurenine <- ggplot(TN_Kynurenine_mean, aes(x = colMeans(TN_Kynurenine), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggp_TN_Kynurenine <- ggplot(TN_Kynurenine_mean, aes(x = colMeans(TN_Kynurenine), y = dor)) + geom_point(aes(color=dor_class))
 ggsave(ggp_TN_Kynurenine, filename = paste(dir, "plot_out/NI08/TN_Kynurenine_bulkized.pdf", sep = ""))
 ```
 
@@ -248,7 +254,7 @@ rownames(TN_Plasminogen_mean) <- TN_Plasminogen_mean$sample_name
 TN_Plasminogen_fit <- lm(dor ~ colMeans(TN_Plasminogen), data= TN_Plasminogen_mean)
 summary(TN_Plasminogen_fit)
 
-ggp_TN_Plasminogen <- ggplot(TN_Plasminogen_mean, aes(x = colMeans(TN_Plasminogen), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggp_TN_Plasminogen <- ggplot(TN_Plasminogen_mean, aes(x = colMeans(TN_Plasminogen), y = dor)) + geom_point(aes(color = dor_class))
 ggsave(ggp_TN_Plasminogen, filename = paste(dir, "plot_out/NI08/TN_Plasminogen_bulkized.pdf", sep = ""))
 ```
 
@@ -262,7 +268,7 @@ rownames(TN_Serpine_sig) <- TN_Serpine_sig$sample_name
 TN_Serpine_fit <- lm(dor ~ SERPINE1, data= TN_Serpine_sig)
 summary(TN_Serpine_fit)
 
-ggp_TN_Serpine1 <- ggplot(TN_Serpine_sig, aes(x = SERPINE1, y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggp_TN_Serpine1 <- ggplot(TN_Serpine_sig, aes(x = SERPINE1, y = dor)) + geom_point(aes(color = dor_class))
 ggsave(ggp_TN_Serpine1, filename = paste(dir, "plot_out/NI08/TN_Serpine1_bulkized.pdf", sep = ""))
 ```
 
@@ -278,11 +284,38 @@ rownames(TN_GapJunction_mean) <- TN_GapJunction_mean$sample_name
 TN_GapJunction_fit <- lm(dor ~ colMeans(TN_GapJunction), data= TN_GapJunction_mean)
 summary(TN_GapJunction_fit)
 
-ggp_TN_GapJunction <- ggplot(TN_GapJunction_mean, aes(x = colMeans(TN_GapJunction), y = dor)) + geom_point(aes(color = dor_class)) + geom_smooth(method = "lm")
+ggp_TN_GapJunction <- ggplot(TN_GapJunction_mean, aes(x = colMeans(TN_GapJunction), y = dor)) + geom_point(aes(color = dor_class))
 ggsave(ggp_TN_GapJunction, filename = paste(dir, "plot_out/NI08/TN_GapJucion_bulkized.pdf", sep = ""))
 ```
 
 
+```{r}
+bulkized_TN_markers <- read.csv(file = paste(dir, "Data_input/mwu_luad.csv", sep = ""))
+bulkized_TN_markers.f <- filter(bulkized_TN_markers, pval_1 <= 0.05)
+hist(bulkized_TN_markers.f$stat_1)
+length(bulkized_TN_markers.f$pval_1)
+bulkized_TN_markers.f <- bulkized_TN_markers.f[order(bulkized_TN_markers.f$stat_1, decreasing = TRUE), ] 
+```
 
+```{r}
+table(bulkized_TN_markers.f$test)
+```
 
+Most compelling high expression corr to low dor
+```{r}
+ggplot(sample.averages.t, aes(x = ADAR, y = dor)) + geom_point(aes(color = patient_id))
+ggplot(sample.averages.t, aes(x = CFL1, y = dor)) + geom_point(aes(color = patient_id))
+```
+
+Most compelling high expression corr to high dor
+```{r}
+ggplot(sample.averages.t, aes(x = TTLL13P, y = dor)) + geom_point(aes(color = dor_class))
+ggplot(sample.averages.t, aes(x = ALS2, y = dor)) + geom_point(aes(color = dor_class))
+ggplot(sample.averages.t, aes(x = RLN1, y = dor)) + geom_point(aes(color = dor_class))
+ggplot(sample.averages.t, aes(x = USP45, y = dor)) + geom_point(aes(color = dor_class))
+ggplot(sample.averages.t, aes(x = BDKRB1, y = dor)) + geom_point(aes(color = dor_class))
+ggplot(sample.averages.t, aes(x = LINC01061, y = dor)) + geom_point(aes(color = dor_class))
+ggplot(sample.averages.t, aes(x = ZNF563, y = dor)) + geom_point(aes(color = dor_class))
+ggplot(sample.averages.t, aes(x = WDR19, y = dor)) + geom_point(aes(color = dor_class))
+```
 
