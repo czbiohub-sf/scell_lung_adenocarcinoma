@@ -204,7 +204,7 @@ require(gridExtra)
 require(gbm)
 n <- length(ggplot.list)
 nCol <- floor(sqrt(n))
-# Exzpression on tSNE
+# Expression on tSNE
 pdf(paste(dir,"plot_out/IM01/Immune_cells_TSNE_with_average_expression_of_cell_markers.pdf", sep=""),15,15)
 do.call("grid.arrange", c(ggplot.list, ncol=nCol))
 dev.off()
@@ -263,5 +263,5 @@ ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), wid
 
 Save immune cell workspace 
 ```{r}
-save(tiss_immune, file=paste(dir,"Data_input/IM01_Immune_Seurat_object.RData", sep=""))
+save(tiss_immune, file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
 ```

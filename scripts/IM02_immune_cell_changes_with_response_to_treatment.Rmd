@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "IM02"
 output: html_document
 ---
 
@@ -8,8 +8,8 @@ Count the fraction of Immune cells across different metadata fields
 Libraries 
 ```{r}
 require(tidyr)
-require(ggthemes)
 require(reshape)
+require(ggthemes)
 require(rcompanion)
 require(ggpubr)
 require(GGally)
@@ -19,7 +19,7 @@ Load immune workspace
 ```{r}
 rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
 ```
 
 # Subset metadata 
