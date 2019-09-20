@@ -1,0 +1,766 @@
+---
+title: "CPBD wrap up and plotting"
+output: html_document
+---
+
+Load immune workspace
+```{r}
+rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+```
+
+Subset Lung cells 
+```{r}
+cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$biopsy_site == "Lung")]
+length(cells)
+tiss_immune_lung <- SubsetData(object = tiss_immune, cells.use = cells)
+```
+
+Table of all immune cells
+```{r}
+ann_all <- as.character(tiss_immune_lung@meta.data$immune_subtype_annotation)
+table(ann_all)
+```
+
+Combine in one table with response to treatment 
+```{r}
+meta.temp <- cbind(as.data.frame(tiss_immune_lung@meta.data$analysis), as.data.frame(ann_all))
+# Rename columns 
+colnames(meta.temp) <- c("analysis", "annotation")
+# Add row names 
+row.names(meta.temp) <- row.names(tiss_immune_lung@meta.data)
+```
+
+# Collapse cell types 
+```{r}
+meta.temp$annotation <- as.character(meta.temp$annotation)
+meta.temp[grep("B-cells", meta.temp$annotation),"annotation"] <- "B-cells"
+meta.temp[grep("pDCs", meta.temp$annotation),"annotation"] <- "Dendritic"
+meta.temp$annotation <- as.character(meta.temp$annotation)
+table(meta.temp$annotation)
+```
+
+Plot table of cell types across treatment response groups 
+```{r}
+require(gplots)
+tab1 <- table(meta.temp$analysis, meta.temp$annotation)
+balloonplot(tab1, main ="Response vs Annotation", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+Convert gene names to ensembl gene ids
+```{r}
+library('biomaRt')
+library('Biobase')
+# Convert to Ensembl
+mart <- useDataset("hsapiens_gene_ensembl", useMart("ensembl"))
+# Subset data 
+data.pro <- as.matrix(tiss_immune_lung@data[,row.names(meta.temp)])
+# Subset gene names 
+genes <- as.character(row.names(data.pro))
+G_list <- getBM(filters= "hgnc_symbol", attributes= c("ensembl_gene_id",
+"entrezgene", "hgnc_symbol"),values=genes,mart= mart)
+# Filter unique
+G_list <- G_list[isUnique(G_list$hgnc_symbol),]
+data.pro <- data.pro[G_list$hgnc_symbol,]
+row.names(data.pro) <- G_list$ensembl_gene_id
+```
+  
+Export metadata and normalized data for each group 
+```{r}
+string <- "/myVolume/scell_lung_adenocarcinoma/interaction_analysis/data/in/"
+groups <- unique(meta.temp$analysis)
+for(i in 1:length(groups)){
+  cells <- row.names(meta.temp)[which(meta.temp$analysis==groups[i])]
+  data.exp <- data.pro[,cells]
+  # Keep only unique genes 
+  data.exp <- data.exp[row.names(data.exp)[which(isUnique(row.names(data.exp))==T)],]
+  meta.exp <- meta.temp[cells,]
+  # Fix metadata format (IF not containing multiple fields)
+  cell_type <- meta.exp$annotation
+  unique(cell_type)
+  # Combine 
+  df.m <- cbind(as.data.frame(row.names(meta.exp)), as.data.frame(cell_type))
+  colnames(df.m) <- c("Cell", "cell_type")
+  write.table(x = df.m, file = paste(string,groups[i],"_CPDB_meta_collapsed.txt", sep=""), sep = "\t", 
+              quote = FALSE, row.names = F)
+  # write.table(x = df[1:50,], file = paste(string,groups[i],"_CPDB_meta_collapsed_SHORT.txt", sep=""), sep = "\t",
+  #             quote = FALSE, row.names = F)
+  # Process counts and convert to Ensembl IDs
+  df.c <- as.data.frame(cbind(as.data.frame(row.names(data.exp)), as.data.frame(data.exp)))
+  colnames(df.c) <- c("Gene", colnames(data.exp))
+  write.table(x = df.c, file = paste(string,groups[i],"_CPDB_counts_collapsed.txt", sep=""), 
+              sep = "\t", row.names = F, quote = FALSE)
+  # write.table(x = df[,1:51], file = paste(string,groups[i],"_CPDB_counts_collapsed_SHORT.txt", sep=""),
+  #             sep = "\t", row.names = F, quote = FALSE)
+}
+```
+
+Process data through the CPDB pipeline.
+That part is done as part of a python package 
+```{r}
+# For example
+### Activate venv 
+# source cpdb-venv/bin/activate
+# Run script in scripts/main_CPDB_script.sh
+```
+
+Parse CPDB outputs 
+```{r}
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+# Create list to store results 
+list_counts_symmetric <- list()
+# Imoprt separate significant_means output files 
+# NAIVE
+baseline.sig.means <- read.table(paste(dir,"interaction_analysis/data/out/NAIVE/significant_means.txt", sep=""), sep = "\t", header=T)
+# Replace "_" at ending so it doesnt end up in wrong subsetting 
+colnames(baseline.sig.means) <- gsub("_IFNG",".IFNG",colnames(baseline.sig.means))
+colnames(baseline.sig.means) <- gsub("_PD1",".PD1",colnames(baseline.sig.means))
+# PD
+pd.sig.means <- read.table(paste(dir,"interaction_analysis/data/out/grouped_PD/significant_means.txt", sep=""), sep = "\t", header=T)
+# Replace "_" at ending so it doesnt end up in wrong subsetting 
+colnames(pd.sig.means) <- gsub("_IFNG",".IFNG",colnames(pd.sig.means))
+colnames(pd.sig.means) <- gsub("_PD1",".PD1",colnames(pd.sig.means))
+# PR
+pr.sig.means <- read.table(paste(dir,"interaction_analysis/data/out/grouped_PR/significant_means.txt", sep=""), sep = "\t", header=T)
+# Replace "_" at ending so it doesnt end up in wrong subsetting 
+colnames(pr.sig.means) <- gsub("_IFNG",".IFNG",colnames(pr.sig.means))
+colnames(pr.sig.means) <- gsub("_PD1",".PD1",colnames(pr.sig.means))
+# Combine to list 
+list.sig.means <- list(baseline.sig.means,pr.sig.means,pd.sig.means)
+names(list.sig.means) <- c("naive.sig.means", "pr.sig.means", "pd.sig.means")
+```
+
+```{r}
+# Loop over all sig.mean files 
+# REmove any collagen interactions 
+list_counts_symmetric <- list()
+rm(temp)
+for(k in 1:length(list.sig.means)){
+  temp <- list.sig.means[[k]]
+  message(paste("Number of interacting pairs for ",names(list.sig.means)[k],"is:" ,nrow(temp)))
+  # Find and remove collagen interactions 
+  a <- grep("COL", as.character(temp$interacting_pair))
+  temp <- temp[-a,]
+  # REmove those from the original list as well 
+  list.sig.means[[k]] <- temp
+  message(paste("Number of interacting pairs for ",names(list.sig.means)[k],"without collagen is:" ,nrow(temp)))
+  # Count number of significant interactions for each group and convert to n*n table 
+  a <- grep("rank", colnames(temp))+1
+  b <- ncol(temp)
+  sig.means_sub  <- temp[,c(a:b)]  
+  rm(temp)
+  # Convert NA to 0 
+  sig.means_sub[is.na(sig.means_sub)] <- 0
+# Count number of non-zero interactions in every column 
+sig.means_sub_counts <- apply(sig.means_sub, MARGIN = 2, function(x) length(which(x != 0)))
+rm(sig.means_sub)
+# Convert to a symmetrical table 
+types <- unique(unlist(strsplit(names(sig.means_sub_counts), "_")))
+message(paste("Number of cell types for",names(list.sig.means)[k],"is:", length(types))) 
+# Create symmetrical table 
+table.temp <- matrix(nrow=length(types), ncol=length(types))
+row.names(table.temp) <- types
+colnames(table.temp) <- types
+# Loop over 
+for(i in 1:length(sig.means_sub_counts)){
+  a <- strsplit(names(sig.means_sub_counts[i]), "_")[[1]][1]
+  b <- strsplit(names(sig.means_sub_counts[i]), "_")[[1]][2]
+  table.temp[a,b] <- sig.means_sub_counts[i]}
+# 
+list_counts_symmetric[[k]] <- table.temp
+rm(sig.means_sub_counts)
+}
+names(list_counts_symmetric) <- c("naive", "pr", "pd")
+```
+
+
+Plot a histogram of the number of total interactions per group 
+```{r}
+melted.temp <- melt(list_counts_symmetric)
+p <-  ggplot(melted.temp, aes(x=value, fill=L1, color=L1)) +
+      geom_histogram(position="identity", binwidth = 1) +
+      facet_grid(L1 ~ .) 
+ggsave(plot = p, filename = paste(dir,"plot_out/IM05/Total_number_of_interactions_per_category.pdf", sep=""),width = 10,height = 10)
+```
+
+Plot as heatmaps 
+```{r}
+library(ggplot2)
+library(viridis)
+# Create list to store plots 
+list_ggplots <- list()
+# Set range for all graphs 
+rng = range(list_counts_symmetric)
+# Plot 
+for(i in 1:length(list_counts_symmetric)){
+melted.temp <- melt(list_counts_symmetric[[i]])
+# # Convert 0s to 1s and log 
+# melted.temp[melted.temp$value==0,"value"] <- 1
+# melted.temp$value <- log10(melted.temp$value)
+# Plot heatmap   
+list_ggplots[[i]] <-  ggplot(data = melted.temp, aes(x=X1, y=X2, fill=value)) + 
+                      geom_tile() + 
+                      theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.2), axis.text.y = element_text(angle=0)) +
+                      #labs(x = "Giver", y = "Receiver") + 
+                      labs(x = "", y = "") + 
+                     #scale_fill_viridis_c(option = "plasma", direction = 1,) +
+                      theme(strip.placement = "outside") + 
+                      ggtitle(names(list_counts_symmetric)[i]) +
+                      scale_fill_gradientn(
+                      colors = viridis_pal()(9),
+                      # breaks=seq(0,200,10), #breaks in the scale bar
+                      limits=c(rng[1], rng[2]))
+  
+}
+list_ggplots[[i]]
+```
+
+Plot subtracted heatmaps to compare 
+```{r}
+# Libraries 
+library(ggplot2)
+# Set range for all graphs 
+rng = range(-70,70)
+# Make pair list 
+pairs <- combn(c(1,2,3), m = 2)
+pairs <- rbind(pairs, c(1,2,3)) # Last row is for list index 
+list_ggplot_pairs <- list()
+# Calculate for each pair
+for(i in 1:ncol(pairs)){
+    melted.temp.minus <- melt(list_counts_symmetric[[pairs[1,i]]]-list_counts_symmetric[[pairs[2,i]]])
+    # Plot 
+    list_ggplot_pairs[[pairs[3,i]]] <- ggplot(data = melted.temp.minus, aes(x=X1, y=X2, fill=value)) + 
+                      geom_tile() + 
+                      theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.2), 
+                            axis.text.y = element_text(angle=0)) +
+                      #labs(x = "Giver", y = "Receiver") +
+                      labs(x = "", y = "") + 
+                      scale_fill_gradient2(midpoint = 0, low="blue", mid="white",high="red", space ="RGB",
+                                           limits=c(floor(rng[1]), ceiling(rng[2]))) + 
+                      ggtitle(paste(names(list_counts_symmetric)[[pairs[1,i]]], names(list_counts_symmetric)[[pairs[2,i]]], sep="-"))  
+    # Name list entry 
+    names(list_ggplot_pairs)[[pairs[3,i]]] <- paste(names(list_counts_symmetric)[[pairs[1,i]]],names(list_counts_symmetric)[[pairs[2,i]]], sep="-")
+  }
+```
+Plot correlations between conditions (instead of subtracting)
+```{r}
+library(broom)
+library(ggridges)
+library(ggplot2)
+library(ggrepel)
+# Make pair list 
+pairs <- combn(c(1,2,3), m = 2)
+pairs <- rbind(pairs, c(1,2,3)) # Last row is for list index 
+list_ggplot_cor <- list()
+list_ggplot_res <- list()
+list_lm <- list()
+# Calculate for each pair
+for(i in 1:ncol(pairs)){
+    df.temp <- cbind(as.data.frame(melt(list_counts_symmetric[[pairs[1,i]]])[,"value"]),
+                  as.data.frame(melt(list_counts_symmetric[[pairs[2,i]]])[,"value"]))
+    # Replace NAs with zeros 
+    df.temp[is.na(df.temp)] <- 0
+    name.1 <- names(list_counts_symmetric)[[pairs[1,i]]]
+    name.2 <- names(list_counts_symmetric)[[pairs[2,i]]]
+    colnames(df.temp) <- c("x", "y")
+    row.names(df.temp) <- paste(melt(list_counts_symmetric[[pairs[1,i]]])[,"X1"],
+      melt(list_counts_symmetric[[pairs[1,i]]])[,"X2"], sep="//")
+    ###################################
+    # REgression analysis 
+    mod <- lm(df.temp$x~df.temp$y)
+    # Plot residuals 
+    df <- augment(mod)
+    df$names <- row.names(df.temp)
+    # Sort on residuals 
+    df <- df[order(df$.resid, decreasing = F),]
+        # Change name factor order 
+    df$names <- factor(df$names, levels = df$names[order(df$.resid, decreasing = F)])
+    # Select the top and bottom 3 residuals 
+    # df.less <- rbind(head(df, 3), tail(df, 3))
+    # Create color 
+    # df.less$color <- df.less$.resid
+    # df.less$color[df.less$color > 0] <- c("darkolivegreen3")
+    # df.less$color[as.numeric(df.less$color) < 0] <- c("firebrick")
+    ###################################
+    # Calculate distances from the diagonal (https://brilliant.org/wiki/dot-product-distance-between-point-and-a-line/)
+    df.temp$dist <- NA
+    for(k in 1:nrow(df.temp)){
+        df.temp$dist[k] <- abs(df.temp[k,1]-df.temp[k,2])/sqrt(2)
+    }
+    # Order on distance 
+    df.temp <- df.temp[order(df.temp$dist),]
+    df.less <- tail(df.temp, 10)
+    df.less$names <- row.names(df.less)
+    ################################### 
+    # Plot correlations 
+    # Keep only top labels for residuals 
+    df.temp$names <- row.names(df.temp)
+    df.temp$names[!df.temp$names %in% row.names(df.less) ] <- ""
+    list_ggplot_cor[[i]] <-   ggplot(df.temp, aes(x=x, y=y,label=names )) +
+                              xlim(0,200) + ylim(0,200) +
+                              geom_point(shape=1) +    
+                              geom_label_repel(nudge_y = 0.3,direction = "y",hjust= 1,segment.size = 0.1,
+                                        label.size = 0.05, ylim = c(0,200),xlim=c(120,200), label.padding = 0.1, vjust=20)  +
+                              geom_abline(slope = 1, intercept = 0, col="red") +
+                              labs(x = name.1, y = name.2) +
+                              annotate("text", x=20, y=150, label= paste("cor=",round(cor(df.temp$x,df.temp$y),3),sep=""))  
+                              #+ geom_smooth(method='lm',formula=y~x)  
+  
+                              geom_label_repel(nudge_y = 0.3,direction = "y",hjust= 10,segment.size = 0.5,
+                                        label.size = 0.05, ylim = c(20,200),xlim=c(50,200), label.padding = 0.1)
+    
+    
+#     # #  Plot the top
+#     list_ggplot_res[[i]] <-   ggplot(data=df.less, aes(x=names, y=dist)) +
+#                               geom_bar(stat="identity") +
+#                               theme(axis.text.y = element_text(size = 10), legend.position="bottom") +
+#                               geom_hline(yintercept = 0) + coord_flip() +
+#                               labs(x = "", y = "Interaction Delta") +
+#                               # scale_fill_manual(values = c("firebrick" = "firebrick", "darkolivegreen3" = "darkolivegreen3"),
+#                               #                   labels=c(name.1,name.2), name="Higher in")
+# # Store parsed linear regression results to plot all in one big histogram 
+# df$group <- paste(name.1, name.2, sep="/")
+# list_lm[[i]] <- df
+}
+```
+
+
+
+Plot all heatmaps 
+```{r}
+require(ggpubr)
+# All plots except correlations 
+list_all <- c(list_ggplots, list_ggplot_pairs) #, list_ggplot_res
+opqr <- ggarrange(plotlist = list_all,nrow = 3, ncol=3, labels = "AUTO") 
+# Save 
+ggsave(filename = paste(dir,"plot_out/IM05/CPDB_heatmaps_treatment_status.pdf", sep=""), plot = opqr, width = 17, height = 17)
+# Correlations 
+opqrs <- ggarrange(plotlist = list_ggplot_cor,nrow = 2, ncol=2, labels = "AUTO") 
+ggsave(filename = paste(dir,"plot_out/IM05/CPDB_heatmaps_treatment_status_correlations.pdf", sep=""), plot = opqrs, width = 17, height = 17)
+```
+
+
+Lets play with networks 
+Construct and plot networks 
+```{r}
+list.igraph <- list()
+require(igraph)
+names(list_counts_symmetric) <- c("naive", "grouped_pr", "grouped_pd")
+for(i in 1:length(list_counts_symmetric)){
+net2 <- graph_from_adjacency_matrix(list_counts_symmetric[[i]], weighted = T)
+type <- names(list_counts_symmetric)[i]
+# Change node size based on cell numbers 
+# Lets recover the cell numbers per category and cell type 
+cell.numbers <- as.data.frame.array(t(table(meta.temp))) # Thats the meta.temp made in line 33 from object ann_all)
+row.names(cell.numbers) <- gsub("-",".",row.names(cell.numbers)) # Change names for compatibility 
+row.names(cell.numbers) <- gsub("/",".",row.names(cell.numbers)) # Change names for compatibility 
+row.names(cell.numbers) <- gsub("_",".",row.names(cell.numbers)) # Change names for compatibility 
+# Sort 
+cell.numbers <- cell.numbers[V(net2)$name,]
+# Set node siae 
+V(net2)$size <- log2(cell.numbers[,type])
+# Set edge width based on weight:
+E(net2)$width <- E(net2)$weight/2
+#change arrow size  edge color and edge width :
+E(net2)$arrow.size <- .05
+E(net2)$edge.color <- "gray80"
+E(net2)$width <- E(net2)$weight/mean(E(net2)$weight)
+plot(net2, vertex.frame.color="white")
+# Remove edges that correspond to less than 10 interactions 
+cut.off <- mean(list_counts_symmetric[[i]]) 
+net.sp <- delete_edges(net2, E(net2)[weight<20])
+# Change layout 
+l <- layout_nicely(net.sp)
+filename <- paste(dir,"plot_out/IM05/Interaction_network_",type,".pdf",sep="")
+pdf(filename,10,10)
+plot(net.sp, vertex.frame.color="white", edge.curved=.1, layout=l, main=type)
+dev.off()
+list.igraph[[i]] <-net.sp
+}
+names(list.igraph) <- c("naive", "grouped_pr", "grouped_pd")
+```
+
+
+Plot Myeloid interactions (Myeloid--ligand) to all other cell types as boxplots across conditions 
+```{r}
+# New dataframe with neoplastic interaction counts 
+a <-  cbind(as.data.frame(list_counts_symmetric$naive["MF.Monocytes",]), 
+      row.names(as.data.frame(list_counts_symmetric$naive["MF.Monocytes",])), 
+      rep("Naive", length(list_counts_symmetric$naive["MF.Monocytes",])))
+colnames(a) <- c("counts", "cell", "group")
+b <-  cbind(as.data.frame(list_counts_symmetric$grouped_pr["MF.Monocytes",]), 
+      row.names(as.data.frame(list_counts_symmetric$grouped_pr["MF.Monocytes",])), 
+      rep("PR", length(list_counts_symmetric$grouped_pr["MF.Monocytes",])))
+colnames(b) <- c("counts", "cell", "group")
+c <-  cbind(as.data.frame(list_counts_symmetric$grouped_pd["MF.Monocytes",]), 
+      row.names(as.data.frame(list_counts_symmetric$grouped_pd["MF.Monocytes",])), 
+      rep("PD", length(list_counts_symmetric$grouped_pd["MF.Monocytes",])))
+colnames(c) <- c("counts", "cell", "group")
+mat.neo <-  rbind(a,b,c)
+rm(a,b,c)
+# Plot 
+p <-  ggplot(data=mat.neo, aes(x=cell, y=counts, group=group)) +
+      geom_line(aes(color=group))+
+      geom_point(aes(shape=group))+ 
+      theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.05, size=10), axis.text.y = element_text(angle=0)) +
+      #labs(x = "Giver", y = "Receiver") + 
+      labs(x = "", y = "") + 
+      theme(strip.placement = "outside") + 
+      ggtitle("Number of possible MF.monocytes interactions")
+
+ggsave(filename = paste(dir,"plot_out/IM05/Number_of_MF_interactions_across_groups.pdf", sep=""), plot = p, width = 10, height = 7)
+p
+```
+
+
+
+
+
+
+For each cell type plot Myeloid-cell type interacting pairs as 
+venn diagrams between naive, PD and PR samples 
+```{r}
+list.interacting.pairs <- list()
+# Get all other cell types 
+types <- colnames(list.sig.means[[1]])[grep("MF.Monocytes_", colnames(list.sig.means[[1]]))]
+types <- do.call(rbind, strsplit(types, "_"))[,2]
+
+for(i in 1:length(list.sig.means)){
+  temp <- list.sig.means[[i]]
+  # Subset only neoplastic cell interactions 
+  # in which the neoplastic cells are the ones expressing the ligand
+  temp <- cbind(temp$interacting_pair, temp$id_cp_interaction,temp[,grep("MF.Monocytes_", colnames(temp))])
+  # Create temporary list to hold each cell type 
+  list.temp <- list()
+    for(k in 1:length(types)){
+      # Subset only positive interactions for the given not neoplastic cell type 
+      genes <- as.character(temp[which(is.na(temp[,grep(types[k], colnames(temp))])==F),"temp$interacting_pair"])
+      # Store genes in list 
+      list.temp[[k]] <- genes 
+    }
+  names(list.temp) <- types 
+  # Place back in big list (which is a list of lists )
+  list.interacting.pairs[[i]] <- list.temp
+}
+names(list.interacting.pairs) <- names(list.sig.means)
+```
+
+Plot agreement between cell types across each condition 
+```{r}
+require(UpSetR)
+# Crate a list for the given cell type 
+list.venn <- list()
+for(i in 1:length(list.interacting.pairs[[1]])){
+message(paste("Processing:", names(list.interacting.pairs[[1]])[i], sep=""))
+# Concatenate lists for the given cell type 
+list.temp <-  list(list.interacting.pairs$naive.sig.means[[i]], 
+              list.interacting.pairs$pr.sig.means[[i]],
+              list.interacting.pairs$pd.sig.means[[i]])
+# Name list with cell type because venn is a stupi function 
+names(list.temp) <- c("Naive", "PR", "PD")
+# Get all unique genes 
+all.pairs <- unique(unlist(list.temp))
+# Create a table of entries for which treatment group each pair is found in 
+mat.temp <- matrix(nrow=length(all.pairs), ncol=3, 0)
+colnames(mat.temp) <- c("Naive", "PR", "PD")
+row.names(mat.temp) <- all.pairs
+  # Loop over all pairs and fill in matrixd 
+for(k in 1:nrow(mat.temp)){
+    mat.temp[k,colnames(mat.temp) %in% names(list.temp)[grep(row.names(mat.temp)[k], list.temp)]]  <- 1      
+}
+# Store mat.temp 
+list.venn[[i]] <- mat.temp
+# Plot mat temp as upsetR plot 
+pdf(paste(dir,"plot_out/IM05/Upset_plot_Myeloid_",names(list.interacting.pairs[[1]])[i],".pdf", sep=""))
+upset(as.data.frame(mat.temp))
+dev.off()
+# Plot mat temp as heatmap
+# Order for heatmap 
+order <- row.names(mat.temp)[order(rowSums(mat.temp), decreasing = T)]
+order <- order[!is.na(order)]
+# Melt matrix 
+df <- melt(mat.temp[order,])
+# convert to ordered factor
+df$X1 <- factor(df$X1, levels = order)
+# Plot heatmap
+p <-                  ggplot(data = df, aes(x=X1, y=X2, fill=as.factor(value))) + 
+                      geom_tile() + 
+                      scale_fill_manual(values=c("white", "gray50")) + 
+                      theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.2, size=5), axis.text.y = element_text(angle=0)) +
+                      #labs(x = "Giver", y = "Receiver") + 
+                      labs(x = "", y = "") + 
+                     #scale_fill_viridis_c(option = "plasma", direction = 1,) +
+                      theme(strip.placement = "outside") + 
+                      ggtitle(names(list.interacting.pairs[[1]])[i])
+# Save 
+ggsave(filename = paste(dir,"plot_out/IM05/Heatmap_plot_Myeloid_",names(list.interacting.pairs[[1]])[i],".pdf", sep=""), plot = p, width = 10, height = 10)
+p
+}
+names(list.venn) <- names(list.interacting.pairs[[1]])
+```
+
+
+
+```{r}
+t.cells <- row.names(tiss_immune_lung@meta.data)[which(tiss_immune_lung@meta.data$immune_subtype_annotation=="T-cells")]
+t.cell.tiss <- SubsetData(tiss_immune_lung, cells.use = t.cells)
+mf.cells <- row.names(tiss_immune_lung@meta.data)[which(tiss_immune_lung@meta.data$immune_subtype_annotation=="MF-Monocytes")]
+mf.cell.tiss <- SubsetData(tiss_immune_lung, cells.use = mf.cells)
+```
+
+```{r}
+t.cell.tiss <- SetIdent(t.cell.tiss, ident.use = t.cell.tiss@meta.data$analysis)
+VlnPlot(t.cell.tiss, "TNFRSF10B")
+```
+
+```{r}
+mf.cell.tiss <- SetIdent(mf.cell.tiss, ident.use = t.cell.tiss@meta.data$analysis)
+VlnPlot(mf.cell.tiss, "TNFSF10")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Start looking at the actual interactions between conditions  -->
+
+<!-- For each cell type plot Neoplastic-cell type interacting pairs as  -->
+<!-- venn diagrams between naive, PD and PR samples  -->
+<!-- ```{r} -->
+<!-- list.interacting.pairs <- list() -->
+<!-- # Get all other cell types  -->
+<!-- types <- colnames(list.sig.means[[1]])[grep("Neoplastic_", colnames(list.sig.means[[1]]))] -->
+<!-- types <- do.call(rbind, strsplit(types, "_"))[,2] -->
+
+<!-- for(i in 1:length(list.sig.means)){ -->
+<!--   temp <- list.sig.means[[i]] -->
+<!--   # Subset only neoplastic cell interactions  -->
+<!--   # in which the neoplastic cells are the ones expressing the ligand -->
+<!--   temp <- cbind(temp$interacting_pair, temp$id_cp_interaction,temp[,grep("Neoplastic_", colnames(temp))]) -->
+<!--   # Create temporary list to hold each cell type  -->
+<!--   list.temp <- list() -->
+<!--     for(k in 1:length(types)){ -->
+<!--       # Subset only positive interactions for the given not neoplastic cell type  -->
+<!--       genes <- as.character(temp[which(is.na(temp[,grep(types[k], colnames(temp))])==F),"temp$interacting_pair"]) -->
+<!--       # Store genes in list  -->
+<!--       list.temp[[k]] <- genes  -->
+<!--     } -->
+<!--   names(list.temp) <- types  -->
+<!--   # Place back in big list (which is a list of lists ) -->
+<!--   list.interacting.pairs[[i]] <- list.temp -->
+<!-- } -->
+<!-- names(list.interacting.pairs) <- names(list.sig.means) -->
+<!-- ``` -->
+
+<!-- Plot agreement between cell types across each condition  -->
+<!-- ```{r} -->
+<!-- # Crate a list for the given cell type  -->
+<!-- list.venn <- list() -->
+<!-- for(i in 1:length(list.interacting.pairs[[1]])){ -->
+<!-- message(paste("Processing:", names(list.interacting.pairs[[1]])[i], sep="")) -->
+<!-- # Concatenate lists for the given cell type  -->
+<!-- list.temp <-  list(list.interacting.pairs$naive.sig.means[[i]],  -->
+<!--               list.interacting.pairs$pr.sig.means[[i]], -->
+<!--               list.interacting.pairs$pd.sig.means[[i]]) -->
+<!-- # Name list with cell type because venn is a stupi function  -->
+<!-- names(list.temp) <- c("Naive", "PR", "PD") -->
+<!-- # Get all unique genes  -->
+<!-- all.pairs <- unique(unlist(list.temp)) -->
+<!-- # Create a table of entries for which treatment group each pair is found in  -->
+<!-- mat.temp <- matrix(nrow=length(all.pairs), ncol=3, 0) -->
+<!-- colnames(mat.temp) <- c("Naive", "PR", "PD") -->
+<!-- row.names(mat.temp) <- all.pairs -->
+<!--   # Loop over all pairs and fill in matrixd  -->
+<!-- for(k in 1:nrow(mat.temp)){ -->
+<!--     mat.temp[k,colnames(mat.temp) %in% names(list.temp)[grep(row.names(mat.temp)[k], list.temp)]]  <- 1       -->
+<!-- } -->
+<!-- # Store mat.temp  -->
+<!-- list.venn[[i]] <- mat.temp -->
+<!-- # Plot mat temp as upsetR plot  -->
+<!-- pdf(paste("/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/upset_plots/Upset_plot_", names(list.interacting.pairs[[1]])[i], ".pdf", sep="")) -->
+<!-- upset(as.data.frame(mat.temp)) -->
+<!-- dev.off() -->
+<!-- # Plot mat temp as heatmap -->
+<!-- # Order for heatmap  -->
+<!-- order <- row.names(mat.temp)[order(rowSums(mat.temp), decreasing = T)] -->
+<!-- order <- order[!is.na(order)] -->
+<!-- # Melt matrix  -->
+<!-- df <- melt(mat.temp[order,]) -->
+<!-- # convert to ordered factor -->
+<!-- df$X1 <- factor(df$X1, levels = order) -->
+<!-- # Plot heatmap -->
+<!-- p <-                  ggplot(data = df, aes(x=X1, y=X2, fill=as.factor(value))) +  -->
+<!--                       geom_tile() +  -->
+<!--                       scale_fill_manual(values=c("white", "gray50")) +  -->
+<!--                       theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.2, size=5), axis.text.y = element_text(angle=0)) + -->
+<!--                       #labs(x = "Giver", y = "Receiver") +  -->
+<!--                       labs(x = "", y = "") +  -->
+<!--                      #scale_fill_viridis_c(option = "plasma", direction = 1,) + -->
+<!--                       theme(strip.placement = "outside") +  -->
+<!--                       ggtitle(names(list.interacting.pairs[[1]])[i]) -->
+<!-- # Save  -->
+<!-- ggsave(filename = paste("/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/gene_heatmaps/Heatmap_", names(list.interacting.pairs[[1]])[i], ".pdf", sep=""), plot = p, width = 10, height = 10) -->
+<!-- p -->
+<!-- } -->
+<!-- names(list.venn) <- names(list.interacting.pairs[[1]]) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- pdf("/myVolume/sclung_adeno/interaction_analysis/plot_out/GPR35.pdf", 10,10) -->
+<!-- VlnPlot(tiss_subset, features.plot = "GPR35", group.by = "Final_immune_annotation", x.lab.rot = T) -->
+<!-- dev.off() -->
+<!-- colnames(tiss_subset@meta.data) -->
+<!-- ``` -->
+
+
+<!-- Plot neoplastic interactions (neoplastic--ligand) to all other cell types as boxplots across conditions  -->
+<!-- ```{r} -->
+<!-- # New dataframe with neoplastic interaction counts  -->
+<!-- a <-  cbind(as.data.frame(list_counts_symmetric$naive["Neoplastic",]),  -->
+<!--       row.names(as.data.frame(list_counts_symmetric$naive["Neoplastic",])),  -->
+<!--       rep("Naive", length(list_counts_symmetric$naive["Neoplastic",]))) -->
+<!-- colnames(a) <- c("counts", "cell", "group") -->
+<!-- b <-  cbind(as.data.frame(list_counts_symmetric$grouped_pr["Neoplastic",]),  -->
+<!--       row.names(as.data.frame(list_counts_symmetric$grouped_pr["Neoplastic",])),  -->
+<!--       rep("PR", length(list_counts_symmetric$grouped_pr["Neoplastic",]))) -->
+<!-- colnames(b) <- c("counts", "cell", "group") -->
+<!-- c <-  cbind(as.data.frame(list_counts_symmetric$grouped_pd["Neoplastic",]),  -->
+<!--       row.names(as.data.frame(list_counts_symmetric$grouped_pd["Neoplastic",])),  -->
+<!--       rep("PD", length(list_counts_symmetric$grouped_pd["Neoplastic",]))) -->
+<!-- colnames(c) <- c("counts", "cell", "group") -->
+<!-- mat.neo <-  rbind(a,b,c) -->
+<!-- rm(a,b,c) -->
+<!-- # Plot  -->
+<!-- p <-  ggplot(data=mat.neo, aes(x=cell, y=counts, group=group)) + -->
+<!--       geom_line(aes(color=group))+ -->
+<!--       geom_point(aes(shape=group))+  -->
+<!--       theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.05, size=10), axis.text.y = element_text(angle=0)) + -->
+<!--       #labs(x = "Giver", y = "Receiver") +  -->
+<!--       labs(x = "", y = "") +  -->
+<!--       theme(strip.placement = "outside") +  -->
+<!--       ggtitle("Number of possible neoplastic cell interactions") -->
+<!-- ggsave(filename = "/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/Number_of_neoplastic_interactions_across_groups.pdf", plot = p, width = 10, height = 7) -->
+<!-- p -->
+<!-- ``` -->
+
+<!-- For each cell type plot Dendritic-cell type interacting pairs as  -->
+<!-- venn diagrams between naive, PD and PR samples  -->
+<!-- ```{r} -->
+<!-- list.interacting.pairs <- list() -->
+<!-- # Get all other cell types  -->
+<!-- types <- colnames(list.sig.means[[1]])[grep("Dendritic_", colnames(list.sig.means[[1]]))] -->
+<!-- types <- do.call(rbind, strsplit(types, "_"))[,2] -->
+
+<!-- for(i in 1:length(list.sig.means)){ -->
+<!--   temp <- list.sig.means[[i]] -->
+<!--   # Subset only neoplastic cell interactions  -->
+<!--   # in which the neoplastic cells are the ones expressing the ligand -->
+<!--   temp <- cbind(temp$interacting_pair, temp$id_cp_interaction,temp[,grep("Dendritic_", colnames(temp))]) -->
+<!--   # Create temporary list to hold each cell type  -->
+<!--   list.temp <- list() -->
+<!--     for(k in 1:length(types)){ -->
+<!--       # Subset only positive interactions for the given not neoplastic cell type  -->
+<!--       genes <- as.character(temp[which(is.na(temp[,grep(types[k], colnames(temp))])==F),"temp$interacting_pair"]) -->
+<!--       # Store genes in list  -->
+<!--       list.temp[[k]] <- genes  -->
+<!--     } -->
+<!--   names(list.temp) <- types  -->
+<!--   # Place back in big list (which is a list of lists ) -->
+<!--   list.interacting.pairs[[i]] <- list.temp -->
+<!-- } -->
+<!-- names(list.interacting.pairs) <- names(list.sig.means) -->
+<!-- ``` -->
+
+<!-- Plot agreement between cell types across each condition  -->
+<!-- ```{r} -->
+<!-- # Crate a list for the given cell type  -->
+<!-- list.venn <- list() -->
+<!-- for(i in 1:length(list.interacting.pairs[[1]])){ -->
+<!-- message(paste("Processing:", names(list.interacting.pairs[[1]])[i], sep="")) -->
+<!-- # Concatenate lists for the given cell type  -->
+<!-- list.temp <-  list(list.interacting.pairs$naive.sig.means[[i]],  -->
+<!--               list.interacting.pairs$pr.sig.means[[i]], -->
+<!--               list.interacting.pairs$pd.sig.means[[i]]) -->
+<!-- # Name list with cell type because venn is a stupi function  -->
+<!-- names(list.temp) <- c("Naive", "PR", "PD") -->
+<!-- # Get all unique genes  -->
+<!-- all.pairs <- unique(unlist(list.temp)) -->
+<!-- # Create a table of entries for which treatment group each pair is found in  -->
+<!-- mat.temp <- matrix(nrow=length(all.pairs), ncol=3, 0) -->
+<!-- colnames(mat.temp) <- c("Naive", "PR", "PD") -->
+<!-- row.names(mat.temp) <- all.pairs -->
+<!--   # Loop over all pairs and fill in matrixd  -->
+<!-- for(k in 1:nrow(mat.temp)){ -->
+<!--     mat.temp[k,colnames(mat.temp) %in% names(list.temp)[grep(row.names(mat.temp)[k], list.temp)]]  <- 1       -->
+<!-- } -->
+<!-- # Store mat.temp  -->
+<!-- list.venn[[i]] <- mat.temp -->
+<!-- # Plot mat temp as upsetR plot  -->
+<!-- pdf(paste("/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/upset_plots/Upset_plot_Dendritic_", names(list.interacting.pairs[[1]])[i], ".pdf", sep="")) -->
+<!-- upset(as.data.frame(mat.temp)) -->
+<!-- dev.off() -->
+<!-- # Plot mat temp as heatmap -->
+<!-- # Order for heatmap  -->
+<!-- order <- row.names(mat.temp)[order(rowSums(mat.temp), decreasing = T)] -->
+<!-- order <- order[!is.na(order)] -->
+<!-- # Melt matrix  -->
+<!-- df <- melt(mat.temp[order,]) -->
+<!-- # convert to ordered factor -->
+<!-- df$X1 <- factor(df$X1, levels = order) -->
+<!-- # Plot heatmap -->
+<!-- p <-                  ggplot(data = df, aes(x=X1, y=X2, fill=as.factor(value))) +  -->
+<!--                       geom_tile() +  -->
+<!--                       scale_fill_manual(values=c("white", "gray50")) +  -->
+<!--                       theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.2, size=5), axis.text.y = element_text(angle=0)) + -->
+<!--                       #labs(x = "Giver", y = "Receiver") +  -->
+<!--                       labs(x = "", y = "") +  -->
+<!--                      #scale_fill_viridis_c(option = "plasma", direction = 1,) + -->
+<!--                       theme(strip.placement = "outside") +  -->
+<!--                       ggtitle(names(list.interacting.pairs[[1]])[i]) -->
+<!-- # Save  -->
+<!-- ggsave(filename = paste("/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/gene_heatmaps/Heatmap_Dendritic_", names(list.interacting.pairs[[1]])[i], ".pdf", sep=""), plot = p, width = 10, height = 10) -->
+<!-- p -->
+<!-- } -->
+<!-- names(list.venn) <- names(list.interacting.pairs[[1]]) -->
+<!-- ``` -->
+
+<!-- Plot Dendritic interactions (Dendritic--ligand) to all other cell types as boxplots across conditions  -->
+<!-- ```{r} -->
+<!-- # New dataframe with neoplastic interaction counts  -->
+<!-- a <-  cbind(as.data.frame(list_counts_symmetric$naive["Dendritic",]),  -->
+<!--       row.names(as.data.frame(list_counts_symmetric$naive["Dendritic",])),  -->
+<!--       rep("Naive", length(list_counts_symmetric$naive["Dendritic",]))) -->
+<!-- colnames(a) <- c("counts", "cell", "group") -->
+<!-- b <-  cbind(as.data.frame(list_counts_symmetric$grouped_pr["Dendritic",]),  -->
+<!--       row.names(as.data.frame(list_counts_symmetric$grouped_pr["Dendritic",])),  -->
+<!--       rep("PR", length(list_counts_symmetric$grouped_pr["Dendritic",]))) -->
+<!-- colnames(b) <- c("counts", "cell", "group") -->
+<!-- c <-  cbind(as.data.frame(list_counts_symmetric$grouped_pd["Dendritic",]),  -->
+<!--       row.names(as.data.frame(list_counts_symmetric$grouped_pd["Dendritic",])),  -->
+<!--       rep("PD", length(list_counts_symmetric$grouped_pd["Dendritic",]))) -->
+<!-- colnames(c) <- c("counts", "cell", "group") -->
+<!-- mat.neo <-  rbind(a,b,c) -->
+<!-- rm(a,b,c) -->
+<!-- # Plot  -->
+<!-- p <-  ggplot(data=mat.neo, aes(x=cell, y=counts, group=group)) + -->
+<!--       geom_line(aes(color=group))+ -->
+<!--       geom_point(aes(shape=group))+  -->
+<!--       theme(axis.text.x = element_text(angle=90,hjust=0.95,vjust=0.05, size=10), axis.text.y = element_text(angle=0)) + -->
+<!--       #labs(x = "Giver", y = "Receiver") +  -->
+<!--       labs(x = "", y = "") +  -->
+<!--       theme(strip.placement = "outside") +  -->
+<!--       ggtitle("Number of possible Dendritic cell interactions") -->
+<!-- ggsave(filename = "/myVolume/sclung_adeno/interaction_analysis/plot_out/collapsed_annotation/Number_of_Dendritic_interactions_across_groups.pdf", plot = p, width = 10, height = 7) -->
+<!-- p -->
+<!-- ``` -->

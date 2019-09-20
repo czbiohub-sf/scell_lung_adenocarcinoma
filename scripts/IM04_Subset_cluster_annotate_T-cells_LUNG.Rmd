@@ -1,0 +1,303 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+More detailed Immune phenotyping of different immune cell types
+Myeloid 
+
+Load immune workspace
+```{r}
+rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
+```
+
+Subset T-cells
+```{r}
+t.cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$immune_subtype_annotation == "T-cells")]
+length(t.cells)
+t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
+```
+
+Biopsy site vs analysis 
+```{r}
+require(gplots)
+pdf(paste(dir, "plot_out/IM04/TCell_counts_across_biopsy_site.pdf",sep=""), 5,5)
+tab.1 <- table(t.cell.tiss@meta.data$biopsy_site, t.cell.tiss@meta.data$analysis)
+balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+dev.off()
+```
+
+Subset T-cells only within Lung 
+```{r}
+t.cells <- row.names(t.cell.tiss@meta.data)[which(t.cell.tiss@meta.data$biopsy_site == "Lung")]
+length(t.cells)
+t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
+```
+
+Unsupervised clustering of T-cells
+
+Find variable genes
+```{r}
+t.cell.tiss <- FindVariableGenes(object = t.cell.tiss, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 1, num.bin = 20, binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
+length(t.cell.tiss@var.genes)
+```
+
+PCA
+```{r}
+t.cell.tiss <- RunPCA(object = t.cell.tiss, do.print = FALSE, pcs.compute = )
+t.cell.tiss <- ProjectPCA(object = t.cell.tiss, do.print = FALSE)
+```
+
+# visualize PCA heatmaps and PC variance
+```{r}
+PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+```
+
+```{r}
+PCElbowPlot(object = t.cell.tiss)
+```
+
+Perform correlation of PCs and metadata fields
+```{r}
+require(corrplot)
+pca.obj <- t.cell.tiss@dr$pca
+pc.coords <- pca.obj@cell.embeddings
+df1 <- t.cell.tiss@meta.data[,c("nGene","nReads","percent.ribo")]
+df2 <- pc.coords[,c(1:10)]
+cordf12 <- cor(df1,df2)
+# Make a correlation plot
+corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+```
+
+JackStraw of PCs 
+```{r}
+t.cell.tiss <- JackStraw(t.cell.tiss, num.replicate = 100, display.progress = T, 
+                         do.par = T, num.cores = 15, num.pc = 15)
+JackStrawPlot(t.cell.tiss, PCs = 1:15)
+```
+
+
+Define components to be used for clustering 
+```{r}
+n.pcs.min = 1
+n.pcs.max = 10
+```
+
+pick resolution parameter
+```{r}
+res.used <- 0.3
+t.cell.tiss <- FindClusters(object = t.cell.tiss, reduction.type = "pca", dims.use = n.pcs.min:n.pcs.max, 
+    resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+```
+
+# Run TSNE
+```{r}
+t.cell.tiss <- RunTSNE(object = t.cell.tiss, dims.use = n.pcs.min:n.pcs.max, seed.use = 10, perplexity=30)
+```
+
+# Plot TSNE
+```{r}
+TSNEPlot(object = t.cell.tiss, do.label = T)
+```
+
+# Plot TSNE and save 
+```{r}
+pdf(paste(dir, "plot_out/IM04/TCell_TSNE_manuscript.pdf",sep=""), 5,5)
+TSNEPlot(object = t.cell.tiss, do.label = F)
+dev.off()
+```
+
+```{r}
+t.cell.tiss <- BuildClusterTree(t.cell.tiss) 
+PlotClusterTree(t.cell.tiss) 
+```
+
+# Plot TSNE with analysis colors 
+```{r}
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$analysis)
+TSNEPlot(object = t.cell.tiss, do.label = T)
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$res.0.3)
+```
+
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis)
+balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+Fraction of PD
+```{r}
+require(reshape)
+tab.1 <- prop.table(table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis), margin = 1)
+tab.1 <- melt(tab.1)
+tab.1$Var.1 <- as.factor(tab.1$Var.1)
+fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
+                           stat="identity" , position=position_dodge())
+ggsave(filename = paste(dir, "plot_out/IM04/Tcell_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
+fraction.plot
+```
+
+Replot barplots using error bars 
+```{r}
+library(ggrepel)
+require(qdapTools)
+require(REdaS)
+require(plyr)
+meta.temp <- t.cell.tiss@meta.data
+meta.temp$res.0.3 <- as.numeric(meta.temp$res.0.3)
+# Change res clusters to MF clusters 
+meta.temp$cluster <- mapvalues(meta.temp$res.0.3, from=c(0,1,2,3,4,5,6), to=c("TC0", "TC1", "TC2","TC3", "TC4", "TC5", "TC6"))
+# Calculate fractions and error bars 
+prop.table.error <- list()
+for(i in 1:length(unique(meta.temp$cluster))){
+vec.temp <- meta.temp[meta.temp$cluster==unique(meta.temp$cluster)[i],"analysis"]
+# Convert to counts and calculate 95% CI 
+# Store in list 
+table.temp <- freqCI(vec.temp, level = c(.95))
+prop.table.error[[i]] <- print(table.temp, percent = TRUE, digits = 3)
+# 
+}
+# Name list 
+names(prop.table.error) <- unique(meta.temp$cluster)
+# Convert to data frame 
+tab.1 <- as.data.frame.array(do.call(rbind, prop.table.error))
+# Add analysis column 
+b <- c()
+a <- c()
+for(i in names(prop.table.error)){
+  a <- rep(i,length(unique(row.names(tab.1))))
+  b <- c(b,a)
+}
+tab.1$cluster <- b
+tab.1$cell <- row.names(tab.1)
+# Resort factor analysis 
+tab.1$cluster <- factor(tab.1$cluster, levels = c("TC0", "TC1", "TC2","TC3", "TC4", "TC5", "TC6"))
+# Rename percentile columns 
+colnames(tab.1)[1] <- "lower"
+colnames(tab.1)[3] <- "upper"
+# 
+p<- ggplot(tab.1, aes(x=cluster, y=Estimate, fill=cell)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.9)) + 
+    theme(legend.position="bottom")
+# Save plot 
+ggsave(filename = paste(dir, "plot_out/IM04/Tcell_TSNE_clusters_by_treatment_with_error_bars_manuscript.pdf",sep=""), plot = p, width = 7,height = 5)
+p
+```
+
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
+balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$analysis, as.character(t.cell.tiss@meta.data$patient_id))
+balloonplot(tab.1, main ="Patient ID vs Treatment response", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+Plot custom genes
+```{r}
+genes <- c("MR1", "NCAM1", "IFNG", "CXCR5", "IL17A", "CCR5", "CCR3", "IL12A","IL12B", "IL4", "IL5", "IL13", "CCR4", "IL1B")
+a <- VlnPlot(t.cell.tiss, features.plot = genes, do.return = T, point.size.use = 1)
+ggsave(filename = paste(dir, "plot_out/IM04/Annotation_Markers_of_Tcells.pdf",sep=""),plot = a,width = 15,height = 15)
+a
+```
+
+
+Plot top genes annotate by reponse
+```{r}
+genes <- c("CD4","CTLA4","PDCD1","FOXP3","IL2RA", "CXCL13", "FCGR3A", "TOP2A", "CD8A")
+a <- VlnPlot(t.cell.tiss, features.plot = genes, do.return = T, point.size.use = 0)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells.pdf",sep=""),plot = a,width = 10,height = 10)
+a
+```
+
+Find all cluster markers 
+```{r}
+t.cell.markers <- FindAllMarkers(object = t.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
+# t.cell.markers <- read.table(paste(dir, "data_out/IM04/T-cells_DE_genes_between_subclusters_Lung.csv",sep=""))
+```
+
+Plot top genes 
+```{r}
+require(tidyverse)
+t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
+t.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
+t.cell.markers %>% group_by(cluster) %>% top_n(50, avg_logFC) -> top50
+pdf(paste(dir, "plot_out/IM04/Heatmap_markers_of_Tcell_clusters.pdf",sep=""), 7,7)
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
+dev.off()
+# DoHeatmap(t.cell.tiss, genes.use = c("CD8A", "CD4", "PDCD1", "CD3E", "TOP2A"), slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, use.scaled = F)
+```
+
+Plot top genes annotate by reponse
+```{r}
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$analysis)
+#t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
+t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$res.0.3)
+```
+
+
+
+Write table of top genes 
+```{r}
+write.table(t.cell.markers, paste(dir, "data_out/IM04/T-cells_DE_genes_between_subclusters_Lung.csv",sep=""))
+```
+
+Plot CD16 across treatment groups 
+```{r}
+temp <- cbind(as.data.frame(t.cell.tiss@meta.data$res.0.3), as.data.frame(t.cell.tiss@meta.data$analysis), as.data.frame(t.cell.tiss@data["FCGR3A",]))
+colnames(temp) <- c("cluster", "response","FCGR3A")
+bp <- ggplot(temp, aes(x=response, y=FCGR3A, group=response)) + 
+  geom_boxplot(aes(fill=response)) + facet_grid(cluster ~ .) +
+  geom_jitter(position=position_jitter(0.2))
+ggsave(filename = paste(dir, "plot_out/IM04/FCGR3A_T_cells.pdf",sep=""),plot = bp,width = 10,height = 15)
+```
+
+
+Plot all relevant, PCA, tSNE and Clustering plots as pdf 
+```{r}
+pdf(paste(dir, "plot_out/IM04/T-cells_subclustering_TSNE_LUNG.pdf",sep=""),width = 10,height = 7)
+# Tables
+# 1
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis)
+balloonplot(tab.1, main ="T-cell subcluster vs Response group", xlab ="", ylab="",
+            label = T, show.margins = F)
+# 2
+tab.1 <- table(t.cell.tiss@meta.data$res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
+balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
+            label = T, show.margins = F)
+# TSNE plots 
+TSNEPlot(object = t.cell.tiss, do.label = T, group.by="res.0.3")
+TSNEPlot(object = t.cell.tiss, do.label = T, group.by="analysis")
+# Heatmaps
+DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
+DoHeatmap(t.cell.tiss, genes.use = top20$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 20 DE genes")
+DoHeatmap(t.cell.tiss, genes.use = top50$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 50 DE genes")
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2", "CXCL13")
+DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
+# Violin plot 
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = t.cell.tiss@meta.data$res.0.3)
+genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2")
+VlnPlot(t.cell.tiss, features.plot = genes)
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = as.character(t.cell.tiss@meta.data$analysis))
+VlnPlot(t.cell.tiss, features.plot = genes)
+t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = t.cell.tiss@meta.data$res.0.3)
+# PCA plots 
+PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+PCElbowPlot(object = t.cell.tiss)
+#JackStrawPlot(t.cell.tiss, PCs = 1:12)
+# Feature plot
+DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T)
+# DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T, group.by = "analysis")
+dev.off()
+```
+Save immune cell workspace 
+```{r}
+save(t.cell.tiss, file=paste(dir,"Data_input/objects/IM04_Tcells_Seurat_object.RData", sep=""))
+```
+

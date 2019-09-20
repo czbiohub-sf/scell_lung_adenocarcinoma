@@ -1,0 +1,125 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+Count the fraction of Immune cells across different metadata fields 
+
+Libraries 
+```{r}
+require(tidyr)
+require(ggthemes)
+require(reshape)
+require(rcompanion)
+require(ggpubr)
+require(GGally)
+```
+
+Load immune workspace
+```{r}
+rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
+```
+
+# Subset metadata 
+Remove cells that are not immune or are annotated as treatment status Pending or unknown. Also 
+exclude thoracentesis derived immune cells as they are not necessarily proximal to the tumor. Brain will also be removed 
+since it only has <10 cells. 
+
+
+Count the fraction of Immune cells across patients with multiple biopsies 
+```{r}
+require(ggthemes)
+require(reshape)
+require(rcompanion)
+require(ggpubr)
+require(gplots)
+# Create list to save Myeloid and T-cell counts for every patient with multiple biopsies 
+list.sum <- list()
+# Subset metadata 
+metadata <- tiss_immune@meta.data
+# Keep only cells from tissues that are not brain or pleura 
+metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
+metadata$biopsy_date_2 <- as.factor(paste(metadata$biopsy_date, metadata$analysis))
+tab.1 <- table(metadata$biopsy_date_2,metadata$patient_id)
+# Which patients have cells across multiple timepoints ? 
+tab.1[tab.1 > 0] <- 1
+# patients <- colnames(tab.1)[which(colSums(tab.1) > 1) ]
+patients <- c("TH226", "TH266")
+# Make a table of patients+biopsy date+biopsy site+ treatment status  
+temp.1 <- metadata[metadata$patient_id %in% patients,c("patient_id","biopsy_date", "biopsy_site", "analysis", "biopsy_date_2")]
+tab.1 <- table(temp.1$biopsy_date_2, temp.1$patient_id)
+# Remove patients with single time points 
+tab.1 <- tab.1[,names(which(colSums(tab.1) !=0))]
+# Zeros to NAs
+tab.1[tab.1 == 0] <- NA
+# Save an image with all patients and their time points 
+pdf(paste(dir,"plot_out/IM05/All_immune_population_correlations_across_treatment.pdf", sep=""), width = 5, height = 5)
+# pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/Heatmap_of_patient_timepoints.pdf",10,10)
+colfunc <- colorRampPalette(c("white", "red"))
+heatmap.2(tab.1, Rowv = F, Colv = F, col = colfunc(10), trace="n", key = T,
+          colsep = 1:ncol(tab.1), sepcolor = "grey90", margins = c(5,10), rowsep = 1:nrow(tab.1), 
+          cellnote=tab.1,
+          notecex=1.0,
+          notecol="black",
+          na.color=par("bg"))
+dev.off()
+# Loop over all patients 
+patients <- c("TH226", "TH266")
+for(i in 1:length(patients)){
+metadata2 <- metadata[which(metadata$patient_id==patients[i]),]
+# Custom for TH179
+print(dim(metadata2))
+if(patients[i]=="TH179"){metadata2 <- metadata2[-which(metadata2$biopsy_site=="LN"),]}
+print(dim(metadata2))
+if(dim(metadata2)[1] != 0 ) {
+# Subset to fields of interest 
+meta.temp <- metadata2[,c("immune_subtype_annotation", "biopsy_date", "biopsy_site", "analysis")]
+meta.temp$biopsy_date <- as.factor(paste(meta.temp$biopsy_date, meta.temp$analysis))
+# Color function
+pal <- tableau_color_pal("Tableau 20")
+# Imune cells per category
+p <- ggplot(meta.temp) + geom_bar(aes(x = biopsy_date,fill = immune_subtype_annotation), position = "fill") + 
+  scale_fill_manual(values = pal(20)) + ggtitle(patients[i])
+# Total number of cells 
+q <- ggplot(melt(meta.temp[,2])) + geom_bar(aes(x = value)) +
+  geom_text(data = as.data.frame(table(meta.temp[,2])),aes(x = Var1, y = Freq, label=Freq), 
+    position = position_dodge(width = 1),
+    vjust = -0.5, size = 4) + ggtitle("Ncells")
+# Perform a chiSquare test 
+table.chi <- t(table(meta.temp[c(1,2)]))
+table.chi.res <- pairwiseNominalIndependence(table.chi,fisher = FALSE,gtest  = FALSE,chisq  = TRUE,method = "fdr")
+temp <- -log10(table.chi.res$p.adj.Chisq)
+temp[is.infinite(temp)] <- 0
+temp[is.na(temp)] <- 0
+# Plot 
+temp <- cbind(as.data.frame(temp), as.data.frame( table.chi.res$Comparison))
+colnames(temp) <- c("p.value", "group")
+r <- ggplot(temp) +geom_point(aes(x = p.value, y = group)) + 
+  labs(x = "-log10(p.value)", y="Treatment Status group") + 
+  geom_vline(xintercept = 5)
+# Also make a line chart 
+tt <- as.data.frame(table(as.data.frame(meta.temp[c(1,2)])))
+colnames(tt) <- c("Var1", "Var2", "Freq")
+o <- ggplot(tt, aes(x=Var1, group=Var2, y=Freq)) +
+  geom_line(aes(color=Var2))+
+  geom_point(aes(color=Var2)) + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) + # , colour = col.imm.generic
+  labs(x ="", y="Number of cells") 
+# Similar plot with normalized axis 
+tt2 <- as.data.frame(prop.table(table(as.data.frame(meta.temp[c(1,2)])),margin = 2))
+colnames(tt2) <- c("Var1", "Var2", "Freq")
+o2 <- ggplot(data=tt2, aes(x=Var1, y=Freq, fill=Var2)) +
+geom_bar(stat="identity", position=position_dodge()) + 
+theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
+  labs(x ="", y="Fraction of cells")
+# Combine and plot all 
+opqr <- ggarrange(p,o,o2,q,r,nrow = 2, ncol=3) 
+# Save 
+ggsave(filename = paste(dir,"plot_out/IM05/Immune_cell_population_changes_multiple_biopsies_",patients[i], ".pdf", sep="") , plot = opqr, width = 17, height = 10)}
+# Also export counts for T-cells and myeloid cells to make a "before-after" plot 
+list.sum[[i]] <- tt2[which(tt2$Var1=="MFs.monocytes" | tt2$Var1=="T-cells" | tt2$Var1=="DCs" | tt2$Var1=="Neutrophils"),]
+names(list.sum)[i] <- patients[i]
+}
+```
