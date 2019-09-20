@@ -1,17 +1,16 @@
 ---
-title: "Untitled"
+title: "IM01"
 author: "Spyros"
 date: "19/9/2018"
 output: html_document
 ---
 
-
-
-Clear environment (optional) and load Seurat object containing Immune cells (from script 03)
+Clear environment (optional) and load Seurat object containing Immune cells (from script S03)
+variable "dir" should be changed to point to the location of the cloned github repo locally
 ```{r}
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/S03_Immune_Seurat_object.RData", sep=""))
 tiss_immune
 ```
 
@@ -20,30 +19,10 @@ Table of immune/non-immune cells (sanity check)
 table(tiss_immune@meta.data$immune_annotation)
 ```
 
-
-Import TCR metadata and merge with immune cell Seurat object 
-```{r}
-require(dplyr)
-tcr_output <- read.csv(paste(dir,"metadata_input/TCR_cell_data.csv", sep=""))
-# Change cell_name to cell_ID 
-# colnames(tcr_output)[grep("cell_name", colnames(tcr_output))] <- "cell_id"
-# Join metadata with TCR metadata 
-meta_new <- left_join(x = tiss_immune@meta.data, y = tcr_output, by = "cell_id")
-row.names(meta_new) <- row.names(tiss_immune@meta.data)
-# Add updated metadata (containing TCR info) to the Seurat obect 
-tiss_immune@meta.data <- meta_new
-table(tiss_immune@meta.data$clonal_group)
-```
-
-Save immune cell workspace 
-```{r}
-save(tiss_immune, file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
-```
-
 Find variable genes
 ```{r}
-tiss_immune <- FindVariableGenes(object = tiss_immune, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 1, num.bin = 20, 
-                                          binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
+require(Seurat)
+tiss_immune <- FindVariableGenes(object = tiss_immune, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 1, num.bin = 20, binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
 length(tiss_immune@var.genes)
 ```
 
@@ -75,28 +54,6 @@ Also visaulize PC variance
 #comp.dev <-pca.obj@sdev
 PCElbowPlot(object = tiss_immune)
 ```
-Plot a few of the principal components 
-```{r}
-require(GGally)
-require(reshape)
-temp <- tiss_immune@dr$pca@cell.embeddings
-temp <- as.data.frame(temp)
-names <- colnames(temp)
-temp <- cbind(temp, tiss_immune@meta.data$general_annotation)
-colnames(temp) <- c(names, "general.annotation")
-pca.scatter = ggpairs(data=temp,
-             columns=1:10, 
-             upper = list(continuous = "points"),
-             lower = list(combo = "na"),
-             mapping=ggplot2::aes(colour = general.annotation), legend = 2) + theme(legend.position = "bottom")
-ggsave(plot = pca.scatter, filename = paste(dir,"plot_out/IM01/Immune_cells_PCA_scatterplots_largefile.pdf", sep=""),width = 15, height = 12)
-```
-
-
-```{r}
-tiss_immune <- JackStraw(tiss_immune, num.replicate = 100, num.cores = 15, do.par = T)
-JackStrawPlot(object = tiss_immune, PCs = 1:20)
-```
 
 Choose the number of principal components to use.
 ```{r}
@@ -117,19 +74,16 @@ tiss_immune <- RunTSNE(object = tiss_immune, dims.use = 1:n.pcs, seed.use = 10, 
 
 Visualize TSNE colored by cluster
 ```{r}
-# note that you can set do.label=T to help label individual clusters
 TSNEPlot(object = tiss_immune, do.label = T)
 ```
 
 Visualize TSNE metadata field
 ```{r}
-# note that you can set do.label=T to help label individual clusters
 TSNEPlot(object = tiss_immune, do.label = F, group.by = "driver_gene")
 ```
 
 Visualize TSNE metadata field
 ```{r}
-# note that you can set do.label=T to help label individual clusters
 TSNEPlot(object = tiss_immune, do.label = F, group.by = "patient_id")
 ```
 
@@ -144,18 +98,17 @@ tiss.markers.immune <- FindAllMarkers(object = tiss_immune, only.pos = TRUE, min
 Write differential gene table
 ```{r}
 write.table(tiss.markers.immune, file=paste(dir,"data_out/IM01/Immune_cells_DE_genes_among_Seurat_clusters.csv", sep=""))
+# In case you want to load the differentially expressed genes without running the FindAllMarkers use : 
 #tiss.markers.immune <- read.csv("/myVolume/sclung_adeno/immune_cell_analysis/data_out/181102_Differentially_expressed_genes_all_immune_cells.csv", header=T, sep=" ")
 ```
 
-Save immune cell workspace 
-```{r}
-save(tiss_immune, file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
-```
+
 
 
 Display the top markers you computed above.
 ```{r}
 require(tidyverse)
+require(dplyr)
 tiss.markers.immune %>% group_by(cluster) %>% top_n(5, avg_logFC)
 ```
 
@@ -216,25 +169,10 @@ ggplot(tab1) +
   geom_bar(position = "fill")
 ```
 
-Patient occupancy per cell type 
-```{r}
-# Barplot of patients per cluster 
-tab1 <- table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$immune_subtype_annotation)
-# 
-tab1 <- melt((apply(tab1, MARGIN = 2, max)/colSums(tab1))*100)
-tab1$cell.type <- row.names(tab1)
-# 
-tab1$cell.type <- factor(tab1$cell.type,levels = as.character(table.temp$Var1[order(table.temp$Freq,decreasing=F)]))
-p <-  ggplot(data=tab1, aes(x=cell.type, y=value)) +
-      geom_bar(stat="identity") + coord_flip()
-ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), width = 90, height = 90, units = "mm")
-```
-
-
 Calculate and plot average expression of broad cell type specific gene sets 
 ```{r}
-library(ggridges)
-library(ggplot2)
+require(ggridges)
+require(ggplot2)
 # # # 
 cell.genes <- read.table(paste(dir,"gene_lists/broad_cell_markers_immune.csv", sep=""), header=T)
 cell.types  <- as.character(unique(cell.genes$cell))
@@ -261,7 +199,9 @@ ggplot.list.2[[i]] <- ggplot(temp, aes(x = clusters, y = gene.exp)) +
                       ggtitle(cell.types[i]) + ylab("Average gene expression (log)")
 }
 # Plot all 
-library(gridExtra)
+require(grid)
+require(gridExtra)
+require(gbm)
 n <- length(ggplot.list)
 nCol <- floor(sqrt(n))
 # Exzpression on tSNE
@@ -293,7 +233,6 @@ tiss_immune@meta.data[,'immune_subtype_annotation'] <- plyr::mapvalues(x = tiss_
 pdf(paste(dir,"plot_out/IM01/Immune_cells_free_annotation_on_TSNE.pdf", sep=""),width = 10,height = 10)
 TSNEPlot(object = tiss_immune, do.label = TRUE, pt.size = 0.5, group.by='immune_subtype_annotation', label.size = 6)
 TSNEPlot(object = tiss_immune, do.label = F, pt.size = 0.5, group.by='immune_subtype_annotation')
-DimPlot
 dev.off()
 ```
 # Barplot of all immune cell counts 
@@ -306,20 +245,23 @@ ggsave(paste(dir,"plot_out/IM01/Immune_cell_counts.pdf", sep=""), width = 90, he
 table.temp
 ```
 
-<!-- Write annotations of immune cells to tiss_subset (which is the master object containing all cells) -->
-<!-- ```{r} -->
-<!-- # Add column epithelial_annotation_lvl_1 to tiss_subset -->
-<!-- tiss_immune@meta.data[,"immune_subtype_annotation"] <- NA -->
-<!-- # Add annotations  -->
-<!-- for(i in 1:nrow(tiss_immune@meta.data)){ -->
-<!--   cell <- row.names(tiss_immune@meta.data)[i] -->
-<!--   a <- which(row.names(tiss_immune@meta.data)==cell) -->
-<!--   tiss_immune@meta.data[a,"immune_subtype_annotation"] <- tiss_immune@meta.data$immune_subtype_annotation[i] -->
-<!-- } -->
-<!-- ``` -->
+Patient occupancy per cell type 
+```{r}
+require(reshape)
+# Barplot of patients per cluster 
+tab1 <- table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$immune_subtype_annotation)
+# 
+tab1 <- melt((apply(tab1, MARGIN = 2, max)/colSums(tab1))*100)
+tab1$cell.type <- row.names(tab1)
+# 
+tab1$cell.type <- factor(tab1$cell.type,levels = as.character(table.temp$Var1[order(table.temp$Freq,decreasing=F)]))
+p <-  ggplot(data=tab1, aes(x=cell.type, y=value)) +
+      geom_bar(stat="identity") + coord_flip()
+ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), width = 90, height = 90, units = "mm")
+```
+
 
 Save immune cell workspace 
 ```{r}
-save(tiss_immune, file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
-tiss_immune@meta.data$immune_subtype_annotation
+save(tiss_immune, file=paste(dir,"Data_input/IM01_Immune_Seurat_object.RData", sep=""))
 ```
