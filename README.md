@@ -12,12 +12,13 @@ https://drive.google.com/drive/folders/1nONsp9VuhmPzuDvMet0i8x26eV9r5lkT?usp=sha
 ### Importing and Creating Seurat Object
 01_Import_data_and_metadata.Rmd: Import raw data and metadata
 
-02_Create_Seurat_object.Rmd: Create inital Seurat object
+02_Create_Seurat_object.Rmd: Create initial Seurat object
 
 03_Subset_and_general_annotations.Rmd: Inital quality control, general cell annotations, and splitting of data into immune and non-immune subsets.
 
 ### Immune Compartment Analysis
-I06_TCR_analysis.Rmd 
+I06_TCR_analysis.Rmd
+
 I06_TCR_analysis.nb.html
 IM01_Subset_cluster_annotate_immune_cells.Rmd
 IM03_immune_cell_changes_with_response_to_treatment.Rmd
