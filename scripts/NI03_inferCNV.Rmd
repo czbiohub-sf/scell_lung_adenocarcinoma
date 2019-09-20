@@ -24,6 +24,7 @@ require(dendextend)
 require(ggthemes)
 library(tidyverse)
 library(Seurat)
+library(miscTools)
 ```
 
 ```{r}
@@ -82,6 +83,7 @@ infercnv_obj = infercnv::CreateInfercnvObject(raw_counts_matrix = paste(dir, "Da
 Save infercnv Object
 ```{r}
 save(infercnv_obj, file = paste(dir, "Data_input/NI03_infercnv_obj.RData", sep = ""))
+# load(file = paste(dir, "Data_input/objects/NI03_infercnv_obj.RData", sep = ""))
 ```
 
 Perform infercnv operations to reveal cnv signal
@@ -109,10 +111,10 @@ the_bars <- as.data.frame(tableau_color_pal("Tableau 20")(20)[infercnv.labels])
 colnames(the_bars) <- "inferCNV_tree"
 the_bars$inferCNV_tree <- as.character(the_bars$inferCNV_tree)
 # PLot tree
-pdf(file = paste(dir, "/plot_out/NI03/NI03_inferCNV_dendrogram_cut.pdf", sep = ""))
+# pdf(file = paste(dir, "/plot_out/NI03/NI03_inferCNV_dendrogram_cut.pdf", sep = ""))
 infercnv.dend %>% set("labels",rep("", nobs(infercnv.dend)) )  %>% plot(main="inferCNV dendrogram") %>%
 colored_bars(colors = as.data.frame(the_bars), dend = infercnv.dend, sort_by_labels_order = FALSE, add = T, y_scale=1000, y_shift = 0)
-dev.off()
+# dev.off()
 ```
 
 Add CNV dendrogram clusters labels to annoation
@@ -157,6 +159,21 @@ rownames(tiss_nonimmune@meta.data) <- tiss_nonimmune@meta.data$cell_id
 save(tiss_nonimmune, file = paste(dir, "Data_input/NI03_nonimmune_annotated_tumor.RData", sep = ""))
 ```
 
+```{r}
+infercnv.obs_txt <- read.table(file = paste(dir, "plot_out/NI03/infercnv.observations.txt", sep = ""))
+class(infercnv.obs_txt)
+dim(infercnv.obs_txt)
+head(infercnv.obs_txt[1:5,1:5])
+tail(infercnv.obs_txt)
+summary(infercnv.obs_txt$O8_1001000408)
+
+
+# x <- apply(infercnv.obs_txt, MARGIN = 2, FUN = function(x) length(which(infercnv.obs_txt[,x] !=1)))
+```
+
+```{r}
+cnv_mean <- colMedians(infercnv.obs_txt)
+```
 
 
 

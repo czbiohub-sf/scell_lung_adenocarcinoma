@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Read in data
+```{r}
+# rm(list=ls())
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+sum_tab <- read.csv(file = paste(dir, "data_out/NI06/NI06_mutation_summary_table.csv", sep = ""))
+mut_of_int <- read.csv(file = paste(dir, "gene_lists/mutations_of_interest.csv", sep = ""))
+sample_by_gene_tab <- read.csv(file = paste(dir, "Data_input/gene_x_sample_ratios.csv", sep = ""), row.names = 1) #updated 190627
+load(file = paste(dir, "Data_input/NI04_epithelial_annotated_tumor_mut.RData", sep = ""))
+```
+
+Subset genes and sample names
+```{r}
+clinical.mut <- as.character(mut_of_int$Gene_Symbol[grep("Clinically", mut_of_int$Gene_Source)])
+tier.mut <- as.character(mut_of_int$Gene_Symbol[grep("Tier", mut_of_int$Gene_Source)])
+samples <- as.character(sum_tab[,1]) # If sample ID is not the first column than this wont work.. )
+```
+
+Create tables to summarize data 
+This will be a binary table for clinical mutations
+```{r}
+mat.clinical <- as.data.frame(matrix(nrow=length(samples), ncol=length(clinical.mut)))
+row.names(mat.clinical) <- samples
+colnames(mat.clinical) <-   clinical.mut
+mat.clinical
+```
+
+Loop over each sample and populate each table 
+```{r}
+for(i in 1:length(samples)){
+  # Separate text in mutations column 
+  muts <- as.character(sum_tab[i,"mutations"])
+  muts <- unlist(strsplit(muts, "/"))
+  # Remove leading/trailing whitespace
+  muts <- trimws(muts, "both")
+  # Count clinical mutations for every gene in the clinical.mut vector
+  for(j in 1:length(clinical.mut)){
+    a <- muts %in% clinical.mut[j]
+    if (length(which(a==T))!=0) {mat.clinical[i,j] <- 1} else {mat.clinical[i,j] <- 0}
+  }
+}
+mat.clinical
+```
+
+
+Plot the Heatmaps for Clinically Reported Genes
+```{r}
+# Binarize to plot and check 
+mat.clinical.b <- mat.clinical
+mat.clinical.b[mat.clinical.b !=0] <- 1
+# filter the rows that have a column sum of zero
+mat.clinical.b.f <- mat.clinical.b
+mat.clinical.b.f$sample <- rownames(mat.clinical.b.f)
+mat.clinical.b.f <- mat.clinical.b.f[,colSums(mat.clinical.b.f[,1:15]) > 0]
+mat.clinical.b.f$sample <- NULL
+mat.clinical.b.f.t <- as.data.frame(t(mat.clinical.b.f))
+sample.ordered <- c("LT_S34", "LT_S43", "LT_S49", "LT_S50", "LT_S51", "LT_S56", "LT_S67", "LT_S66", "LT_S65", "LT_S69", "LT_S74", "LT_S75", "LT_S45", "LT_S52", "LT_S55", "LT_S01", "LT_S42", "LT_S11", "LT_S13", "LT_S41", "LT_S71", "LT_S57", "LT_S82", "LT_S53", "LT_S05", "LT_S07", "LT_S08", "LT_S16", "LT_S48", "LT_S63", "LT_S58", "LT_S79", "LT_S80", "LT_S78", "LT_S21", "LT_S23", "LT_S28", "LT_S47", "LT_S54", "LT_S72")
+mat.clinical.b.f.t.s <- mat.clinical.b.f.t[,c(sample.ordered)]
+mat.clinical.b.f.t.s.f <- mat.clinical.b.f.t.s[ ,names(which(colSums(mat.clinical.b.f.t.s)  > 0))]
+colSums(mat.clinical.b.f.t.s.f)
+
+pdf(file = paste(dir, "plot_out/NI09/190627_oncogene_ROI_heatmap.pdf", sep = ""))
+pheatmap(mat = mat.clinical.b.f.t.s.f, cluster_cols = FALSE, cluster_rows = FALSE, color = viridis(2), annotation_col = ano_pull2)
+dev.off()
+```
+
+
+Investiate the ROIs reported from clinical and COSMIC ROIs
+```{r}
+sample_by_gene_tab
+sample.ordered <- c("LT_S34", "LT_S43", "LT_S49", "LT_S50", "LT_S51", "LT_S56", "LT_S67", "LT_S66", "LT_S65", "LT_S69", "LT_S74", "LT_S75", "LT_S45", "LT_S52", "LT_S55", "LT_S01", "LT_S42", "LT_S11", "LT_S13", "LT_S41", "LT_S71", "LT_S57", "LT_S82", "LT_S53", "LT_S05", "LT_S07", "LT_S08", "LT_S16", "LT_S48", "LT_S63", "LT_S58", "LT_S79", "LT_S80", "LT_S78", "LT_S21", "LT_S23", "LT_S28", "LT_S47", "LT_S54", "LT_S72")
+sample_by_gene_tab <- sample_by_gene_tab[,c(sample.ordered)]
+colnames(sample_by_gene_tab)
+sample_by_gene_tab_filtered <- sample_by_gene_tab[rowSums(sample_by_gene_tab) > 0, colSums(sample_by_gene_tab) > 0]
+sample_by_gene_tab_filtered$gene <- rownames(sample_by_gene_tab_filtered)
+sample_by_gene_tab_filtered_s <- sample_by_gene_tab_filtered %>% arrange(desc(rowSums(sample_by_gene_tab_filtered[1:36])))
+rownames(sample_by_gene_tab_filtered_s) <- sample_by_gene_tab_filtered_s$gene
+sample_by_gene_tab_filtered_s$gene <- NULL
+
+# get analysis annotations
+ano_pull <- as.data.frame(colnames(sample_by_gene_tab))
+colnames(ano_pull) <- "sample_name"
+ano_pull1 <-  left_join(x = ano_pull, y = tiss_subset_tumor@meta.data[, c("sample_name", "analysis")], by = "sample_name")
+ano_pull2 <- unique(ano_pull1)
+rownames(ano_pull2) <- ano_pull2$sample_name
+ano_pull2$sample_name <- NULL
+
+pdf(file = paste(dir, "plot_out/NI09/190627_coverage_ROI_heatmap.pdf", sep = ""))
+pheatmap(mat = sample_by_gene_tab_filtered_s, cluster_cols = FALSE, cluster_rows = FALSE, color = viridis(10), annotation_col = ano_pull2)
+dev.off()
+```
+
+
+
+

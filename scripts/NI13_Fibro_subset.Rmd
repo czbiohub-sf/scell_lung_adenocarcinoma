@@ -1,0 +1,375 @@
+---
+title: "Fibroblasts Subset"
+output: html_notebook
+---
+
+Libraries
+```{r}
+library(Seurat)
+library(devtools)
+library(clustree)
+library(tidyverse)
+library(gridExtra)
+library(ggridges)
+library(ggplot2)
+library(ggExtra)
+library(corrplot)
+library(reshape)
+```
+
+```{r}
+dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file = paste(dir,"Data_input/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
+```
+
+Subset fibroblasts
+```{r}
+fibroblasts <- filter(tiss_nonimmune@meta.data, nonimmune_general_annotation == "Fibroblast")
+fibroblast_sub <- SubsetData(tiss_nonimmune, cells.use = fibroblasts$cell_id)
+```
+
+Normalize and scale the data
+```{r}
+fibroblast_sub <- NormalizeData(object = fibroblast_sub,)
+fibroblast_sub <- ScaleData(object = fibroblast_sub)
+```
+
+Find variable genes
+```{r}
+fibroblast_sub <- FindVariableGenes(object = fibroblast_sub, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+```
+
+Perform PCA
+```{r}
+fibroblast_sub <- RunPCA(object = fibroblast_sub, do.print = FALSE)
+fibroblast_sub <- ProjectPCA(object = fibroblast_sub, do.print = FALSE)
+```
+
+Visualize top genes in principal components
+```{r}
+PCHeatmap(object = fibroblast_sub, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+```
+
+Perform correlation of PCs and metadata fields
+```{r}
+pca.obj <- fibroblast_sub@dr$pca
+pc.coords <- pca.obj@cell.embeddings
+df1 <- fibroblast_sub@meta.data[,c("nGene","nReads","percent.ribo")]
+df2 <- pc.coords[,c(1:10)]
+cordf12 <- cor(df1,df2)
+# Make a correlation plot
+corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+```
+
+Also visaulize PC variance
+```{r}
+#comp.dev <-pca.obj@sdev
+PCElbowPlot(object = fibroblast_sub)
+```
+
+Choose the number of principal components to use.
+
+```{r}
+n.pcs = 20
+```
+
+Check clustering stability at given resolution 
+```{r}
+# Set different resolutions 
+res.used <- seq(0.1,1,by=0.2)
+# Loop over and perform clustering of different resolutions 
+for(i in res.used){
+        fibroblast_sub <- FindClusters(object = fibroblast_sub, reduction.type = "pca", dims.use = 1:n.pcs, 
+        resolution = i, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+        }
+# Make plot 
+clus.tree.out <- clustree(fibroblast_sub) +
+    theme(legend.position = "bottom") + 
+    scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+
+# Plot 
+clus.tree.out
+```
+
+Set resolution and perform clustering
+```{r}
+res.used <- 0.3
+fibroblast_sub <- FindClusters(object = fibroblast_sub, reduction.type = "pca", dims.use = 1:n.pcs, 
+    resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+```
+
+Perform  tSNE
+```{r}
+fibroblast_sub <- RunTSNE(object = fibroblast_sub, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+```
+
+Visualize TSNE colored by cluster
+```{r}
+TSNEPlot(object = fibroblast_sub, do.label = T)
+TSNEPlot(object = fibroblast_sub, group.by = "analysis")
+TSNEPlot(object = fibroblast_sub, group.by = "biopsy_site")
+```
+
+Fraction of PD
+```{r}
+tab.1 <- prop.table(table(fibroblast_sub@meta.data$res.0.3, fibroblast_sub@meta.data$analysis), margin = 1)
+tab.1 <- melt(tab.1)
+tab.1$Var.1 <- as.factor(tab.1$Var.1)
+fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
+                           stat="identity", position='dodge') + coord_flip()
+fraction.plot
+
+tab.2 <- prop.table(table(fibroblast_sub@meta.data$res.0.3, fibroblast_sub@meta.data$patient_id), margin = 1)
+tab.2 <- melt(tab.2)
+tab.2$Var.1 <- as.factor(tab.2$Var.1)
+fraction.plot1 <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.2,
+                           stat="identity") + coord_flip()
+fraction.plot1
+```
+
+Cluster Occ by patient
+```{r}
+# Calculate mixing score for each cluster 
+tab.3 <- table(fibroblast_sub@meta.data$patient_id, fibroblast_sub@meta.data$res.0.3)
+occ_score <- apply(tab.3, 2, max)/colSums(tab.3)
+# Plot mixing score
+par(las=3);barplot(sort(occ_score), xlab="Cluster", ylab="Patient max Ncells/Total cells", ylim=c(0,1));abline(h=0.7, col="red")
+```
+
+Create a dendrogram of all fibroblast clusters
+```{r}
+# Export data from Seurat object and normalize
+data.raw <- fibroblast_sub@raw.data
+dim(data.raw)
+
+#r Export metadata from Seurat object
+metadata <- fibroblast_sub@meta.data
+dim(metadata)
+
+# Subset data and metadata to contain same cells and in the same order. Normalize data
+data.raw <- as.matrix(data.raw[,row.names(metadata)])
+# Remove non-expressed genes 
+data.raw <- data.raw[names(which(rowSums(data.raw)!=0)),]
+# Normalize
+data.norm <- apply(X=data.raw, MARGIN=2, function(x) log2((((x/sum(x))*1000000)+1)) )
+dim(data.norm)
+
+# Overdispersion
+sel.by.cv <- function(counts.nodups) {
+  require(statmod)# library(pcaMethods); library(fastICA)
+  ed <- counts.nodups*1000000/colSums(counts.nodups) # Second pass, no duplicates
+  #ed <- counts.nodups
+  means <- rowMeans(ed)
+  vars <- apply(ed,1,var)
+  cv2 <- vars/means^2
+  winsorize <- function (x, fraction=0.05) {
+    if(length(fraction) != 1 || fraction < 0 ||
+       fraction > 0.5) {
+      stop("bad value for 'fraction'")
+    }
+    lim <- quantile(x, probs=c(fraction, 1-fraction))
+    x[ x < lim[1] ] <- lim[1]
+    x[ x > lim[2] ] <- lim[2]
+    x
+  }
+  wed <- t(apply(ed, 1, winsorize, fraction=2/ncol(ed))) 
+  means = rowMeans(wed); vars = apply(wed,1,var); cv2 <- vars/means^2
+  useForFit <- means >= unname( quantile( means[ which( cv2 > .3 ) ], .95 ) ) 
+  fit <- glmgam.fit( cbind( a0 = 1, a1tilde = 1/means[useForFit] ),cv2[useForFit] )
+  xg <- exp(seq( min(log(means[means>0])), max(log(means), na.rm=T), length.out=1000 ))
+  afit <- fit$coef["a1tilde"]/means+fit$coef["a0"]
+  vfit <- fit$coef["a1tilde"]/xg+fit$coef["a0"]
+  varFitRatio <- vars/(afit*means^2)
+  varorder <- order(varFitRatio,decreasing=T)
+  return(varorder)
+}
+# OD analysis
+o <- sel.by.cv(data.raw)
+
+# select top OD genes (1000 genes)
+
+data.norm.top <- data.norm[o[1:1000],]
+dim(data.norm.top)
+# Remove cells with no expression of any of the overdispersed genes 
+cells <- names(which(colSums(data.norm.top)!=0))
+metadata <- metadata[cells,]
+data.raw <- data.raw[,row.names(metadata)]
+data.norm <- data.norm[,row.names(metadata)]
+data.norm.top <- data.norm.top[,row.names(metadata)]
+
+#Calculate distance
+dist.cor <- as.dist(1-abs(cor(data.norm.top)))
+
+# Create a cluster distance matrix
+
+# Rename the res column to cluster
+mat_clus_dis <- matrix(nrow=length(unique(metadata$res.0.3)), 
+                       ncol=length(unique(metadata$res.0.3)))
+colnames(mat_clus_dis) <- paste("Cluster_", 0:(length(unique(metadata$res.0.3))-1), sep="")
+row.names(mat_clus_dis) <- paste("Cluster_", 0:(length(unique(metadata$res.0.3))-1), sep="")
+# 
+diag(mat_clus_dis) <- 0
+# 
+clusters <- 0:max(as.numeric(metadata$res.0.3))
+for(i in 1:nrow(mat_clus_dis)){
+  cells <- row.names(metadata)[which(metadata$res.0.3==clusters[i])]
+  for(j in 1:ncol(mat_clus_dis)){
+  no_cells <- row.names(metadata)[which(metadata$res.0.3==clusters[j])]
+  mat.dist.temp <- as.matrix(dist.cor)[cells,no_cells]
+  mat_clus_dis[i,j] <-  mean(mat.dist.temp)
+  }
+}
+# Convert to distance object
+dist.clus <- as.dist(mat_clus_dis)
+```
+
+Plot and save Dendrogram
+```{r Hierarchical clusterting}
+# Convert to clustering object
+tree.clus <- hclust(dist.clus, "ward.D2")
+# Plot 
+plot(tree.clus)
+```
+
+Fibroblast Signatures
+```{r}
+# Typical CAF markers
+DoHeatmap(fibroblast_sub, genes.use = c("PDGFRA", "PDGFRB", "FAP", "ACTA2", "PDPN", "VIM"), slim.col.label = TRUE, use.scaled = TRUE)
+
+# myofibroblasts
+myofib <- FetchData(fibroblast_sub, vars.all = c("ACTA2", "MYH11", "TAGLN", "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+myofib$myofib_mean <- rowMeans(myofib[1:3])
+ggplot(myofib, aes(x = res.0.3, y = myofib_mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6) + ggtitle("myofib sig")
+```
+
+
+```{r}
+fibro_clus_markers <- FindAllMarkers(fibroblast_sub)
+fibro_top_10 <- fibro_clus_markers %>% group_by(cluster) %>% top_n(5, avg_logFC)
+DoHeatmap(fibroblast_sub, genes.use = fibro_top_10$gene, slim.col.label = TRUE, use.scaled = FALSE)
+```
+
+Cluster 8 of fibroblasts == sinusoidal endothelial cells #PMID: 10910247
+```{r}
+VlnPlot(fibroblast_sub, "ENG")
+VlnPlot(fibroblast_sub, "VWF")
+VlnPlot(fibroblast_sub, c("FCN3", "FCN2"))
+```
+
+synovial like fibroblasts == cluster 7 (from pleural resection TH205/LT_S34)
+```{r}
+VlnPlot(fibroblast_sub, "HAS1")
+VlnPlot(fibroblast_sub, "PRG4")
+VlnPlot(fibroblast_sub, "WNT4") # PMID: 11832423
+VlnPlot(fibroblast_sub, c("CFB", "CFI"))
+```
+
+matrix fibroblast markers
+```{r}
+VlnPlot(fibroblast_sub, "COL1A1")
+VlnPlot(fibroblast_sub, "COL13A1")
+VlnPlot(fibroblast_sub, "COL14A1")
+VlnPlot(fibroblast_sub, "ELN")
+VlnPlot(fibroblast_sub, "FN1")
+VlnPlot(fibroblast_sub, "VCAM1")
+VlnPlot(fibroblast_sub, "FGF10")
+VlnPlot(fibroblast_sub, "TCF21")
+```
+
+lipofibroblasts
+```{r}
+VlnPlot(fibroblast_sub, "PLIN2")
+VlnPlot(fibroblast_sub, "PPARG")
+VlnPlot(fibroblast_sub, "FABP1")
+VlnPlot(fibroblast_sub, "FABP5")
+VlnPlot(fibroblast_sub, "LPL")
+VlnPlot(fibroblast_sub, "KRT79")
+VlnPlot(fibroblast_sub, "MRC1")
+```
+
+
+Find programs of interest 
+```{r}
+MMPs <- grep(pattern = "MMP*", x = rownames(fibroblast_sub@raw.data))
+MMPs1 <- rownames(fibroblast_sub@raw.data)[MMPs]
+MMPs2 <- MMPs1[29:54]
+MMPs3 <- FetchData(fibroblast_sub, vars.all = c(MMPs2, "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+MMPs3$MMP_mean <- rowMeans(MMPs3[1:26])
+DoHeatmap(fibroblast_sub, genes.use = MMPs2, slim.col.label = TRUE, use.scaled = FALSE)
+ggplot(MMPs3, aes(x = res.0.3, y = MMP_mean)) + geom_boxplot(outlier.shape = NA) +
+  geom_jitter(aes(color = analysis), alpha = 1/6)
+
+COLs <- grep(pattern = "COL*", x = rownames(fibroblast_sub@raw.data))
+COLs1 <- rownames(fibroblast_sub@raw.data)[COLs]
+COLs2 <- COLs1[44:93]
+COLs3 <- FetchData(fibroblast_sub, vars.all = c(COLs2, "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+COLs3$COL_mean <- rowMeans(COLs3[1:50])
+DoHeatmap(fibroblast_sub, genes.use = COLs2, slim.col.label = TRUE)
+ggplot(COLs3, aes(x = res.0.3, y = COL_mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6)
+
+CXCLS <- grep(pattern = "CXCL*", x = rownames(fibroblast_sub@raw.data))
+CXCLS1 <- rownames(fibroblast_sub@raw.data)[CXCLS]
+DoHeatmap(fibroblast_sub, genes.use = CXCLS1, slim.col.label = TRUE, use.scaled = FALSE)
+
+Wnts <- grep(pattern = "WNT*", x = rownames(fibroblast_sub@raw.data))
+Wnts1 <- rownames(fibroblast_sub@raw.data)[Wnts]
+Wnts2 <- Wnts1[5:23]
+DoHeatmap(fibroblast_sub, genes.use = Wnts2, slim.col.label = TRUE, use.scaled = TRUE)
+
+
+
+# plasminogen pathway genes
+DoHeatmap(fibroblast_sub, genes.use = c("PLAT", "PLAU", "ANXA2", "PLAUR", "SERPINE1", "SERPINB1"), slim.col.label = TRUE, use.scaled = FALSE)
+VlnPlot(fibroblast_sub, c("SERPINE1", "SERPINB1"))
+```
+
+Fibroblast Signatures
+```{r}
+clus_1 <- FetchData(fibroblast_sub, vars.all = c("CTHRC1", "VCAN", "SULF1", "COL10A1","POSTN", "SFRP4", "HTRA3", "ASPN", "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+clus_1$clus_1mean <- rowMeans(clus_1[1:8])
+DoHeatmap(fibroblast_sub, genes.use = colnames(clus_1[1:8]), slim.col.label = TRUE)
+ggplot(clus_1, aes(x = res.0.3, y = clus_1mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6) + ggtitle("clus 1")
+
+clus_2 <- FetchData(fibroblast_sub, vars.all = c("COX4I2", "HIGD1B", "RGS5", "GJA4", "NDUFA4L2", "PDGFRB", "COL4A1", "PTP4A3", "COL4A2", "LHFP", "PPP1R14A", "EGFL6", "NOTCH3", "PTN", "COL18A1", "ACTG2", "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+clus_2$clus_2mean <- rowMeans(clus_2[1:8])
+# DoHeatmap(fibroblast_sub, genes.use = )
+ggplot(clus_2, aes(x = res.0.3, y = clus_2mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6) + ggtitle("clus 2")
+
+clus_4 <- FetchData(fibroblast_sub, vars.all = c("PLA2G2A", "SFRP2", "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+clus_4$clus_4mean <- rowMeans(clus_2[1:2])
+ggplot(clus_4, aes(x = res.0.3, y = clus_4mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6) + ggtitle("clus 4")
+
+clus_5 <- FetchData(fibroblast_sub, vars.all = c("MMP3", "SERPINE2", "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+clus_5$clus_5mean <- rowMeans(clus_2[1:2])
+ggplot(clus_5, aes(x = res.0.3, y = clus_5mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6) + ggtitle("clus 5")
+
+clus_6 <- FetchData(fibroblast_sub, vars.all = c("GPC3", "MFAP4", "A2M", "CYR61", "MACF1", "GPX3", "TIMP3", "CFD", "FIGF", "LTBP4", "SEPP1", "ADH1B", "CTGF", "PTGDS", "SCN7A", "PRELP", "MAMDC2", "FHL1", "DST", "AOC3", "INMT", "NPNT", "ELN", "USP53", "G0S2", "FMO2", "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+clus_6$clus_6mean <- rowMeans(clus_2[1:16])
+ggplot(clus_6, aes(x = res.0.3, y = clus_6mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6) + ggtitle("clus 6")
+
+clus_7 <- FetchData(fibroblast_sub, vars.all = c("ALDH1A3", "C3", "CCL2", "SOD2", "TNFRSF12A", "SLC20A1", "NFKBIA", "PTX3", "DKK1", "SERPINB2", "analysis", "biopsy_site", "cell_id", "sample_name", "patient_id", "res.0.3"))
+clus_7$clus_7mean <- rowMeans(clus_7[1:10])
+ggplot(clus_7, aes(x = res.0.3, y = clus_7mean)) + geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(color = analysis), alpha = 1/6) + ggtitle("clus 7")
+
+DoHeatmap(object = fibroblast_sub, genes.use = c("MRC1", "CD164", "IL18", "CD9", "TGM2"), use.scaled = FALSE, slim.col.label = TRUE)
+```
+
+```{r}
+save(fibroblast_sub, file = paste(dir, "Data_input/objects/NI13_fibro_subset_object.RData", sep = ""))
+```
+
+
+
+
+
+
+

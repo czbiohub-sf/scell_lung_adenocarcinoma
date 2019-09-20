@@ -15,6 +15,7 @@ library(clustree)
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/NI03_epithelial_annotated_tumor.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
 ```
 
 Look for clincal mutation found in normal classified cells
@@ -109,7 +110,7 @@ tiss_subset_normalepi <- RunTSNE(object = tiss_subset_normalepi, dims.use = 1:n.
 
 Visualize TSNE colroed by cluster
 ```{r}
-pdf(file = paste(dir, "plot_out/NI05/tumor_tsne.pdf", sep = ""))
+pdf(file = paste(dir, "plot_out/NI05/nontumor_epi_tsne.pdf", sep = ""))
 TSNEPlot(object = tiss_subset_normalepi, do.label = T)
 dev.off()
 ```
@@ -123,13 +124,40 @@ tiss_subset_normalepi@meta.data[480,] # found in cluster 3
 Cluster Occ by patient
 ```{r}
 # Calculate mixing score for each cluster 
-tab.1 <- table(tiss_subset_normalepi@meta.data$patient_id, tiss_subset_normalepi@meta.data$res.0.9)
+tab.1 <- table(tiss_subset_normalepi@meta.data$patient_id, tiss_subset_normalepi@meta.data$res.0.3)
 occ_score <- apply(tab.1, 2, max)/colSums(tab.1)
 # Plot mixing score
-pdf(file = paste(dir, "plot_out/NI05/tumor_clusocc_bargraph.pdf", sep = ""))
+pdf(file = paste(dir, "plot_out/NI05/clusocc_bargraph.pdf", sep = ""))
 par(las=3);barplot(sort(occ_score), xlab="Cluster", ylab="Patient max Ncells/Total cells", ylim=c(0,1));abline(h=0.7, col="red")
 dev.off()
 ```
+
+Compare cluster occ of normal epi to tumor
+```{r}
+# noraml
+tab.1 <- table(tiss_subset_normalepi@meta.data$patient_id, tiss_subset_normalepi@meta.data$res.0.3)
+occ_score <- apply(tab.1, 2, max)/colSums(tab.1)
+normal_occ <- as.data.frame(occ_score)
+normal_occ$group <- "normal"
+colnames(normal_occ) <- c("score", "group")
+# tumor
+tab.2 <- table(tiss_subset_tumor2@meta.data$patient_id, tiss_subset_tumor@meta.data$res.0.9)
+occ_score2 <- apply(tab.2, 2, max)/colSums(tab.2)
+tumor_occ <- as.data.frame(occ_score2)
+tumor_occ$group <- "tumor"
+colnames(tumor_occ) <- c("score", "group")
+
+occ_combo <- rbind(normal_occ, tumor_occ)
+
+occ_changes <- ggplot(occ_combo,aes(x=score)) + 
+    # geom_histogram(data=subset(occ_combo, group == 'normal'),fill = "blue", alpha = 0.2, bins = 5) +
+    # geom_histogram(data=subset(occ_combo, group == 'tumor'),fill = "red", alpha = 0.2, bins = 5) +
+    geom_density(data=subset(occ_combo, group == 'normal'), size = 1.5, colour = "blue") + 
+    geom_density(data=subset(occ_combo, group == 'tumor'), size = 1.5, colour = "red")
+
+ggsave(occ_changes, filename = paste(dir, "plot_out/NI05/NI05_occ_changes_tumor_nontumor.pdf", sep = ""), width = 10, height = 10)
+```
+
 
 Create a Dendrogram of all Epitheial Clusters
 ```{r}
@@ -294,6 +322,7 @@ Annotate the normal epi cells
 # enumerate current cluster IDs and the labels for them
 cluster.ids <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)
 annotation <- c("alveolar type 2 cell", "club cell", "alveolar type 1 cell", "unknown stroma", "unknown stroma", "unknown stroma", "ciliated cell", "unknown stroma", "hepatocyte", "unknown stroma", "unknown stroma", "alveolar type 2 cell", "alveolar type 2 cell", "ionocyte", "basal cell", "unknown stroma", "ciliated cell")
+
 tiss_subset_normalepi@meta.data[,'norm_epi_annotation'] <- plyr::mapvalues(x = tiss_subset_normalepi@meta.data$res.0.3, from = cluster.ids, to = annotation)
 
 # save annotation column with cell_id
@@ -305,13 +334,45 @@ Plot tSNE with annoations
 pdf(file = paste(dir, "plot_out/NI05/NI05_norm_epi_annotated_tsne.csv", sep = ""))
 TSNEPlot(object = tiss_subset_normalepi, group.by='norm_epi_annotation')
 dev.off()
+TSNEPlot(object = tiss_subset_normalepi, group.by='biopsy_site')
 ```
 
 Save object
 ```{r}
-save(tiss_subset_normalepi, file = paste(dir, "Data_input/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
+save(tiss_subset_normalepi, file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
+# load(file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
+```
+
+save normal epi annotations to all epi seurat object
+```{r}
+tiss_nonimmune_epi@meta.data <- left_join(tiss_nonimmune_epi@meta.data, tiss_subset_normalepi@meta.data[,c(6,64)])
+rownames(tiss_nonimmune_epi@meta.data) <- tiss_nonimmune_epi@meta.data$cell_id
+tiss_nonimmune_epi@meta.data$epi_anno_final <- tiss_nonimmune_epi@meta.data$norm_epi_annotation
+# replace na with tumor
+tiss_nonimmune_epi@meta.data$epi_anno_final[is.na(tiss_nonimmune_epi@meta.data$epi_anno_final)] <- "tumor"
+table(tiss_nonimmune_epi@meta.data$epi_anno_final)
+
+save(tiss_nonimmune_epi, file = paste(dir, "Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep = ""))
+# load("/myVolume/scell_lung_adenocarcinoma/Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData")
 ```
 
 
+```{r}
+# Barplot of all epi cell counts 
+table.temp <- as.data.frame(table(tiss_nonimmune_epi@meta.data$epi_anno_final))
+table.temp$Var1 <- factor(table.temp$Var1,levels = as.character(table.temp$Var1[order(table.temp$Freq,decreasing=F)]))
+p <-  ggplot(data = table.temp, aes(x = Var1, y = Freq, fill = Var1)) +
+      geom_bar(stat ="identity") + coord_flip() + theme(legend.position = "none") 
+ggsave(plot = p, paste(dir,"plot_out/NI05/epi_cell_counts.pdf", sep=""), width = 90, height = 90, units = "mm")
+```
+
+```{r}
+#set levels for plotting
+tiss_nonimmune_epi@meta.data$epi_anno_final <- factor(tiss_nonimmune_epi@meta.data$epi_anno_final, levels = c("basal cell", "ionocyte", "hepatocyte", "ciliated cell", "alveolar type 1 cell", "club cell", "alveolar type 2 cell", "unknown stroma", "tumor"))
+
+p1 <- ggplot(tiss_nonimmune_epi@meta.data, aes(x = epi_anno_final, y = nGene)) + geom_boxplot(aes(fill = epi_anno_final)) + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + theme(legend.position = "none") + coord_flip()
+
+ggsave(plot = p1, paste(dir,"plot_out/NI05/epi_cell_nGenes.pdf", sep=""), width = 90, height = 90, units = "mm")
+```
 
 
