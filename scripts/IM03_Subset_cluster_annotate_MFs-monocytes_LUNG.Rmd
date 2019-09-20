@@ -1,26 +1,27 @@
 ---
-title: "Untitled"
+title: "IM03"
 output: html_document
 ---
 
 More detailed Immune phenotyping of different immune cell types
-Myeloid 
+Macrophages and Monocytes of the lung
 
 Load immune workspace
 ```{r}
 rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/Immuune_Seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
 ```
 
 Biopsy site vs analysis all cell types 
 ```{r}
+require(gplots)
 tab.1 <- table(tiss_immune@meta.data$biopsy_site, tiss_immune@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs Biopsy site for all cells", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
-Biopsy site vs cell types 
+Table of Biopsy site vs analysis 
 ```{r}
 cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$biopsy_site == "Lung")]
 tiss.temp <- SubsetData(object = tiss_immune, cells.use = cells)
@@ -31,7 +32,7 @@ rm(tiss.temp)
 ```
 
 
-Subset Myeloid
+Subset Macrophages and Monocytes
 ```{r}
 mf.cells <- row.names(tiss_immune@meta.data)[which(tiss_immune@meta.data$immune_subtype_annotation == "MF-Monocytes")]
 length(mf.cells)
@@ -46,12 +47,13 @@ balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
-Subset Myeloid only within Lung 
+Subset only cells derived from Lung samples 
 ```{r}
 mf.cells <- row.names(mf.cell.tiss@meta.data)[which(mf.cell.tiss@meta.data$biopsy_site == "Lung")]
 length(mf.cells)
 mf.cell.tiss <- SubsetData(object = tiss_immune, cells.use = mf.cells)
 ```
+
 Biopsy site vs analysis 
 ```{r}
 tab.1 <- table(mf.cell.tiss@meta.data$biopsy_site, mf.cell.tiss@meta.data$analysis)
@@ -129,7 +131,7 @@ TSNEPlot(object = mf.cell.tiss, do.label = T)
 
 # Plot TSNE and save 
 ```{r}
-pdf(paste(dir, "plot_out/IM04/MF_TSNE_manuscript.pdf",sep=""), 5,5)
+pdf(paste(dir, "plot_out/IM03/MF_TSNE_manuscript.pdf",sep=""), 5,5)
 TSNEPlot(object = mf.cell.tiss, do.label = F)
 dev.off()
 ```
@@ -154,9 +156,8 @@ tab.1 <- melt(tab.1)
 tab.1$Var.1 <- as.factor(tab.1$Var.1)
 fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
                            stat="identity" , position=position_dodge())
-ggsave(filename = paste(dir, "plot_out/IM04/MF_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
+ggsave(filename = paste(dir, "plot_out/IM03/MF_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
 fraction.plot
-
 ```
 
 Replot barplots using error bars 
@@ -203,7 +204,7 @@ p<- ggplot(tab.1, aes(x=cluster, y=Estimate, fill=cell)) +
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.9)) + 
     theme(legend.position="bottom")
 # Save plot 
-ggsave(filename = paste(dir, "plot_out/IM04/MF_TSNE_clusters_by_treatment_with_error_bars_manuscript.pdf",sep=""), plot = p, width = 7,height = 5)
+ggsave(filename = paste(dir, "plot_out/IM03/MF_TSNE_clusters_by_treatment_with_error_bars_manuscript.pdf",sep=""), plot = p, width = 7,height = 5)
 p
 ```
 
@@ -213,6 +214,8 @@ tab.1 <- table(mf.cell.tiss@meta.data$res.0.3, as.character(mf.cell.tiss@meta.da
 balloonplot(tab.1, main ="Patient ID vs MF-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
+
+
 ```{r}
 tab.1 <- table(mf.cell.tiss@meta.data$analysis, as.character(mf.cell.tiss@meta.data$patient_id))
 balloonplot(tab.1, main ="Patient ID vs MF-cell cluster", xlab ="", ylab="",
@@ -225,14 +228,14 @@ tab.1 <- melt(tab.1)
 tab.1$Var.1 <- as.factor(tab.1$Var.1)
 fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var.1, fill = Var.2), data = tab.1,
                            stat="identity")
-ggsave(filename = paste(dir, "plot_out/IM04/MF_fraction_of_each_response_group_TSNE_clusters.pdf",sep=""), plot = fraction.plot,width = 7,height = 7)
+ggsave(filename = paste(dir, "plot_out/IM03/MF_fraction_of_each_response_group_TSNE_clusters.pdf",sep=""), plot = fraction.plot,width = 7,height = 7)
 fraction.plot
 ```
 
 Find all cluster markers 
 ```{r}
 mf.cell.markers <- FindAllMarkers(object = mf.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
-# mf.cell.markers <- read.table(paste(dir, "data_out/IM04/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
+# mf.cell.markers <- read.table(paste(dir, "data_out/IM03/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
 ```
 
 Plot top genes 
@@ -240,7 +243,7 @@ Plot top genes
 require(tidyverse)
 mf.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 mf.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
-pdf(paste(dir, "plot_out/IM04/Heatmap_markers_of_MFcell_clusters.pdf",sep=""), 7,7)
+pdf(paste(dir, "plot_out/IM03/Heatmap_markers_of_MFcell_clusters.pdf",sep=""), 7,7)
 DoHeatmap(mf.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
 dev.off()
 # DoHeatmap(mf.cell.tiss, genes.use = c("CD8A", "CD4", "PDCD1", "CD3E", "TOP2A"), slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, use.scaled = F)
@@ -266,29 +269,30 @@ mf.cell.tiss <- SetIdent(mf.cell.tiss,ident.use = mf.cell.tiss@meta.data$res.0.3
 
 Write table of top genes 
 ```{r}
-write.table(mf.cell.markers, paste(dir, "data_out/IM04/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
+write.table(mf.cell.markers, paste(dir, "data_out/IM03/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
 ```
 
 
-Plot top genes 
+Plot genes of choice
 ```{r}
 # Violin plot 
 genes <- c("IDO1","WARS","CXCL10","GBP5", "ANKRD22", "THBS1", "PTX3", "MARCO", "CCL13", "IL1B")
 a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T, point.size.use = 0)
-ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_MFs.pdf",sep=""),plot = a,width = 10,height = 10)
+ggsave(filename = paste(dir, "plot_out/IM03/Markers_of_PD_MFs.pdf",sep=""),plot = a,width = 10,height = 10)
 a
 ```
+
 Plot top genes 
 ```{r}
 # Violin plot 
 a <- VlnPlot(tiss_immune, features.plot = "CXCR3", group.by = "immune_subtype_annotation",do.sort = T, x.lab.rot = T, do.return = T)
-ggsave(filename = paste(dir, "plot_out/IM04/CXCR3_expression_all_immune_cells.pdf",sep=""),plot = a,width = 7,height = 5)
+ggsave(filename = paste(dir, "plot_out/IM03/CXCR3_expression_all_immune_cells.pdf",sep=""),plot = a,width = 7,height = 5)
 ```
 
 
 Plot all relevant, PCA, tSNE and Clustering plots as pdf 
 ```{r}
-pdf(paste(dir, "plot_out/IM04/MF-cells_subclustering_TSNE_LUNG.pdf",sep=""),width = 10,height = 7)
+pdf(paste(dir, "plot_out/IM03/MF-cells_subclustering_TSNE_LUNG.pdf",sep=""),width = 10,height = 7)
 # Tables
 # 1
 tab.1 <- table(mf.cell.tiss@meta.data$res.0.3, mf.cell.tiss@meta.data$analysis)
@@ -313,29 +317,12 @@ mf.cell.tiss <- SetIdent(object = mf.cell.tiss, ident.use = mf.cell.tiss@meta.da
 # PCA plots 
 PCHeatmap(object = mf.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
 PCElbowPlot(object = mf.cell.tiss)
-JackStrawPlot(mf.cell.tiss, PCs = 1:12)
+#JackStrawPlot(mf.cell.tiss, PCs = 1:12)
 # Feature plot
 DotPlot(mf.cell.tiss, top10$gene, x.lab.rot = T)
 # DotPlot(mf.cell.tiss, top10$gene, x.lab.rot = T, group.by = "analysis")
 dev.off()
 ```
-
-TO DO ! 
-
-Import the differential expression results 
-Convert to IPA format and export for IPA analysis
-```{r}
-# Read table generated above 
-markers <- read.table(paste(dir, "data_out/IM04/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
-# Source function 
-source(paste(dir, "scripts/seurat_to_IPA.R",sep=""))
-# Import table of DE genes 
-t.ipa <- seurat.to.ipa(df = markers, score.column = "avg_logFC",divide.by.column = "cluster",
-                        gene.column = "gene", divide.append = "lung_t_cell")
-# # Write table 
-write.table(t.ipa, paste(dir, "data_out/IM04/Differentially_expressed_genes_MFcell_clusters_LUNG.txt",sep=""), row.names = T, quote=F, sep="\t")
-```
-
 
 Plot top genes 
 ```{r}
@@ -343,4 +330,10 @@ Plot top genes
 genes <- c("TGFB1", "IL10", "IL1B", "TNF", "IL6", "IL12A", "IL12B")
 a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T, point.size.use = 1)
 
+```
+
+
+Save immune cell workspace 
+```{r}
+save(mf.cell.tiss, file=paste(dir,"Data_input/objects/IM03_MFs_Seurat_object.RData", sep=""))
 ```
