@@ -10,36 +10,36 @@ https://drive.google.com/drive/folders/1nONsp9VuhmPzuDvMet0i8x26eV9r5lkT?usp=sha
 
 ### Importing and Creating Seurat Object
 
-**_01_Import_data_and_metadata.Rmd_**: Import raw data and metadata
+**_01_Import_data_and_metadata.Rmd_**: Import raw data and metadata. Output of this scipt is saved as _"S01_Data_and_metadata.RData"_.
 
-**_02_Create_Seurat_object.Rmd_**: Create initial Seurat object
+**_02_Create_Seurat_object.Rmd_**: Imports .RData object from script 01. Creates initial Seurat object and performs initial quality control. Final output object is saved as _"S02_Main_Seurat_object_filtered.RData"_. 
 
-**_03_Subset_and_general_annotations.Rmd_**: Inital quality control, general cell annotations, and splitting of data into immune and non-immune subsets.
+**_03_Subset_and_general_annotations.Rmd_**: Imports final .RData object from script 02. In this script we subset samples to those with greater than 10 cells and perform clustering. The cells are annotated and subset to immune or non-immune cells datasets. Produced obejects are _"S03_Main_Seurat_object_filtered_and_subset.RData"_, _"S03_Immuune_Seurat_object.RData"_, and _"S03_Nonimmune_Seurat_object.RData"_. 
 
 ### Immune Compartment Analysis
 
-**_IM01_Subset_cluster_annotate_immune_cells.Rmd_**: Imports .RData object from script 03 above that includes only immune cells. In the script cells are clustered and annotated. Object that is produced and saved at the end of the script is called "IM01_Immune_Seurat_object.RData"
+**_IM01_Subset_cluster_annotate_immune_cells.Rmd_**: Imports .RData object from script 03 above that includes only immune cells. In the script cells are clustered and annotated. Object that is produced and saved at the end of the script is called _"IM01_Immune_Seurat_object.RData"_.
 
 **_IM02_immune_cell_changes_with_response_to_treatment.Rmd_**: Imports .RData object from script IM01. Within the  script we investigate changes in the fraction of immune populations in regard to treatment status across all patients.
 
-**_IM03_Subset_cluster_annotate_MFs-monocytes_LUNG.Rmd_**: Subsetting and clustering of all macrophages/monocytes from Lung biopsies followed by treatment stage specific analysis of resulting populations. Output object is called IM03_MFs_Seurat_object.RData.
+**_IM03_Subset_cluster_annotate_MFs-monocytes_LUNG.Rmd_**: Subsetting and clustering of all macrophages/monocytes from Lung biopsies followed by treatment stage specific analysis of resulting populations. Output object is called _IM03_MFs_Seurat_object.RData_.
 
-**_IM04_Subset_cluster_annotate_T-cells_LUNG.Rmd_**: Subsetting and clustering of all macrophages/monocytes from Lung biopsies followed by treatment stage specific analysis of resulting populations. Output object is called IM04_Tcells_Seurat_object.RData.
+**_IM04_Subset_cluster_annotate_T-cells_LUNG.Rmd_**: Subsetting and clustering of all macrophages/monocytes from Lung biopsies followed by treatment stage specific analysis of resulting populations. Output object is called _IM04_Tcells_Seurat_object.RData_.
 
 **_IM05_Immune_cells_across_pats_with_multiple_biopsies.Rmd_**: Analysis of fractional population changes in patients with multiple biopsies. 
 
 
 ### Non-Immune Compartment Analysis
 
-**_NI01_General_annotation_of_nonimmune_cells.Rmd_**: Imports .RData object from script 03 that included only non-immune cells. In the script cells are clustered and annotated. Objects that is produced and saved at the end of the script is called "NI01_Nonimmune_Seurat_object_annotated.RData".
+**_NI01_General_annotation_of_nonimmune_cells.Rmd_**: Imports .RData object from script 03 that included only non-immune cells. In the script cells are clustered and annotated. Objects that is produced and saved at the end of the script is called _"NI01_Nonimmune_Seurat_object_annotated.RData"_.
 
-**_NI02_epi_subset_and_cluster.Rmd_**: Imports .RData object from NI01. In this script we subset the cells to only those that are epithelial and re cluster cells. The resulting subset object is saved at the end of the script as "NI02_Epi_Seurat_object_clustered.RData".
+**_NI02_epi_subset_and_cluster.Rmd_**: Imports .RData object from NI01. In this script we subset the cells to only those that are epithelial and re cluster cells. The resulting subset object is saved at the end of the script as _"NI02_Epi_Seurat_object_clustered.RData"_.
 
 **_NI03_inferCNV.Rmd_**: Imports .RData object from NI02. In this script we use InferCNV to identify cancer and non-cancer epithelial cells. The cells are annotated and the resulting object is saved at the end of the script as "NI03_epithelial_annotated_tumor.RData".
 
-**_NI04_Cancer_cells_DEgenes.Rmd_**: Imports .RData object generated from NI03. In this script we subset the data to cancer cells only and then find the differenitailly expressed genes from three comparisions: 1. TN vs PER, 2. TN vs PD, and 3. PER vs PD. The cancer cell only object is saved as "NI04_tumor_seurat_object.RData".
+**_NI04_Cancer_cells_DEgenes.Rmd_**: Imports .RData object generated from NI03. In this script we subset the data to cancer cells only and then find the differenitailly expressed genes from three comparisions: 1. TN vs PER, 2. TN vs PD, and 3. PER vs PD. The cancer cell only object is saved as _"NI04_tumor_seurat_object.RData"_.
 
-**_NI05_Annotation_of_Nontumor_epi.Rmd_**: Imports .RData object generated from NI03. In this script we subset the data to non-cancer cells only. The non-cancer epithelial cells are then clustered and annotated. The non-cancer epithelial cell object is saved as "NI05_normalepi_seurat_object_annotated.RData".
+**_NI05_Annotation_of_Nontumor_epi.Rmd_**: Imports .RData object generated from NI03. In this script we subset the data to non-cancer cells only. The non-cancer epithelial cells are then clustered and annotated. The non-cancer epithelial cell object is saved as _"NI05_normalepi_seurat_object_annotated.RData"_.
 
 **_NI06_mutation_analysis.Rmd_**: Imports .RData object generated from NI04. In this script we combine outputs from cerebra to a create mutational table.
 
