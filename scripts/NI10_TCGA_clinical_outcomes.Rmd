@@ -13,8 +13,8 @@ library(tidyverse)
 Read in TCGA data
 ```{r}
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-luad_tcga <- read.csv(file = paste(dir, "Data_input/tcga_luad_counts.csv", sep = ""))
-tcga_meta <- read.csv(file = paste(dir, "Data_input/tcga_luad_metadata.csv", sep = ""), row.names = 1)
+luad_tcga <- read.csv(file = paste(dir, "Data_input/TCGA/tcga_luad_counts.csv", sep = ""))
+tcga_meta <- read.csv(file = paste(dir, "Data_input/TCGA/tcga_luad_metadata.csv", sep = ""), row.names = 1)
 CIBERSORT_tcga <- read.csv(file = paste(dir, "Data_input/TCGA/CIBERSORT_TCGA.csv", sep = ""))
 ```
 
@@ -31,13 +31,16 @@ Subset and format TCGA data
 tcga_samples <- as.data.frame(colnames(luad_tcga))
 tcga_samples1 <- data.frame(do.call('rbind', strsplit(as.character(tcga_samples$`colnames(luad_tcga)`),'.',fixed=TRUE)))
 tcga_samples1 <- tcga_samples1[(2:586),]
-table(tcga_samples1$X4) #subset to only 01A tcga samples
+
+#subset to only 01A tcga samples
+table(tcga_samples1$X4) 
 tcga_samples1 <- filter(tcga_samples1, X4 == "01A")
 tcga_samples1$name <- paste(tcga_samples1$X1, tcga_samples1$X2, tcga_samples1$X3, tcga_samples1$X4, sep = ".")
-tcga_samples1$bcr_patient_barcode <- paste(tcga_samples1$X1, tcga_samples1$X2, tcga_samples1$X3, sep = "-")
+tcga_samples1$bcr_patient_barcode <- paste(tcga_samples1$X1, tcga_samples1$X2, tcga_samples1$X3, "01A", sep = "-")
 
 #subset luad_tcga to tcga_samples1$name
 luad_tcga <- luad_tcga[, c("gene", tcga_samples1$name)]
+
 #subset luad_tcga to genes not duplicated, set rownames to genes
 n_occur <- data.frame(table(luad_tcga$gene))
 genes_remove <- luad_tcga[luad_tcga$gene %in% n_occur$Var1[n_occur$Freq > 1],]
@@ -52,9 +55,6 @@ colnames(luad_tcga1) <- gsub(pattern = "\\.", replacement = "-", x = colnames(lu
 #gsub the "-01A" to the end of the bcr sample name
 tcga_meta$bcr_patient_barcode <- paste(tcga_meta$bcr_patient_barcode, "-01A", sep = "")
 head(tcga_meta)
-
-#combine tcga metas
-tcga_meta <- left_join(x = tcga_meta, y = tcga_meta_extra, by = "bcr_patient_barcode")
 ```
 
 Example output with TCGA, a simple example
@@ -73,6 +73,7 @@ Alveolar_sig <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1",
 TCGA_Alveolar <- luad_tcga1[Alveolar_sig, ]
 head(TCGA_Alveolar)
 dim(TCGA_Alveolar)
+
 TCGA_Alveolar_mean <- as.data.frame(colMeans(TCGA_Alveolar))
 colnames(TCGA_Alveolar_mean) <- "TCGA_Alveolar_mean"
 hist(TCGA_Alveolar_mean$TCGA_Alveolar_mean)
@@ -90,7 +91,7 @@ table(TCGA_Alveolar_mean_f$Alveolar_quartile.1)
 
 
 ```{r}
-luad_tcga1_AlveolarSig <- left_join(tcga_meta, TCGA_Alveolar_mean_f, by = "bcr_patient_barcode")
+luad_tcga1_AlveolarSig <- left_join(TCGA_Alveolar_mean_f,tcga_meta, by = "bcr_patient_barcode")
 head(luad_tcga1_AlveolarSig)
 
 #subset to only stage III and IV
@@ -160,7 +161,7 @@ table(TCGA_Kynurenine_mean_f$Kynurenine_quartile.1)
 ```
 
 ```{r}
-luad_tcga1_Kynurenine <- left_join(tcga_meta, TCGA_Kynurenine_mean_f, by = "bcr_patient_barcode")
+luad_tcga1_Kynurenine <- left_join(TCGA_Kynurenine_mean_f, tcga_meta, by = "bcr_patient_barcode")
 
 # subset to late stage
 # luad_tcga1_Kynurenine <- filter(luad_tcga1_Kynurenine, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
@@ -230,7 +231,7 @@ table(TCGA_Plasminogen_mean_f$Plasminogen_quartile.1)
 ```
 
 ```{r}
-luad_tcga1_Plasminogen <- left_join(tcga_meta, TCGA_Plasminogen_mean_f, by = "bcr_patient_barcode")
+luad_tcga1_Plasminogen <- left_join(TCGA_Plasminogen_mean_f, tcga_meta, by = "bcr_patient_barcode")
 
 # Subset to only late stage
 # luad_tcga1_Plasminogen <- filter(luad_tcga1_Plasminogen, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
@@ -284,7 +285,7 @@ table(TCGA_Serpine_sig_f$SERPINE1_quartile.1)
 
 
 ```{r}
-luad_tcga1_Serpine <- left_join(tcga_meta, TCGA_Serpine_sig_f, by = "bcr_patient_barcode")
+luad_tcga1_Serpine <- left_join(TCGA_Serpine_sig_f, tcga_meta, by = "bcr_patient_barcode")
 
 # Subset to only lage stage
 # luad_tcga1_Serpine <- filter(luad_tcga1_Serpine, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
@@ -339,7 +340,7 @@ table(TCGA_GapJunction_mean_f$GapJunction_quartile.1)
 ```
 
 ```{r}
-luad_tcga1_GapJunction <- left_join(tcga_meta, TCGA_GapJunction_mean_f, by = "bcr_patient_barcode")
+luad_tcga1_GapJunction <- left_join(TCGA_GapJunction_mean_f, tcga_meta, by = "bcr_patient_barcode")
 
 # Subset to only late stage
 # luad_tcga1_GapJunction <- filter(luad_tcga1_GapJunction, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
