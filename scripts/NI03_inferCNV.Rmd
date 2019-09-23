@@ -30,14 +30,14 @@ library(miscTools)
 ```{r}
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/NI02_Epi_Seurat_object_annotated.RData", sep=""))
-load(file=paste(dir,"Data_input/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/NI02_Epi_Seurat_object_annotated.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
 ```
 
 Create and save a Raw Counts Table
 ```{r}
 temp <- as.matrix(tiss_nonimmune@raw.data)
-write.table(x = temp, file =  paste(dir, "Data_input/NI03_CNV_data_out_all_cells_raw_counts_largefile.txt", sep = ""), quote = F,sep = '\t')
+write.table(x = temp, file =  paste(dir, "Data_input/objects/NI03_CNV_data_out_all_cells_raw_counts_largefile.txt", sep = ""), quote = F,sep = '\t')
 rm(temp)
 ```
 
@@ -66,24 +66,24 @@ temp.3$V2[sample(which(temp.3$V2=="Fibroblast_normal"),300)] <- "Fibroblast"
 inferCNV.annotation <- rbind(temp.1, temp.2, temp.3)
 rm("temp.1", "temp.2", "temp.3")
 # Write table
-write.table(inferCNV.annotation, file = paste(dir,"Data_input/NI03_CNV_cell_metadata_shuffle_largefile.txt", sep=""),row.names = F, col.names = F, quote=F, sep="\t")
+write.table(inferCNV.annotation, file = paste(dir,"Data_input/objects/NI03_CNV_cell_metadata_shuffle_largefile.txt", sep=""),row.names = F, col.names = F, quote=F, sep="\t")
 ```
 
 Import gene location table 
 ```{r}
-inferCNV.genes <- read.table(file = paste(dir,"Data_input/NI03_CNV_hg19_genes_ordered_correct_noXY.txt", sep = ""))
+inferCNV.genes <- read.table(file = paste(dir,"Data_input/objects/NI03_CNV_hg19_genes_ordered_correct_noXY.txt", sep = ""))
 head(inferCNV.genes)
 ```
 
 Create the infercnv object
 ```{r}
-infercnv_obj = infercnv::CreateInfercnvObject(raw_counts_matrix = paste(dir, "Data_input/NI03_CNV_data_out_all_cells_raw_counts_largefile.txt", sep = ""), annotations_file = paste(dir, "Data_input/NI03_CNV_cell_metadata_shuffle_largefile.txt", sep = ""), delim="\t", gene_order_file = paste(dir, "Data_input/NI03_CNV_hg19_genes_ordered_correct_noXY.txt", sep = ""), ref_group_names = c("Endothelial_normal", "Fibroblast_normal"))
+infercnv_obj = infercnv::CreateInfercnvObject(raw_counts_matrix = paste(dir, "Data_input/objects/NI03_CNV_data_out_all_cells_raw_counts_largefile.txt", sep = ""), annotations_file = paste(dir, "Data_input/objects/NI03_CNV_cell_metadata_shuffle_largefile.txt", sep = ""), delim="\t", gene_order_file = paste(dir, "Data_input/objects/NI03_CNV_hg19_genes_ordered_correct_noXY.txt", sep = ""), ref_group_names = c("Endothelial_normal", "Fibroblast_normal"))
 ```
 
 Save infercnv Object
 ```{r}
-save(infercnv_obj, file = paste(dir, "Data_input/NI03_infercnv_obj.RData", sep = ""))
-# load(file = paste(dir, "Data_input/objects/NI03_infercnv_obj.RData", sep = ""))
+save(infercnv_obj, file = paste(dir, "Data_input/objects/NI03_infercnv_obj.RData", sep = ""))
+# load(file = paste(dir, "Data_input/objects/objects/NI03_infercnv_obj.RData", sep = ""))
 ```
 
 Perform infercnv operations to reveal cnv signal
@@ -151,12 +151,12 @@ Update Seurat objects with tumor annotations
 tiss_nonimmune_epi@meta.data <- left_join(x = tiss_nonimmune_epi@meta.data, y = inferCNV.annotation.malignant[,c(1,3)], by = "cell_id")
 rownames(tiss_nonimmune_epi@meta.data) <- tiss_nonimmune_epi@meta.data$cell_id
 #Save Seurat object 
-save(tiss_nonimmune_epi, file = paste(dir, "Data_input/NI03_epithelial_annotated_tumor.RData", sep = ""))
+save(tiss_nonimmune_epi, file = paste(dir, "Data_input/objects/NI03_epithelial_annotated_tumor.RData", sep = ""))
 
 tiss_nonimmune@meta.data <- left_join(x = tiss_nonimmune@meta.data, y = inferCNV.annotation.malignant[,c(1,3)], by = "cell_id")
 rownames(tiss_nonimmune@meta.data) <- tiss_nonimmune@meta.data$cell_id
 #Save Seurat object 
-save(tiss_nonimmune, file = paste(dir, "Data_input/NI03_nonimmune_annotated_tumor.RData", sep = ""))
+save(tiss_nonimmune, file = paste(dir, "Data_input/objects/NI03_nonimmune_annotated_tumor.RData", sep = ""))
 ```
 
 ```{r}

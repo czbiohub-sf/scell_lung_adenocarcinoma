@@ -13,7 +13,7 @@ library(ggplot2)
 
 ```{r}
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file = paste(dir,"Data_input/NI03_epithelial_annotated_tumor.RData", sep=""))
+load(file = paste(dir,"Data_input/objects/NI03_epithelial_annotated_tumor.RData", sep=""))
 ```
 
 Check nGenes and nReads for tumor vs nontumor
@@ -368,7 +368,7 @@ table(input_pr_pd_PD$sig) # find number of genes that are sig for PD compared to
 ```
 
 ```{r}
-save(tiss_subset_tumor2, file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
+save(tiss_subset_tumor2, file = paste(dir, "Data_input/objects/objects/NI04_tumor_seurat_object.RData", sep = ""))
 ```
 
 

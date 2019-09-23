@@ -1,0 +1,129 @@
+---
+title: "AT2 Compare Between Datasets and Groups"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(Seurat)
+library(matrixStats)
+```
+
+```{r}
+# load dropseq data from 	Vieira Braga FA, Kar G, Berg M, Carpaij OA et al. A cellular census of human lungs identifies novel cell states in health and in asthma. Nat Med 2019 Jun 17. PMID: 31209336
+dropseq_metadat <- read.csv(file = "/myVolume/scell_lung_adenocarcinoma/Data_input/GSE130148_data/GSE130148_barcodes_cell_types.txt", header = TRUE, sep = "\t")
+rownames(dropseq_metadat) <- dropseq_metadat$cell.barcode
+load(file = paste(dir, "Data_input/GSE130148_data/GSE130148_raw_counts.RData", sep = ""))
+head(raw_counts)
+```
+
+Create Seurat object for Dropseq Data
+```{r}
+dropseq_data <- CreateSeuratObject(raw.data = raw_counts, meta.data = dropseq_metadat)
+```
+
+Assign AT2 signature
+```{r}
+AT2_sig_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+```
+
+Pull data for dropseq AT2s
+```{r}
+table(dropseq_data@meta.data$celltype)
+# subset only Typle 2 cells
+
+dropseq_type2 <- filter(dropseq_data@meta.data, celltype == "Type 2")
+rownames(dropseq_type2) <- dropseq_type2$cell.barcode
+table(dropseq_type2$GEO_Sample)
+
+dropseq_Type2 <- SubsetData(object = dropseq_data, cells.use = dropseq_type2$cell.barcode)
+dropseq_at2exp <- as.data.frame(t(FetchData(dropseq_Type2, vars.all = AT2_sig_genes)))
+dropseq_at2exp$score <- rowMeans(dropseq_at2exp)
+```
+
+Pull data for scRNAseq non cancer AT2s
+```{r}
+# Fetch Data for AT2 Sig in Normal AT2 Cells
+normal_at2 <- filter(tiss_nonimmune_epi@meta.data, epi_anno_final == "alveolar type 2 cell")
+normal_at2_sub <- SubsetData(tiss_nonimmune_epi, cells.use = normal_at2$cell_id)
+
+norm_at2exp <- as.data.frame(t(FetchData(normal_at2_sub, vars.all = AT2_sig_genes)))
+```
+
+Pull data for scRNAseq for cancer groups
+```{r}
+tumor_at2exp <- FetchData(tiss_subset_tumor2, c('analysis', 'cell_id', AT2_sig_genes))
+
+TN_at2exp <- filter(tumor_at2exp, analysis == 'naive')
+rownames(TN_at2exp) <- TN_at2exp$cell_id
+TN_at2exp$analysis <- NULL
+TN_at2exp$cell_id <- NULL
+TN_at2exp <- as.data.frame(t(TN_at2exp))
+
+
+PER_at2exp <- filter(tumor_at2exp, analysis == 'grouped_pr')
+rownames(PER_at2exp) <- PER_at2exp$cell_id
+PER_at2exp$analysis <- NULL
+PER_at2exp$cell_id <- NULL
+PER_at2exp <- as.data.frame(t(PER_at2exp))
+
+PD_at2exp <- filter(tumor_at2exp, analysis == 'grouped_pd')
+rownames(PD_at2exp) <- PD_at2exp$cell_id
+PD_at2exp$analysis <- NULL
+PD_at2exp$cell_id <- NULL
+PD_at2exp <- as.data.frame(t(PD_at2exp))
+```
+
+
+```{r}
+external_v_norm.p <- as.data.frame(cor(dropseq_at2exp$score, norm_at2exp, method = "pearson")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_norm.p <- as.data.frame(t(external_v_norm.p))
+external_v_norm.p$group <- "normal at2"
+
+external_v_TN.p <- as.data.frame(cor(dropseq_at2exp$score, TN_at2exp, method = "pearson")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_TN.p <- as.data.frame(t(external_v_TN.p))
+external_v_TN.p$group <- "TN"
+
+external_v_PER.p <- as.data.frame(cor(dropseq_at2exp$score, PER_at2exp, method = "pearson")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_PER.p <- as.data.frame(t(external_v_PER.p))
+external_v_PER.p$group <- "PER"
+
+external_v_PD.p <- as.data.frame(cor(as.data.frame(dropseq_at2exp$score), PD_at2exp, method = "pearson")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_PD.p <- as.data.frame(t(external_v_PD.p))
+external_v_PD.p$group <- "PD"
+
+pearsoncorr_df <- do.call("rbind", list(external_v_norm.p, external_v_TN.p, external_v_PER.p, external_v_PD.p))
+
+cor_test.1 <- pairwise.wilcox.test(x = pearsoncorr_df$corr, g = pearsoncorr_df$group)
+cor_test.1 <- as.data.frame(cor_test.1$p.value)
+
+ggplot(pearsoncorr_df, aes(x = group, y = corr, fill = group)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Pearson Correlation") + ylim(-.5, 1) #+ geom_signif(comparisons = list(c("PD", "PER")), y_position = 1.1, annotations = '5.89-25') + geom_signif(comparisons = list(c("PD", "TN")), y_position = 1.5, annotations = '1.37e-13') + geom_signif(comparisons = list(c("PER", "TN")), y_position = 1.3, annotations = '1.98e-06') + geom_signif(comparisons = list(c("normal at2", "PER")), y_position = 1.7, annotations = '2.04e-96') + scale_x_discrete(limits = c("normal at2", "TN", "PER", "PD"))
+
+```
+
+```{r}
+external_v_norm.s <- as.data.frame(cor(dropseq_at2exp$score, norm_at2exp, method = "spearman")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_norm.s <- as.data.frame(t(external_v_norm.s))
+external_v_norm.s$group <- "normal at2"
+
+external_v_TN.s <- as.data.frame(cor(dropseq_at2exp$score, TN_at2exp, method = "spearman")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_TN.s <- as.data.frame(t(external_v_TN.s))
+external_v_TN.s$group <- "TN"
+
+external_v_PER.s <- as.data.frame(cor(dropseq_at2exp$score, PER_at2exp, method = "spearman")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_PER.s <- as.data.frame(t(external_v_PER.s))
+external_v_PER.s$group <- "PER"
+
+external_v_PD.s <- as.data.frame(cor(as.data.frame(dropseq_at2exp$score), PD_at2exp, method = "spearman")) %>% select_if(~ !any(is.na(.))) %>% `rownames<-` ("corr")
+external_v_PD.s <- as.data.frame(t(external_v_PD.s))
+external_v_PD.s$group <- "PD"
+
+spearmancorr_df <- do.call("rbind", list(external_v_norm.s, external_v_TN.s, external_v_PER.s, external_v_PD.s))
+
+cor_test.2 <- pairwise.wilcox.test(x = spearmancorr_df$corr, g = spearmancorr_df$group)
+cor_test.2 <- as.data.frame(cor_test.2$p.value)
+
+spearman_corr_plot <- ggplot(spearmancorr_df, aes(x = group, y = corr, fill = group)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("spearman Correlation") + ylim(-1, 1)
+ggsave(spearman_corr_plot, filename = paste(dir, "plot_out/NI09/spearman_corr_bycell.pdf", sep = ""), width = 5, height = 5)
+```
+

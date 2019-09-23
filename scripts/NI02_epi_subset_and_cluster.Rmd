@@ -18,7 +18,7 @@ Clear environment and load filtered Seurat object
 ```{r}
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
 ```
 
 Subset Seurat object to Only Epithelial Cells
@@ -111,7 +111,7 @@ tiss_nonimmune_epi@meta.data$epi_seurat_cluster <- tiss_nonimmune_epi@meta.data$
 
 
 ```{r}
-save(tiss_nonimmune_epi, file= paste(dir,"/Data_input/NI02_Epi_Seurat_object_clustered.RData", sep=""))
+save(tiss_nonimmune_epi, file= paste(dir,"/Data_input/objects/NI02_Epi_Seurat_object_clustered.RData", sep=""))
 ```
 
 

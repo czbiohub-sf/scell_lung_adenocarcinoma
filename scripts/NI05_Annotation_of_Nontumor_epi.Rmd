@@ -14,13 +14,13 @@ library(clustree)
 ```{r}
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/NI03_epithelial_annotated_tumor.RData", sep=""))
-load(file=paste(dir,"Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/NI03_epithelial_annotated_tumor.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/objects/NI04_tumor_seurat_object.RData", sep=""))
 ```
 
 Look for clincal mutation found in normal classified cells
 ```{r}
-cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/validationTable_cells.4.19.19.csv", sep = ""))
+cell_mutation_tab <- read.csv(file = paste(dir, "Data_input/objects/validationTable_cells.4.19.19.csv", sep = ""))
 rownames(cell_mutation_tab) <- cell_mutation_tab$cell
 cell_mutation_tab$tumorCell_bool <- NULL
 
@@ -339,8 +339,8 @@ TSNEPlot(object = tiss_subset_normalepi, group.by='biopsy_site')
 
 Save object
 ```{r}
-save(tiss_subset_normalepi, file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
-# load(file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
+save(tiss_subset_normalepi, file = paste(dir, "Data_input/objects/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
+# load(file = paste(dir, "Data_input/objects/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
 ```
 
 save normal epi annotations to all epi seurat object
@@ -352,8 +352,8 @@ tiss_nonimmune_epi@meta.data$epi_anno_final <- tiss_nonimmune_epi@meta.data$norm
 tiss_nonimmune_epi@meta.data$epi_anno_final[is.na(tiss_nonimmune_epi@meta.data$epi_anno_final)] <- "tumor"
 table(tiss_nonimmune_epi@meta.data$epi_anno_final)
 
-save(tiss_nonimmune_epi, file = paste(dir, "Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep = ""))
-# load("/myVolume/scell_lung_adenocarcinoma/Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData")
+save(tiss_nonimmune_epi, file = paste(dir, "Data_input/objects/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep = ""))
+# load("/myVolume/scell_lung_adenocarcinoma/Data_input/objects/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData")
 ```
 
 
