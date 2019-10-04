@@ -50,3 +50,15 @@ https://drive.google.com/drive/folders/1nONsp9VuhmPzuDvMet0i8x26eV9r5lkT?usp=sha
 **_NI09_AT2_sig_compare.Rmd_**: Imports .RData objects from NI04 and NI05 as well as data and metadata files in /Data_input/GSE130148_data. In this script we compare cancers cells from each treatment timepoint (TN, PER, PD), as well as non-cancer AT2 cells to an outside dataset of healthy AT2 cells. 
 
 **_NI10_TCGA_clinical_outcomes.Rmd_**: Imports three input files from /Data_input/TCGA. We compare the five gene expression signatures found within the grouped analysis of NI04 to patient surival outcomes within the TCGA. 
+
+**_NI11_WES_analysis.ipynb_**: 
+
+**_NI12_msk_analysis.ipynb_**: 
+
+**_NI13_get_ercc_substitution_rate.py_**: 
+
+
+## Cerebra
+
+We used the Cerebra tool (https://github.com/czbiohub/cerebra) report mutations and read coverage of regions of interest within genes. Cerebra uses GATK output files (.vcfs) as input and is comprised of several modules which do the following: 1) generate a cell_x_gene mutation-counts matrix, 2) generate a cell_x_ROI summary table that reports amino acid level mutations for a user-defined list of genes, 3) report read coverage (variant vs total reads) to each ROI.
+
