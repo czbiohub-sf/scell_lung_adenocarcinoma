@@ -353,7 +353,7 @@ tiss_nonimmune_epi@meta.data$epi_anno_final[is.na(tiss_nonimmune_epi@meta.data$e
 table(tiss_nonimmune_epi@meta.data$epi_anno_final)
 
 save(tiss_nonimmune_epi, file = paste(dir, "Data_input/objects/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep = ""))
-# load("/myVolume/scell_lung_adenocarcinoma/Data_input/objects/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData")
+# load("/myVolume/scell_lung_adenocarcinoma/Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData")
 ```
 
 

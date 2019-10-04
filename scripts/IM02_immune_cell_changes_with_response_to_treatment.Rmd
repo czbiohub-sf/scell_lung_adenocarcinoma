@@ -76,9 +76,15 @@ p<- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
     theme(axis.text.x = element_text(angle = 45, hjust=1, vjust=0.5), legend.position="bottom") + 
     xlab("") + 
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05))
+p1<- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
+    geom_bar(stat = "identity", aes(fill=cell)) + facet_grid(cols =  vars(cell)) + 
+    theme_bw() +  
+    theme(axis.text.x = element_text(angle = 45, hjust=1, vjust=0.5), legend.position= "none") + 
+    xlab("") + 
+    geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05))
 # Save plot 
-ggsave(paste(dir,"plot_out/IM02/All_immune_populations_across_treatment.pdf", sep=""),width = 11, height = 8)
-p
+ggsave(p1, filename = paste(dir,"plot_out/IM02/All_immune_populations_across_treatment2.pdf", sep=""),width = 11, height = 8)
+p1
 ```
 
 

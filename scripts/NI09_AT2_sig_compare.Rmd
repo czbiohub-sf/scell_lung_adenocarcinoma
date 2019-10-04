@@ -15,6 +15,10 @@ dropseq_metadat <- read.csv(file = "/myVolume/scell_lung_adenocarcinoma/Data_inp
 rownames(dropseq_metadat) <- dropseq_metadat$cell.barcode
 load(file = paste(dir, "Data_input/GSE130148_data/GSE130148_raw_counts.RData", sep = ""))
 head(raw_counts)
+
+load(file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
+load(file=paste(dir,"Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
+load("/myVolume/scell_lung_adenocarcinoma/Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData")
 ```
 
 Create Seurat object for Dropseq Data
@@ -120,10 +124,22 @@ external_v_PD.s$group <- "PD"
 
 spearmancorr_df <- do.call("rbind", list(external_v_norm.s, external_v_TN.s, external_v_PER.s, external_v_PD.s))
 
+at2spear <- filter(spearmancorr_df, group == "normal at2")
+mean(at2spear$corr)
+
+tnspear <- filter(spearmancorr_df, group == "TN")
+mean(tnspear$corr)
+
+PERspear <- filter(spearmancorr_df, group == "PER")
+mean(PERspear$corr)
+
+PDspear <- filter(spearmancorr_df, group == "PD")
+mean(PDspear$corr)
+
 cor_test.2 <- pairwise.wilcox.test(x = spearmancorr_df$corr, g = spearmancorr_df$group)
 cor_test.2 <- as.data.frame(cor_test.2$p.value)
 
 spearman_corr_plot <- ggplot(spearmancorr_df, aes(x = group, y = corr, fill = group)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("spearman Correlation") + ylim(-1, 1)
-ggsave(spearman_corr_plot, filename = paste(dir, "plot_out/NI09/spearman_corr_bycell.pdf", sep = ""), width = 5, height = 5)
+# ggsave(spearman_corr_plot, filename = paste(dir, "plot_out/NI09/spearman_corr_bycell.pdf", sep = ""), width = 5, height = 5)
 ```
 

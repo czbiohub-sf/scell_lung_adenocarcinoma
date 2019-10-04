@@ -31,16 +31,13 @@ Subset and format TCGA data
 tcga_samples <- as.data.frame(colnames(luad_tcga))
 tcga_samples1 <- data.frame(do.call('rbind', strsplit(as.character(tcga_samples$`colnames(luad_tcga)`),'.',fixed=TRUE)))
 tcga_samples1 <- tcga_samples1[(2:586),]
-
-#subset to only 01A tcga samples
-table(tcga_samples1$X4) 
+table(tcga_samples1$X4) #subset to only 01A tcga samples
 tcga_samples1 <- filter(tcga_samples1, X4 == "01A")
 tcga_samples1$name <- paste(tcga_samples1$X1, tcga_samples1$X2, tcga_samples1$X3, tcga_samples1$X4, sep = ".")
-tcga_samples1$bcr_patient_barcode <- paste(tcga_samples1$X1, tcga_samples1$X2, tcga_samples1$X3, "01A", sep = "-")
+tcga_samples1$bcr_patient_barcode <- paste(tcga_samples1$X1, tcga_samples1$X2, tcga_samples1$X3, sep = "-")
 
 #subset luad_tcga to tcga_samples1$name
 luad_tcga <- luad_tcga[, c("gene", tcga_samples1$name)]
-
 #subset luad_tcga to genes not duplicated, set rownames to genes
 n_occur <- data.frame(table(luad_tcga$gene))
 genes_remove <- luad_tcga[luad_tcga$gene %in% n_occur$Var1[n_occur$Freq > 1],]
@@ -55,6 +52,7 @@ colnames(luad_tcga1) <- gsub(pattern = "\\.", replacement = "-", x = colnames(lu
 #gsub the "-01A" to the end of the bcr sample name
 tcga_meta$bcr_patient_barcode <- paste(tcga_meta$bcr_patient_barcode, "-01A", sep = "")
 head(tcga_meta)
+head(luad_tcga1)
 ```
 
 Example output with TCGA, a simple example
@@ -73,7 +71,6 @@ Alveolar_sig <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1",
 TCGA_Alveolar <- luad_tcga1[Alveolar_sig, ]
 head(TCGA_Alveolar)
 dim(TCGA_Alveolar)
-
 TCGA_Alveolar_mean <- as.data.frame(colMeans(TCGA_Alveolar))
 colnames(TCGA_Alveolar_mean) <- "TCGA_Alveolar_mean"
 hist(TCGA_Alveolar_mean$TCGA_Alveolar_mean)
@@ -91,7 +88,7 @@ table(TCGA_Alveolar_mean_f$Alveolar_quartile.1)
 
 
 ```{r}
-luad_tcga1_AlveolarSig <- left_join(TCGA_Alveolar_mean_f,tcga_meta, by = "bcr_patient_barcode")
+luad_tcga1_AlveolarSig <- left_join(tcga_meta, TCGA_Alveolar_mean_f, by = "bcr_patient_barcode")
 head(luad_tcga1_AlveolarSig)
 
 #subset to only stage III and IV
@@ -100,7 +97,7 @@ head(luad_tcga1_AlveolarSig)
 # Use only quantile 1 and 4
 luad_tcga1_AlveolarSig <- filter(luad_tcga1_AlveolarSig, Alveolar_quartile.1 == "1" | Alveolar_quartile.1 == "4")
 
-
+pdf(file = paste(dir, "plot_out/NI10/Alveolar_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
     xlab = "Years",
@@ -110,6 +107,7 @@ survminer::ggsurvplot(
     pval = TRUE,
     palette = c("#330066", "#CCCC00"),
     conf.int = FALSE)
+dev.off()
 
 summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
         times = 2)
@@ -161,7 +159,7 @@ table(TCGA_Kynurenine_mean_f$Kynurenine_quartile.1)
 ```
 
 ```{r}
-luad_tcga1_Kynurenine <- left_join(TCGA_Kynurenine_mean_f, tcga_meta, by = "bcr_patient_barcode")
+luad_tcga1_Kynurenine <- left_join(tcga_meta, TCGA_Kynurenine_mean_f, by = "bcr_patient_barcode")
 
 # subset to late stage
 # luad_tcga1_Kynurenine <- filter(luad_tcga1_Kynurenine, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
@@ -170,6 +168,7 @@ luad_tcga1_Kynurenine <- left_join(TCGA_Kynurenine_mean_f, tcga_meta, by = "bcr_
 # Use only quantile 1 and 4
 luad_tcga1_Kynurenine <- filter(luad_tcga1_Kynurenine, Kynurenine_quartile.1 == "1" | Kynurenine_quartile.1 == "4")
 
+pdf(file = paste(dir, "plot_out/NI10/Kynurenine_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
     xlab = "Years",
@@ -178,6 +177,7 @@ survminer::ggsurvplot(
     censor = TRUE,
     pval = TRUE,
     palette = c("#330066", "#CCCC00"))
+dev.off()
 
 summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
         times = 3)
@@ -231,7 +231,7 @@ table(TCGA_Plasminogen_mean_f$Plasminogen_quartile.1)
 ```
 
 ```{r}
-luad_tcga1_Plasminogen <- left_join(TCGA_Plasminogen_mean_f, tcga_meta, by = "bcr_patient_barcode")
+luad_tcga1_Plasminogen <- left_join(tcga_meta, TCGA_Plasminogen_mean_f, by = "bcr_patient_barcode")
 
 # Subset to only late stage
 # luad_tcga1_Plasminogen <- filter(luad_tcga1_Plasminogen, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
@@ -240,7 +240,7 @@ luad_tcga1_Plasminogen <- left_join(TCGA_Plasminogen_mean_f, tcga_meta, by = "bc
 # Use only quantile 1 and 4
 luad_tcga1_Plasminogen <- filter(luad_tcga1_Plasminogen, Plasminogen_quartile.1 == "1" | Plasminogen_quartile.1 == "4")
 
-
+pdf(file = paste(dir, "plot_out/NI10/Plasminogen_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
     xlab = "Years",
@@ -249,6 +249,7 @@ survminer::ggsurvplot(
     censor = TRUE,
     pval = TRUE,
     palette = c("#330066", "#CCCC00"))
+dev.off()
 
 summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
         times = 3)
@@ -285,7 +286,7 @@ table(TCGA_Serpine_sig_f$SERPINE1_quartile.1)
 
 
 ```{r}
-luad_tcga1_Serpine <- left_join(TCGA_Serpine_sig_f, tcga_meta, by = "bcr_patient_barcode")
+luad_tcga1_Serpine <- left_join(tcga_meta, TCGA_Serpine_sig_f, by = "bcr_patient_barcode")
 
 # Subset to only lage stage
 # luad_tcga1_Serpine <- filter(luad_tcga1_Serpine, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
@@ -294,7 +295,7 @@ luad_tcga1_Serpine <- left_join(TCGA_Serpine_sig_f, tcga_meta, by = "bcr_patient
 # Use only quantile 1 and 4
 luad_tcga1_Serpine <- filter(luad_tcga1_Serpine, SERPINE1_quartile.1 == "1" | SERPINE1_quartile.1 == "4")
 
-
+pdf(file = paste(dir, "plot_out/NI10/SERPINE1_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
     xlab = "Years",
@@ -303,6 +304,7 @@ survminer::ggsurvplot(
     censor = TRUE,
     pval = TRUE,
     palette = c("#330066", "#CCCC00"))
+dev.off()
 
 summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
         times = 3)
@@ -340,7 +342,7 @@ table(TCGA_GapJunction_mean_f$GapJunction_quartile.1)
 ```
 
 ```{r}
-luad_tcga1_GapJunction <- left_join(TCGA_GapJunction_mean_f, tcga_meta, by = "bcr_patient_barcode")
+luad_tcga1_GapJunction <- left_join(tcga_meta, TCGA_GapJunction_mean_f, by = "bcr_patient_barcode")
 
 # Subset to only late stage
 # luad_tcga1_GapJunction <- filter(luad_tcga1_GapJunction, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
@@ -349,6 +351,7 @@ luad_tcga1_GapJunction <- left_join(TCGA_GapJunction_mean_f, tcga_meta, by = "bc
 # Use only quantile 1 and 4
 luad_tcga1_GapJunction <- filter(luad_tcga1_GapJunction, GapJunction_quartile.1 == "1" | GapJunction_quartile.1 == "4")
 
+pdf(file = paste(dir, "plot_out/NI10/GapJunction_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
     xlab = "Years",
@@ -358,6 +361,7 @@ survminer::ggsurvplot(
     conf.int = FALSE,
     pval = TRUE,
     palette = c("#330066", "#CCCC00"))
+dev.off()
 
 summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
         times = 3)
@@ -406,6 +410,7 @@ luad_tcga1_Macrophages <- left_join(tcga_meta, TCGA_Macrophages_f, by = "bcr_pat
 # Use only quantile 1 and 4
 luad_tcga1_Macrophages <- filter(luad_tcga1_Macrophages, Macrophages_quartile.1 == "1" | Macrophages_quartile.1 == "4")
 
+pdf(file = paste(dir, "plot_out/NI10/Macrophage_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
     xlab = "Years",
@@ -415,6 +420,7 @@ survminer::ggsurvplot(
     conf.int = FALSE,
     pval = TRUE,
     palette = c("#330066", "#CCCC00"))
+dev.off()
 
 summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
         times = 3)
@@ -456,6 +462,7 @@ luad_tcga1_t_cells <- left_join(tcga_meta, TCGA_t_cells_f, by = "bcr_patient_bar
 # Use only quantile 1 and 4
 luad_tcga1_t_cells <- filter(luad_tcga1_t_cells, t_cells_quartile.1 == "1" | t_cells_quartile.1 == "4")
 
+pdf(file = paste(dir, "plot_out/NI10/Tcell_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ t_cells_quartile.1, data = luad_tcga1_t_cells), 
     xlab = "Years",
@@ -465,6 +472,7 @@ survminer::ggsurvplot(
     conf.int = FALSE,
     pval = TRUE,
     palette = c("#330066", "#CCCC00"))
+dev.off()
 
 summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  t_cells_quartile.1, data = luad_tcga1_t_cells), 
         times = 3)

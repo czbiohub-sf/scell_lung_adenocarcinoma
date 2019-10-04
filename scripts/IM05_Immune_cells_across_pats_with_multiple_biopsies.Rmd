@@ -13,6 +13,9 @@ require(reshape)
 require(rcompanion)
 require(ggpubr)
 require(GGally)
+library(ggrepel)
+require(qdapTools)
+require(REdaS)
 ```
 
 Load immune workspace
@@ -22,19 +25,25 @@ dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
 ```
 
+```{r}
+require(ggthemes)
+require(devtools)
+require(reshape)
+# packageurl <- "https://cran.r-project.org/src/contrib/Archive/DescTools/DescTools_0.99.28.tar.gz"
+# install.packages(packageurl, repos = NULL, type = "source")
+# install.packages('rcompanion')
+require(rcompanion)
+require(ggpubr)
+require(gplots)
+```
+
 # Subset metadata 
 Remove cells that are not immune or are annotated as treatment status Pending or unknown. Also 
 exclude thoracentesis derived immune cells as they are not necessarily proximal to the tumor. Brain will also be removed 
 since it only has <10 cells. 
 
-
 Count the fraction of Immune cells across patients with multiple biopsies 
 ```{r}
-require(ggthemes)
-require(reshape)
-require(rcompanion)
-require(ggpubr)
-require(gplots)
 # Create list to save Myeloid and T-cell counts for every patient with multiple biopsies 
 list.sum <- list()
 # Subset metadata 
@@ -55,7 +64,7 @@ tab.1 <- tab.1[,names(which(colSums(tab.1) !=0))]
 # Zeros to NAs
 tab.1[tab.1 == 0] <- NA
 # Save an image with all patients and their time points 
-pdf(paste(dir,"plot_out/IM05/All_immune_population_correlations_across_treatment.pdf", sep=""), width = 5, height = 5)
+# pdf(paste(dir,"plot_out/IM05/All_immune_population_correlations_across_treatment.pdf", sep=""), width = 5, height = 5)
 # pdf("/myVolume/sclung_adeno/immune_cell_analysis/plot_out/I04/Heatmap_of_patient_timepoints.pdf",10,10)
 colfunc <- colorRampPalette(c("white", "red"))
 heatmap.2(tab.1, Rowv = F, Colv = F, col = colfunc(10), trace="n", key = T,
@@ -64,16 +73,14 @@ heatmap.2(tab.1, Rowv = F, Colv = F, col = colfunc(10), trace="n", key = T,
           notecex=1.0,
           notecol="black",
           na.color=par("bg"))
-dev.off()
+# dev.off()
+
 # Loop over all patients 
 patients <- c("TH226", "TH266")
-for(i in 1:length(patients)){
+for(i in 1:length(patients)) {
 metadata2 <- metadata[which(metadata$patient_id==patients[i]),]
 # Custom for TH179
 print(dim(metadata2))
-if(patients[i]=="TH179"){metadata2 <- metadata2[-which(metadata2$biopsy_site=="LN"),]}
-print(dim(metadata2))
-if(dim(metadata2)[1] != 0 ) {
 # Subset to fields of interest 
 meta.temp <- metadata2[,c("immune_subtype_annotation", "biopsy_date", "biopsy_site", "analysis")]
 meta.temp$biopsy_date <- as.factor(paste(meta.temp$biopsy_date, meta.temp$analysis))
@@ -94,7 +101,7 @@ temp <- -log10(table.chi.res$p.adj.Chisq)
 temp[is.infinite(temp)] <- 0
 temp[is.na(temp)] <- 0
 # Plot 
-temp <- cbind(as.data.frame(temp), as.data.frame( table.chi.res$Comparison))
+temp <- cbind(as.data.frame(temp), as.data.frame(table.chi.res$Comparison))
 colnames(temp) <- c("p.value", "group")
 r <- ggplot(temp) +geom_point(aes(x = p.value, y = group)) + 
   labs(x = "-log10(p.value)", y="Treatment Status group") + 
@@ -117,9 +124,118 @@ theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
 # Combine and plot all 
 opqr <- ggarrange(p,o,o2,q,r,nrow = 2, ncol=3) 
 # Save 
-ggsave(filename = paste(dir,"plot_out/IM05/Immune_cell_population_changes_multiple_biopsies_",patients[i], ".pdf", sep="") , plot = opqr, width = 17, height = 10)}
+# ggsave(filename = paste(dir,"plot_out/IM05/Immune_cell_population_changes_multiple_biopsies_",patients[i], ".pdf", sep="") , plot = opqr, width = 17, height = 10)}
 # Also export counts for T-cells and myeloid cells to make a "before-after" plot 
 list.sum[[i]] <- tt2[which(tt2$Var1=="MFs.monocytes" | tt2$Var1=="T-cells" | tt2$Var1=="DCs" | tt2$Var1=="Neutrophils"),]
 names(list.sum)[i] <- patients[i]
 }
+```
+
+
+Plot fractional changes of selected cell populations across treatment (Patient TH226)
+```{r}
+metadata <- tiss_immune@meta.data
+# Keep only cells from tissues that are not brain or pleura 
+metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
+#Keep only TH226
+metadata_TH226 <- filter(metadata, patient_id == "TH226")
+#add back rownames
+rownames(metadata_TH226) <- metadata_TH226$cell_id
+# Convert to factor with logical order 
+metadata_TH226$analysis <- factor(metadata_TH226$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+# Create table and keep selected cell types 
+meta.temp <- metadata_TH226[,c("immune_subtype_annotation", "analysis")]
+
+# Loop over treatment response categories 
+# Create list to store frequency tables 
+prop.table.error <- list()
+for(i in 1:length(unique(meta.temp$analysis))){
+vec.temp <- meta.temp[meta.temp$analysis==unique(meta.temp$analysis)[i],"immune_subtype_annotation"]
+# Convert to counts and calculate 95% CI 
+# Store in list 
+table.temp <- freqCI(vec.temp, level = c(.95))
+prop.table.error[[i]] <- print(table.temp, percent = TRUE, digits = 3)
+# 
+}
+# Name list 
+names(prop.table.error) <- unique(meta.temp$analysis)
+# Add the analysis labels 
+for(i in 1:length(prop.table.error)){
+  row.names(prop.table.error[[i]]) <- paste(row.names(prop.table.error[[i]]), names(prop.table.error)[i], sep="__")
+}
+# Convert to data frame 
+tab.1 <- as.data.frame.array(do.call(rbind, prop.table.error))
+# Add analysis column
+tab.1$analysis <- do.call(rbind, strsplit(row.names(tab.1), "__"))[,2]
+# Resort factor analysis 
+tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+# Store cell type in different column 
+tab.1$cell <- do.call(rbind, strsplit(row.names(tab.1), "__"))[,1]
+
+colnames(tab.1)[1] <- "lower"
+colnames(tab.1)[3] <- "upper"
+
+# Plot
+p1<- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
+    geom_bar(stat = "identity", aes(fill=analysis)) + facet_grid(cols =  vars(cell)) + 
+    geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust=1, vjust=0.5), legend.position = 'none') + 
+    xlab("")
+
+# Save plot 
+ggsave(plot = p1, filename = paste(dir,"plot_out/IM02/All_immune_populations_across_treatment_TH226.pdf", sep=""),width = 11, height = 8)
+p1
+```
+
+Plot fractional changes of selected cell populations across treatment (Patient TH226)
+```{r}
+metadata_TH266 <- filter(metadata, patient_id == "TH266")
+#add back rownames
+rownames(metadata_TH266) <- metadata_TH266$cell_id
+# Convert to factor with logical order 
+metadata_TH266$analysis <- factor(metadata_TH266$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+# Create table and keep selected cell types 
+meta.temp <- metadata_TH266[,c("immune_subtype_annotation", "analysis")]
+
+# Loop over treatment response categories 
+# Create list to store frequency tables 
+prop.table.error <- list()
+for(i in 1:length(unique(meta.temp$analysis))){
+vec.temp <- meta.temp[meta.temp$analysis==unique(meta.temp$analysis)[i],"immune_subtype_annotation"]
+# Convert to counts and calculate 95% CI 
+# Store in list 
+table.temp <- freqCI(vec.temp, level = c(.95))
+prop.table.error[[i]] <- print(table.temp, percent = TRUE, digits = 3)
+# 
+}
+# Name list 
+names(prop.table.error) <- unique(meta.temp$analysis)
+# Add the analysis labels 
+for(i in 1:length(prop.table.error)){
+  row.names(prop.table.error[[i]]) <- paste(row.names(prop.table.error[[i]]), names(prop.table.error)[i], sep="__")
+}
+# Convert to data frame 
+tab.1 <- as.data.frame.array(do.call(rbind, prop.table.error))
+# Add analysis column
+tab.1$analysis <- do.call(rbind, strsplit(row.names(tab.1), "__"))[,2]
+# Resort factor analysis 
+tab.1$analysis <- factor(tab.1$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+# Store cell type in different column 
+tab.1$cell <- do.call(rbind, strsplit(row.names(tab.1), "__"))[,1]
+
+colnames(tab.1)[1] <- "lower"
+colnames(tab.1)[3] <- "upper"
+
+# Plot
+p2 <- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
+    geom_bar(stat = "identity", aes(fill=analysis)) + facet_grid(cols =  vars(cell)) + 
+    geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.05)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust=1, vjust=0.5), legend.position = 'none') + 
+    xlab("")
+
+# Save plot 
+ggsave(plot = p2, filename = paste(dir,"plot_out/IM02/All_immune_populations_across_treatment_TH266.pdf", sep=""),width = 11, height = 8)
+p2
 ```
