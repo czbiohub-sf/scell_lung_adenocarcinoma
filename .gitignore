@@ -7,3 +7,5 @@
 *largefile*
 *interaction_analysis/data/*
 *interaction_analysis/cpdb-venv/*
+scripts/.ipynb_checkpoints/
+*.ipynb_checkpoints*
