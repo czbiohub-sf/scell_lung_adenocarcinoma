@@ -51,11 +51,11 @@ https://drive.google.com/drive/folders/1nONsp9VuhmPzuDvMet0i8x26eV9r5lkT?usp=sha
 
 **_NI10_TCGA_clinical_outcomes.Rmd_**: Imports three input files from /Data_input/TCGA. We compare the five gene expression signatures found within the grouped analysis of NI04 to patient surival outcomes within the TCGA. 
 
-**_NI11_WES_analysis.ipynb_**: 
+**_NI11_WES_analysis.ipynb_**: This notebook compares the mutations identified in whole-exome-seq to those identified with scRNA-seq, for the same patient samples.  
 
-**_NI12_msk_analysis.ipynb_**: 
+**_NI12_msk_analysis.ipynb_**: This notebook creates figures 2D & E. Takes as input msk_impact_2017/MSK-IMPACT_cosmic_tier1.txt, msk_impact_2017data_clinical_patient_edit.txt and mutation_input/coverage_all_cells_cerebra.csv from Data_input/. Investigates survival outcomes of a large cohort of LAUD patients with similar/different mutational profiles as the ones we identify in our patient samples. 
 
-**_NI13_get_ercc_substitution_rate.py_**: 
+**_NI13_get_ercc_substitution_rate.py_**: python script for calculating per-base substitution rates in ERCC standards, for a large group of scRNA-seq bam files. 
 
 
 ## Cerebra
