@@ -174,6 +174,7 @@ save(tiss_immune, file=paste(dir,"Data_input/objects/IM02_Immune_Seurat_object.R
 Calculate the fractions per patient 
 ```{r}
 require(reshape2)
+require(ggpubr)
 # 
 metadata <- tiss_immune@meta.data
 # Keep only cells from tissues that are not brain or pleura 
@@ -200,30 +201,22 @@ for(i in 1:length(samples)){
   tab.pats[i,"group"] <- as.character(unique(meta.temp$analysis[rows]))
   tab.pats[i,"total_cells"] <- sum(table(meta.temp[rows,"immune_subtype_annotation"]))
 }
-# Consider patients with more 100 cells 
-tab.pats.filtered <- tab.pats[which(tab.pats$total_cells > 200),]
+# Consider patients with more 50 cells 
+tab.pats.filtered <- tab.pats[which(tab.pats$total_cells > 50),]
 tab.pats.filtered$sample <- row.names(tab.pats.filtered)
 tab.pats.filtered <- tab.pats.filtered[,-which(colnames(tab.pats.filtered)=="total_cells")]
 tab.pats.filtered <- melt(tab.pats.filtered)
 tab.pats.filtered$group <- factor(tab.pats.filtered$group, levels = c("naive", "grouped_pr", "grouped_pd"))
-# Make boxplots 
+# Make boxplots and add wilcoxon test p.values between groups
+my_comparisons <- list( c("naive", "grouped_pr"), c("grouped_pr", "grouped_pd"), c("grouped_pd", "naive") )
 bp <- ggplot(tab.pats.filtered, aes(x = group, y = value)) +
-    geom_boxplot(size = .75, aes(fill=group)) +
+    geom_boxplot(size = .75, aes(fill=group), outlier.colour=NA) +
     facet_grid(. ~ variable) + 
     theme_bw() + 
     theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5), legend.position = "none") + 
-    geom_jitter(shape=16, position=position_jitter(0.2))
+    geom_jitter(shape=16, position=position_jitter(0.2)) + 
+    stat_compare_means(comparisons = my_comparisons, method = "wilcox.test")
 ggsave(filename = paste(dir,"plot_out/IM02/Immune_cell_population_fractions_per_patient.pdf", sep=""), plot = bp,width = 11, height = 8)
-# Calculate significance 
-cells <- as.character(unique(tab.pats.filtered$variable))
-list.sig <- list()
-for(i in 1:length(cells)){
-  rows <- which(tab.pats.filtered$variable==cells[i])
-  temp <- tab.pats.filtered[rows,]
-  test <- pairwise.wilcox.test(temp$value,temp$group, p.adjust.method = "none")  
-  list.sig[[i]] <- test$p.value
-}
-names(list.sig) <- cells
 ```
 
 
