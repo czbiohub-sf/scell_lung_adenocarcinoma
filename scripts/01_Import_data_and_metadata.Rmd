@@ -12,25 +12,26 @@ library(Matrix)
 ```
 
 Set the full path to the github directory 
-```{r}
+```{r set wd path}
 rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
+# dir <- "~/Downloads/scell_lung_adenocarcinoma/"
 ```
 
 Load data
-```{r}
-raw.data <- read.csv(paste(dir,"Data_input/S01_datafinal.csv", sep=""), header=T, row.names = 1)
+```{r load data}
+raw.data <- read.csv(paste(dir,"Data_input/csv_files/S01_datafinal.csv", sep=""), header=T, row.names = 1)
 dim(raw.data)
 head(colnames(raw.data))
 ```
 
 Load metadata
-```{r}
-metadata <- read.csv(paste(dir,"Data_input/S01_metacells.csv", sep=""), row.names=1, header=T)
+```{r load metadata}
+metadata <- read.csv(paste(dir,"Data_input/csv_files/S01_metacells.csv", sep=""), row.names=1, header=T)
 head(metadata)
 ```
 
 Save both objects as RData object for quicker loading 
-```{r}
-save(list=c("metadata","raw.data","dir"), file=paste(dir,"Data_input/S01_Data_and_metadata.RData", sep=""))
+```{r save object}
+save(list=c("metadata","raw.data","dir"), file=paste(dir,"Data_input/objects/S01_Data_and_metadata.RData", sep=""))
 ```
