@@ -8,7 +8,7 @@ Load RData object
 ```{r}
 rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file = paste(dir,"Data_input/S01_Data_and_metadata.RData", sep=""))
+load(file = paste(dir,"Data_input/objects/S01_Data_and_metadata.RData", sep=""))
 ```
 
 Find ERCC's, compute the percent ERCC, and drop them from the raw data.
@@ -32,7 +32,7 @@ head(main_tiss@meta.data)
 
 Save prefiltered Seurat object 
 ```{r}
-save(main_tiss, file=paste(dir,"Data_input/S02_Main_Seurat_object_prefilter.RData", sep=""))
+save(main_tiss, file=paste(dir,"Data_input/objects/S02_Main_Seurat_object_prefilter.RData", sep=""))
 # load(paste(dir,"Data_input/Main_Seurat_object_prefilter.RData", sep=""))
 ```
 
@@ -52,5 +52,5 @@ main_tiss_filtered
 
 Save filtered Seurat object
 ```{r}
-save(main_tiss_filtered, file=paste(dir,"Data_input/S02_Main_Seurat_object_filtered.RData", sep=""))
+save(main_tiss_filtered, file=paste(dir,"Data_input/objects/S02_Main_Seurat_object_filtered.RData", sep=""))
 ```
