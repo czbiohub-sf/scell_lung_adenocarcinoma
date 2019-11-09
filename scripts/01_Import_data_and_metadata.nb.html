@@ -182,6 +182,11 @@ $(document).ready(function () {
 <p>Set the full path to the github directory</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucm0obGlzdD1scygpKVxuZGlyIDwtIFwiL215Vm9sdW1lL3NjZWxsX2x1bmdfYWRlbm9jYXJjaW5vbWEvXCJcbiMgZGlyIDwtIFwifi9Eb3dubG9hZHMvc2NlbGxfbHVuZ19hZGVub2NhcmNpbm9tYS9cIlxuYGBgIn0= -->
+<pre class="r"><code>rm(list=ls())
+dir &lt;- &quot;/myVolume/scell_lung_adenocarcinoma/&quot;
+# dir &lt;- &quot;~/Downloads/scell_lung_adenocarcinoma/&quot;</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>Load data</p>
@@ -214,6 +219,9 @@ head(metadata)</code></pre>
 <p>Save both objects as RData object for quicker loading</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2F2ZShsaXN0PWMoXCJtZXRhZGF0YVwiLFwicmF3LmRhdGFcIixcImRpclwiKSwgZmlsZT1wYXN0ZShkaXIsXCJEYXRhX2lucHV0L29iamVjdHMvUzAxX0RhdGFfYW5kX21ldGFkYXRhLlJEYXRhXCIsIHNlcD1cIlwiKSlcbmBgYCJ9 -->
+<pre class="r"><code>save(list=c(&quot;metadata&quot;,&quot;raw.data&quot;,&quot;dir&quot;), file=paste(dir,&quot;Data_input/objects/S01_Data_and_metadata.RData&quot;, sep=&quot;&quot;))</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 
 <div id="rmd-source-code">LS0tCnRpdGxlOiAiMDFfU2V1cmF0X3dvcmtmbG93X3NldHVwIgpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sKLS0tCgpMb2FkIGxpYnJhcmllcwpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0KbGlicmFyeSh1c2VmdWwpCmxpYnJhcnkoU2V1cmF0KQpsaWJyYXJ5KGRwbHlyKQpsaWJyYXJ5KE1hdHJpeCkKYGBgCgpTZXQgdGhlIGZ1bGwgcGF0aCB0byB0aGUgZ2l0aHViIGRpcmVjdG9yeSAKYGBge3Igc2V0IHdkIHBhdGh9CnJtKGxpc3Q9bHMoKSkKZGlyIDwtICIvbXlWb2x1bWUvc2NlbGxfbHVuZ19hZGVub2NhcmNpbm9tYS8iCiMgZGlyIDwtICJ+L0Rvd25sb2Fkcy9zY2VsbF9sdW5nX2FkZW5vY2FyY2lub21hLyIKYGBgCgpMb2FkIGRhdGEKYGBge3IgbG9hZCBkYXRhfQpyYXcuZGF0YSA8LSByZWFkLmNzdihwYXN0ZShkaXIsIkRhdGFfaW5wdXQvY3N2X2ZpbGVzL1MwMV9kYXRhZmluYWwuY3N2Iiwgc2VwPSIiKSwgaGVhZGVyPVQsIHJvdy5uYW1lcyA9IDEpCmRpbShyYXcuZGF0YSkKaGVhZChjb2xuYW1lcyhyYXcuZGF0YSkpCmBgYAoKTG9hZCBtZXRhZGF0YQpgYGB7ciBsb2FkIG1ldGFkYXRhfQptZXRhZGF0YSA8LSByZWFkLmNzdihwYXN0ZShkaXIsIkRhdGFfaW5wdXQvY3N2X2ZpbGVzL1MwMV9tZXRhY2VsbHMuY3N2Iiwgc2VwPSIiKSwgcm93Lm5hbWVzPTEsIGhlYWRlcj1UKQpoZWFkKG1ldGFkYXRhKQpgYGAKClNhdmUgYm90aCBvYmplY3RzIGFzIFJEYXRhIG9iamVjdCBmb3IgcXVpY2tlciBsb2FkaW5nIApgYGB7ciBzYXZlIG9iamVjdH0Kc2F2ZShsaXN0PWMoIm1ldGFkYXRhIiwicmF3LmRhdGEiLCJkaXIiKSwgZmlsZT1wYXN0ZShkaXIsIkRhdGFfaW5wdXQvb2JqZWN0cy9TMDFfRGF0YV9hbmRfbWV0YWRhdGEuUkRhdGEiLCBzZXA9IiIpKQpgYGA=</div>

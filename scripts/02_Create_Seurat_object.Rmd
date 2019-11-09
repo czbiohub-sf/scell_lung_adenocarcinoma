@@ -23,6 +23,9 @@ dim(raw.data)
 Create the Seurat object with all the data (unfiltered)
 ```{r}
 main_tiss <- CreateSeuratObject(raw.data = raw.data)
+# add rownames to metadta 
+row.names(metadata) <- metadata$cell_id
+# add metadata to Seurat object 
 main_tiss <- AddMetaData(object = main_tiss, metadata = metadata)
 main_tiss <- AddMetaData(object = main_tiss, percent.ercc, col.name = "percent.ercc")
 # Changing nUMI column name to nReads

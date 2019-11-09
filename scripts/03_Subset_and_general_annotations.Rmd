@@ -19,7 +19,7 @@ Clear environment and load filtered Seurat object
 ```{r}
 # rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/02_Main_Seurat_object_filtered.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/02_Main_Seurat_object_filtered.RData", sep=""))
 ```
 
 Drop any samples with 10 or less cells
