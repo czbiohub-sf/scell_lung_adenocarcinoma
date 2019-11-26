@@ -9,3 +9,4 @@
 *interaction_analysis/cpdb-venv/*
 scripts/.ipynb_checkpoints/
 *.ipynb_checkpoints*
+*SRA_upload*
