@@ -188,18 +188,18 @@ tab.1 <- as.data.frame.array(do.call(rbind, prop.table.error))
 b <- c()
 a <- c()
 for(i in names(prop.table.error)){
-  a <- rep(i,length(unique(row.names(tab.1))))
+  a <- rep(i,3)
   b <- c(b,a)
 }
 tab.1$cluster <- b
-tab.1$cell <- row.names(tab.1)
+tab.1$cell <- rep(row.names(tab.1)[1:3], length(unique(tab.1$cluster)))
 # Resort factor analysis 
 tab.1$cluster <- factor(tab.1$cluster, levels = c("MF0", "MF1", "MF2", "MF3", "MF4"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
 # 
-p<- ggplot(tab.1, aes(x=cluster, y=Estimate, fill=cell)) + 
+p <- ggplot(tab.1, aes(x=cluster, y=Estimate, fill=cell)) + 
     geom_bar(position=position_dodge(), stat="identity") +
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.9)) + 
     theme(legend.position="bottom")
@@ -221,6 +221,7 @@ tab.1 <- table(mf.cell.tiss@meta.data$analysis, as.character(mf.cell.tiss@meta.d
 balloonplot(tab.1, main ="Patient ID vs MF-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
+
 Fraction of PD
 ```{r}
 tab.1 <- prop.table(table(mf.cell.tiss@meta.data$res.0.3, mf.cell.tiss@meta.data$analysis), margin = 1)
