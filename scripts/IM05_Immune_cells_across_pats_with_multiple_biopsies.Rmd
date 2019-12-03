@@ -138,7 +138,7 @@ metadata <- tiss_immune@meta.data
 # Keep only cells from tissues that are not brain or pleura 
 metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
 #Keep only TH226
-metadata_TH226 <- filter(metadata, patient_id == "TH226")
+metadata_TH226 <- metadata[which(metadata$patient_id == "TH226"),]
 #add back rownames
 rownames(metadata_TH226) <- metadata_TH226$cell_id
 # Convert to factor with logical order 
