@@ -18,10 +18,11 @@ test1 <- read.csv("~/Desktop/PC9_qpcr_190918_1.csv")
 ```
 
 ```{r}
+# Set group variables as in input table
 group_var <- c("d02", "d07", "d19", "d70","d02", "d07", "d19", "d70","d02", "d07", "d19", "d70")
 ```
 
-Subset to GOIs
+Subset to genes of interest
 ```{r}
 genes <- c("SFTPD", "NKX2.1", "BMP4", "CYP4B1", "QPRT", "PLAU", "GJB4", "KRT6A")
 test1.2 <- test1[ ,genes]
@@ -30,21 +31,23 @@ test1.4 <- test1[,c(genes, "GUSB")]
 
 one step calculation and ggplot
 ```{r}
+#with delta_ct method
 test1.3 <- pcr_analyze(df = test1.2, group_var = group_var,  reference_group = 'd02', method = "delta_ct")
-test1.5 <- pcr_analyze(df = test1.4, group_var = group_var,  reference_gene = 'GUSB', reference_group = 'd02', method = "delta_delta_ct")
+
+# with delta_delta_ct method
+# test1.5 <- pcr_analyze(df = test1.4, group_var = group_var,  reference_gene = 'GUSB', reference_group = 'd02', method = "delta_delta_ct")
+
 # test1.3$log_fc <- log(test1.3$fold_change)
 # test1.3 <- filter(test1.3, group != "d02")
 
+# plot rough draft
+# ggplot(test1.3, aes(x = factor(gene, level = c("AGER", "SFTPD", "NKX2.1", "BMP4", "NAPSA", "DLC1", "CYP4B1", "PDE4C", "ABCA1", "QPRT", "PLAU", "SERPINE1", "GJB4", "KRT6A")), y = fold_change, group = factor(group, level = c("d07", "d19", "d70")))) + geom_bar(position = "dodge", stat = "summary") + xlab ("Gene") + ylab("Log Fold Change") + scale_fill_discrete(name = "Timepoint", labels = c("d7 (PER)", "d19 (PER)", "AR (PD)"), aesthetics = "fill") + theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1)) + geom_errorbar(aes(ymin=lower, ymax=upper), width=.2, position=position_dodge(.9))
 
-ggplot(test1.3, aes(x = factor(gene, level = c("AGER", "SFTPD", "NKX2.1", "BMP4", "NAPSA", "DLC1", "CYP4B1", "PDE4C", "ABCA1", "QPRT", "PLAU", "SERPINE1", "GJB4", "KRT6A")), y = fold_change, group = factor(group, level = c("d07", "d19", "d70")))) + geom_bar(position = "dodge", stat = "summary") + xlab ("Gene") + ylab("Log Fold Change") + scale_fill_discrete(name = "Timepoint", labels = c("d7 (PER)", "d19 (PER)", "AR (PD)"), aesthetics = "fill") + theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1)) + geom_errorbar(aes(ymin=lower, ymax=upper), width=.2, position=position_dodge(.9))
-
+# set error
 test1.3$fold.plus.error <-  test1.3$fold_change+test1.3$error
 test1.3$fold.minus.error <-  test1.3$fold_change-test1.3$error
 
-test1.3.m <- test1.3[-which(test1.3$gene == "NKX2.1"),]
-
 gp1 <- ggplot(test1.3, aes(x = factor(gene, level = c("SFTPD", "NKX2.1", "BMP4", "CYP4B1", "QPRT", "PLAU", "GJB4", "KRT6A")), y = fold_change, group = factor(group, level = c("d02","d07", "d19", "d70")), fill = group)) + geom_bar(position = "dodge", stat = "summary") + xlab ("Gene") + ylab("Fold Change") + scale_fill_discrete(name = "Timepoint", labels = c("d2 (Baseline)", "d7 (PER)", "d19 (PER)", "AR (PD)"), aesthetics = "fill") + theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1)) + geom_errorbar(aes(ymin=fold.minus.error, ymax=fold.plus.error), width=.2, position=position_dodge(.9)) + facet_wrap(.~ factor(gene, level = c("SFTPD", "NKX2.1", "BMP4", "CYP4B1", "QPRT", "PLAU", "GJB4", "KRT6A")), scales = "free", nrow=1) + theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
-
 
 gp2 <- ggplot(test1.3, aes(x = factor(gene, level = c("NKX2.1","QPRT")), y = fold_change, group = factor(group, level = c("d02","d07", "d19", "d70")), fill = group)) + geom_bar(position = "dodge", stat = "summary") + xlab ("Gene") + ylab("Fold Change") + scale_fill_discrete(name = "Timepoint", labels = c("d2 (Baseline)", "d7 (PER)", "d19 (PER)", "AR (PD)"), aesthetics = "fill") + theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1)) + geom_errorbar(aes(ymin=fold.minus.error, ymax=fold.plus.error), width=.2, position=position_dodge(.9)) + facet_wrap(.~ factor(gene, level = c("NKX2.1","QPRT")), scales = "free", nrow=1) + theme(axis.title.x=element_blank(),axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
@@ -54,7 +57,7 @@ ggsave(gp2, filename = "~/Google Drive/SC_LungTumor/Data_share/Manuscript/Tables
 ```
 
 ```{r}
-# check code above manually
+# calculate pvalues for changes from baseline to each timepoint (day2 vs days 7, 19 and 70)
 genes <- c("SFTPD", "NKX2.1", "BMP4", "CYP4B1", "QPRT", "PLAU", "GJB4", "KRT6A")
 test10 <- test1[ ,c(genes, "X")]
 day2 <- filter(test10, X == "d02")
@@ -63,7 +66,7 @@ day19 <- filter(test10, X == "d19")
 day70 <- filter(test10, X == "d70")
 
 t.test(x = day2$NKX2.1, y = day7$NKX2.1) #p-value = 0.3489
-t.test(x = day2$NKX2.1, y = day19$NKX2.1) #p-value = 0.0002145
+t.test(x = day2$NKX2.1, y = day19$NKX2.1) #p-value = 0.0002145 ***
 t.test(x = day2$NKX2.1, y = day70$NKX2.1) #p-value = 0.4801
 
 t.test(x = day2$SFTPD, y = day7$SFTPD) #p-value = 0.1647
@@ -72,7 +75,7 @@ t.test(x = day2$SFTPD, y = day70$SFTPD) #p-value = 0.2777
 
 t.test(x = day2$QPRT, y = day7$QPRT) # p-value =  0.8671
 t.test(x = day2$QPRT, y = day19$QPRT) # p-value = 0.4407
-t.test(x = day2$QPRT, y = day70$QPRT) # p-value = 0.032399
+t.test(x = day2$QPRT, y = day70$QPRT) # p-value = 0.032399 *
 
 t.test(x = day2$PLAU, y = day7$PLAU) #p-value = 0.5815
 t.test(x = day2$PLAU, y = day19$PLAU) #p-value = 0.4349
