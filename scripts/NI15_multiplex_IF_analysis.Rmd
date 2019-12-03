@@ -1,0 +1,197 @@
+---
+title: "NI15_Vectra_Analysis"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+# install.packages('ggsignif')
+library(ggsignif)
+library(ggplot2)
+install.packages('REdaS')
+library(REdaS)
+```
+
+Load RData object 
+```{r}
+rm(list=ls())
+# panel_83 <- read.csv("~/Downloads/train_panel83.csv")
+panel_83 <- read.csv("~/Downloads/panel83b_AZ.csv", row.names = 1)
+head(panel_83)
+table(panel_83$Image, panel_83$Slide)
+panel_83$Slide <- paste(panel_83$Subject.ID, panel_83$Encounter, panel_83$Block, sep = "_")
+table(panel_83$Slide, panel_83$Phenotype)
+```
+
+```{r}
+slides <- unique(panel_83$Slide)
+# panel_83 <- panel_83
+list_temp <- list()
+for(i in 1:length(slides)){
+ 
+   panel_temp <- panel_83[which(panel_83$Slide==slides[i]),]
+  
+  macrophage_percent <- length(which(panel_temp$Phenotype == "Macrophage"))/(length(which(panel_temp$Phenotype == "Macrophage")) + length(which(panel_temp$Phenotype == "T cell")))
+  
+  tcell_percent <- length(which(panel_temp$Phenotype == "T cell"))/(length(which(panel_temp$Phenotype == "Macrophage")) + length(which(panel_temp$Phenotype == "T cell")))
+  
+  macrophage_percent_all <- length(which(panel_temp$Phenotype == "Macrophage"))/(length(rownames(panel_temp)))
+ 
+  tcell_percent_all <- length(which(panel_temp$Phenotype == "T cell"))/(length(rownames(panel_temp)))
+
+ list_temp[[i]] <- as.data.frame(cbind(unique(as.character(panel_temp$Slide)), macrophage_percent, tcell_percent, macrophage_percent_all, tcell_percent_all))
+
+}
+
+panel_all <- do.call(rbind, list_temp)
+colnames(panel_all) <- c("Slide", "macrophage_percent", "tcell_percent", "macrophage_percent_all", "tcell_percent_all")
+```
+
+```{r}
+# add annoations
+anno <- as.data.frame(unique(panel_83$Slide))
+colnames(anno) <- "Slide"
+anno$group <- c("PER", "PER", "PER", "PER", "PER", "TN", "TN", "TN")
+anno$tissue <- c("lung", "lung", "lung", "lung","lung", "lung","lung", "lung")
+anno$patient_id <- c("AZ010", "AZ009", "AZ008", "AZ005", "AZ003", "AZ009","AZ005","AZ003")
+panel_all <- left_join(panel_all, anno, by = "Slide")
+```
+
+
+```{r}
+# pdf("~/Downloads/ggplots/190919_pop_changes.pdf")
+ggplot(panel_all, aes(x = factor(group, level = c("TN", "PER", "PD")), y = as.numeric(as.character(macrophage_percent)))) + geom_point() + ggtitle("% Macrophages/Immune Cells") + geom_signif(comparisons = list(c("PD", "PER")), map_signif_level=TRUE, y_position = 1.10) + geom_signif(comparisons = list(c("TN", "PER")), map_signif_level=TRUE, y_position = 1) + geom_signif(comparisons = list(c("TN", "PD")), map_signif_level=TRUE, y_position = 1.25) + xlab("Group") + ylab("Percent")
+
+# ggplot(panel_all, aes(x = factor(group, level = c("TN", "PER", "PD")), y = as.numeric(as.character(macrophage_percent_all)))) + geom_point() + ggtitle("% Macrophages/All cells") + geom_signif(comparisons = list(c("PD", "PER")), map_signif_level=TRUE, y_position = 1.10) + geom_signif(comparisons = list(c("TN", "PER")), map_signif_level=TRUE) + geom_signif(comparisons = list(c("TN", "PD")), map_signif_level=TRUE, y_position = 1.25) + xlab("Group") + ylab("Percent")
+
+ggplot(panel_all, aes(x = factor(group, level = c("TN", "PER", "PD")), y = as.numeric(as.character(tcell_percent)))) + geom_point() + ggtitle("% T cells/Immune Cells") + geom_signif(comparisons = list(c("PD", "PER")), map_signif_level=TRUE, y_position = 1.10) + geom_signif(comparisons = list(c("TN", "PER")), map_signif_level=TRUE, y_position = 1) + geom_signif(comparisons = list(c("TN", "PD")), map_signif_level=TRUE, y_position = 1.25) + xlab("Group") + ylab("Percent")
+
+# ggplot(panel_all, aes(x = factor(group, level = c("TN", "PER", "PD")), y = as.numeric(as.character(tcell_percent_all)))) + geom_point() + ggtitle("% T cells/All Cells") + geom_signif(comparisons = list(c("PD", "PER")), map_signif_level=TRUE, y_position = 1.10) + geom_signif(comparisons = list(c("TN", "PER")), map_signif_level=TRUE) + geom_signif(comparisons = list(c("TN", "PD")), map_signif_level=TRUE, y_position = 1.25) + xlab("Group") + ylab("Percent")
+# dev.off()
+```
+
+
+```{r}
+AZ003 <- filter(panel_all, patient_id == "AZ003")
+table(AZ003$Slide)
+
+AZ005 <- filter(panel_all, patient_id == "AZ005")
+table(AZ005$Slide)
+
+AZ009 <- filter(panel_all, patient_id == "AZ009")
+table(AZ009$Slide)
+
+AZ003_mac_bar <- ggplot(AZ003, aes(x = factor(group, level = c("TN", "PER")), y = as.numeric(as.character(macrophage_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("macrophage percent") + xlab("group")
+
+AZ003_tcell_bar <- ggplot(AZ003, aes(x = factor(group, level = c("TN", "PER")), y = as.numeric(as.character(tcell_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("tcell percent") + xlab("group")
+
+AZ005_mac_bar <- ggplot(AZ005, aes(x = factor(group, level = c("TN", "PER")), y = as.numeric(as.character(macrophage_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("macrophage percent") + xlab("group")
+
+AZ005_tcell_bar <- ggplot(AZ005, aes(x = factor(group, level = c("TN", "PER")), y = as.numeric(as.character(tcell_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("tcell percent") + xlab("group")
+
+AZ009_mac_bar <- ggplot(AZ009, aes(x = factor(group, level = c("TN", "PER")), y = as.numeric(as.character(macrophage_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("macrophage percent") + xlab("group")
+
+AZ009_tcell_bar <- ggplot(AZ009, aes(x = factor(group, level = c("TN", "PER")), y = as.numeric(as.character(tcell_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("tcell percent") + xlab("group")
+
+# ggsave(TH281_mac_bar, filename = "~/Google Drive/SC_LungTumor/Data_share/Manuscript/Tables and Figures/Figures_illustrator/Figure_5_Sup/TH281_mac_bar.pdf", width = 5, height = 5)
+
+# ggsave(TH281_tcell_bar, filename = "~/Google Drive/SC_LungTumor/Data_share/Manuscript/Tables and Figures/Figures_illustrator/Figure_5_Sup/TH281_tcell_bar.pdf", width = 5, height = 5)
+```
+
+```{r}
+AZ_panel_paired <- rbind(AZ003, AZ005)
+AZ_panel_paired1 <- rbind(AZ_panel_paired, AZ009)
+
+ggplot(AZ_panel_paired1, aes(x = factor(group, level = c("TN", "PER", "PD")), y = as.numeric(as.character(macrophage_percent)), fill = patient_id)) + geom_bar(position = "dodge",stat = "identity") + ylab("macrophage percent") + xlab("group") + facet_grid(.~patient_id)
+
+ggplot(AZ_panel_paired1, aes(x = factor(group, level = c("TN", "PER","PD")), y = as.numeric(as.character(tcell_percent)), fill = patient_id)) + geom_bar(position = "dodge",stat = "identity") + ylab("tcell percent") + xlab("group") + facet_grid(.~patient_id)
+```
+
+```{r}
+# panel_83_lung <- read.csv("~/Downloads/train_panel83.csv")
+panel_83_lung <- read.csv("~/Downloads/panel83b_lung.csv", row.names = 1)
+head(panel_83_lung)
+table(panel_83_lung$Image, panel_83_lung$Slide)
+panel_83_lung$Slide <- paste(panel_83_lung$Subject.ID, panel_83_lung$Encounter, panel_83_lung$Block, sep = "_")
+table(panel_83_lung$Slide, panel_83_lung$Phenotype)
+```
+
+```{r}
+slides <- unique(panel_83_lung$Slide)
+# panel_83_lung <- panel_83_lung
+list_temp <- list()
+for(i in 1:length(slides)){
+ 
+   panel_temp <- panel_83_lung[which(panel_83_lung$Slide==slides[i]),]
+  
+  macrophage_percent <- length(which(panel_temp$Phenotype == "Macrophage"))/(length(which(panel_temp$Phenotype == "Macrophage")) + length(which(panel_temp$Phenotype == "T cell")))
+  
+  tcell_percent <- length(which(panel_temp$Phenotype == "T cell"))/(length(which(panel_temp$Phenotype == "Macrophage")) + length(which(panel_temp$Phenotype == "T cell")))
+  
+  macrophage_percent_all <- length(which(panel_temp$Phenotype == "Macrophage"))/(length(rownames(panel_temp)))
+ 
+  tcell_percent_all <- length(which(panel_temp$Phenotype == "T cell"))/(length(rownames(panel_temp)))
+
+ list_temp[[i]] <- as.data.frame(cbind(unique(as.character(panel_temp$Slide)), macrophage_percent, tcell_percent, macrophage_percent_all, tcell_percent_all))
+
+}
+
+panel_all1 <- do.call(rbind, list_temp)
+colnames(panel_all1) <- c("Slide", "macrophage_percent", "tcell_percent", "macrophage_percent_all", "tcell_percent_all")
+```
+
+```{r}
+# add annoations
+anno <- as.data.frame(unique(panel_83_lung$Slide))
+colnames(anno) <- "Slide"
+anno$group <- c("PD", "TN", "TN", "PER", "TN", "PER")
+anno$tissue <- c("lung", "lung", "lung", "lung","lung", "lung")
+panel_all1 <- left_join(panel_all1, anno, by = "Slide")
+```
+
+```{r}
+panel_281 <- filter(panel_all1, Slide == "TH-281_E2_B1" | Slide == "TH-281_E3_B1")
+panel_281$patient_id <- "TH281"
+table(panel_281$Slide)
+
+# pdf("~/Downloads/ggplots/TH281_TN_to_PD.pdf")
+ggplot(panel_281, aes(x = factor(group, level = c("TN", "PD")), y = as.numeric(as.character(macrophage_percent)), group = 1)) + geom_point() + ggtitle("% Macrophages/Immune Cells") + geom_line()
+
+ggplot(panel_281, aes(x = factor(group, level = c("TN", "PD")), y = as.numeric(as.character(tcell_percent)), group = 1)) + geom_point() + ggtitle("% T cells/Immune Cells") + geom_line()
+# dev.off()
+
+TH281_mac_bar <- ggplot(panel_281, aes(x = factor(group, level = c("TN", "PD")), y = as.numeric(as.character(macrophage_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("macrophage percent") + xlab("group")
+
+TH281_tcell_bar <- ggplot(panel_281, aes(x = factor(group, level = c("TN", "PD")), y = as.numeric(as.character(tcell_percent)), group = 1)) + geom_bar(position = "dodge",stat = "identity") + ylab("tcell percent") + xlab("group")
+
+# ggsave(TH281_mac_bar, filename = "~/Google Drive/SC_LungTumor/Data_share/Manuscript/Tables and Figures/Figures_illustrator/Figure_5_Sup/TH281_mac_bar.pdf", width = 5, height = 5)
+
+# ggsave(TH281_tcell_bar, filename = "~/Google Drive/SC_LungTumor/Data_share/Manuscript/Tables and Figures/Figures_illustrator/Figure_5_Sup/TH281_tcell_bar.pdf", width = 5, height = 5)
+```
+
+```{r}
+all <- rbind(AZ_panel_paired1, panel_281)
+
+# pdf("~/Google Drive/SC_LungTumor/Data_share/Manuscript/Tables and Figures/Figures_illustrator/Figure_5_Sup/Vectradata_20092019.pdf")
+ggplot(all, aes(x = factor(group, level = c("TN", "PER", "PD")), y = as.numeric(as.character(macrophage_percent)), fill = patient_id)) + geom_bar(position = "dodge",stat = "identity") + ylab("macrophage percent") + xlab("group") + facet_grid(.~patient_id)
+
+ggplot(all, aes(x = factor(group, level = c("TN", "PER","PD")), y = as.numeric(as.character(tcell_percent)), fill = patient_id)) + geom_bar(position = "dodge",stat = "identity") + ylab("tcell percent") + xlab("group") + facet_grid(.~patient_id)
+# dev.off()
+```
+
+
+```{r}
+macrophages_all <- all[,c(1:2,6:8)]
+CI_mac <- ?freqCI(macrophages_all$macrophage_percent, level = 0.95)
+```
+
+```{r}
+tcell_all <- all[,c(1,3,6:8)]
+tcell_all$tcell_percent <- as.numeric(as.character(tcell_all$tcell_percent))*100
+CI_tcell <- freqCI(tcell_all$tcell_percent, level = 0.95)
+
+as.vector(tcell_all$tcell_percent)
+
+```
+
