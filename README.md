@@ -20,6 +20,9 @@ https://drive.google.com/drive/folders/1nONsp9VuhmPzuDvMet0i8x26eV9r5lkT?usp=sha
 
 **_IM01_Subset_cluster_annotate_immune_cells.Rmd_**: Imports .RData object from script 03 above that includes only immune cells. In the script cells are clustered and annotated. Object that is produced and saved at the end of the script is called _"IM01_Immune_Seurat_object.RData"_.
 
+![Image of Immune cell tSNE with marker gene colors](https://github.com/czbiohub/scell_lung_adenocarcinoma/blob/master/plot_out/IM01/Immune_cells_TSNE_with_average_expression_of_cell_markers.pdf)
+
+
 **_IM02_immune_cell_changes_with_response_to_treatment.Rmd_**: Imports .RData object from script IM01. Within the  script we investigate changes in the fraction of immune populations in regard to treatment status across all patients.
 
 **_IM03_Subset_cluster_annotate_MFs-monocytes_LUNG.Rmd_**: Subsetting and clustering of all macrophages/monocytes from Lung biopsies followed by treatment stage specific analysis of resulting populations. Output object is called _IM03_MFs_Seurat_object.RData_.
