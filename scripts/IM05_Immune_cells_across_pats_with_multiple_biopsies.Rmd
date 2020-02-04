@@ -44,6 +44,7 @@ since it only has <10 cells.
 
 Count the fraction of Immune cells across patients with multiple biopsies 
 ```{r}
+install.packages("rcompanion")
 # Create list to save Myeloid and T-cell counts for every patient with multiple biopsies 
 list.sum <- list()
 # Subset metadata 
@@ -85,7 +86,7 @@ print(dim(metadata2))
 meta.temp <- metadata2[,c("immune_subtype_annotation", "biopsy_date", "biopsy_site", "analysis")]
 meta.temp$biopsy_date <- as.factor(paste(meta.temp$biopsy_date, meta.temp$analysis))
 # Color function
-pal <- tableau_color_pal("Tableau 20")
+pal <- tableau_color_pal("tableau20")
 # Imune cells per category
 p <- ggplot(meta.temp) + geom_bar(aes(x = biopsy_date,fill = immune_subtype_annotation), position = "fill") + 
   scale_fill_manual(values = pal(20)) + ggtitle(patients[i])
@@ -188,9 +189,26 @@ ggsave(plot = p1, filename = paste(dir,"plot_out/IM02/All_immune_populations_acr
 p1
 ```
 
+Significance between fractions 
+Chi-square Test of Independence  
+```{r}
+count.mat <- as.matrix(table(metadata_TH226$analysis,metadata_TH226$immune_subtype_annotation))
+p.mat <- matrix(nrow = ncol(count.mat), ncol=1)
+row.names(p.mat) <- colnames(count.mat)
+for(i in 1:ncol(count.mat)){
+  test <- chisq.test(count.mat[,i])
+  p.mat[i,1] <- test$p.value*ncol(count.mat)
+}
+0.01-p.mat[,1]
+```
+
 Plot fractional changes of selected cell populations across treatment (Patient TH226)
 ```{r}
-metadata_TH266 <- filter(metadata, patient_id == "TH266")
+metadata <- tiss_immune@meta.data
+# Keep only cells from tissues that are not brain or pleura 
+metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
+# 
+metadata_TH266 <- metadata[which(metadata$patient_id == "TH266"),]
 #add back rownames
 rownames(metadata_TH266) <- metadata_TH266$cell_id
 # Convert to factor with logical order 
@@ -238,4 +256,17 @@ p2 <- ggplot(tab.1, aes(x=analysis, y=Estimate, group=cell)) +
 # Save plot 
 ggsave(plot = p2, filename = paste(dir,"plot_out/IM02/All_immune_populations_across_treatment_TH266.pdf", sep=""),width = 11, height = 8)
 p2
+```
+
+Significance between fractions 
+Chi-square Test of Independence  
+```{r}
+count.mat <- as.matrix(table(metadata_TH266$analysis,metadata_TH266$immune_subtype_annotation))
+p.mat <- matrix(nrow = ncol(count.mat), ncol=1)
+row.names(p.mat) <- colnames(count.mat)
+for(i in 1:ncol(count.mat)){
+  test <- chisq.test(count.mat[,i])
+  p.mat[i,1] <- test$p.value*ncol(count.mat)
+}
+0.01-p.mat[,1]
 ```

@@ -92,6 +92,18 @@ p1
 ```
 
 
+Significance between fractions 
+Chi-square Test of Independence  
+```{r}
+count.mat <- as.matrix(table(meta.temp$analysis,meta.temp$immune_subtype_annotation))
+p.mat <- matrix(nrow = ncol(count.mat), ncol=1)
+row.names(p.mat) <- colnames(count.mat)
+for(i in 1:ncol(count.mat)){
+  test <- chisq.test(count.mat[,i])
+  p.mat[i,1] <- test$p.value*ncol(count.mat)
+}
+```
+
 Changes of specific cell populations across clinical fields 
 All vs All correlation plots 
 ```{r}

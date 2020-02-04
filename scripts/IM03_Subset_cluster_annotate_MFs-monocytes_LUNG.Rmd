@@ -11,6 +11,7 @@ Load immune workspace
 rm(list=ls())
 dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
+load(file="~/Downloads/scell_lung_adenocarcinoma/Data_input/objects/IM01_Immune_Seurat_object.RData")
 ```
 
 Biopsy site vs analysis all cell types 
@@ -206,6 +207,19 @@ p <- ggplot(tab.1, aes(x=cluster, y=Estimate, fill=cell)) +
 # Save plot 
 ggsave(filename = paste(dir, "plot_out/IM03/MF_TSNE_clusters_by_treatment_with_error_bars_manuscript.pdf",sep=""), plot = p, width = 7,height = 5)
 p
+```
+
+Significance between fractions 
+Chi-square Test of Independence  
+```{r}
+count.mat <- as.matrix(table(meta.temp$analysis, meta.temp$cluster))
+p.mat <- matrix(nrow = ncol(count.mat), ncol=1)
+row.names(p.mat) <- colnames(count.mat)
+for(i in 1:ncol(count.mat)){
+  test <- chisq.test(count.mat[,i])
+  p.mat[i,1] <- test$p.value*ncol(count.mat)
+}
+
 ```
 
 

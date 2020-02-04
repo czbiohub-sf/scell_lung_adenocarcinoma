@@ -23,7 +23,7 @@ t.cell.tiss <- SubsetData(object = tiss_immune, cells.use = t.cells)
 Biopsy site vs analysis 
 ```{r}
 require(gplots)
-pdf(paste(dir, "plot_out/IM04/TCell_counts_across_biopsy_site.pdf",sep=""), 5,5)
+# pdf(paste(dir, "plot_out/IM04/TCell_counts_across_biopsy_site.pdf",sep=""), 5,5)
 tab.1 <- table(t.cell.tiss@meta.data$biopsy_site, t.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
             label = T, show.margins = F)
@@ -186,6 +186,20 @@ p<- ggplot(tab.1, aes(x=cluster, y=Estimate, fill=cell)) +
 ggsave(filename = paste(dir, "plot_out/IM04/Tcell_TSNE_clusters_by_treatment_with_error_bars_manuscript.pdf",sep=""), plot = p, width = 7,height = 5)
 p
 ```
+
+Significance between fractions 
+Chi-square Test of Independence  
+```{r}
+count.mat <- as.matrix(table(meta.temp$analysis, meta.temp$cluster))
+p.mat <- matrix(nrow = ncol(count.mat), ncol=1)
+row.names(p.mat) <- colnames(count.mat)
+for(i in 1:ncol(count.mat)){
+  test <- chisq.test(count.mat[,i])
+  p.mat[i,1] <- test$p.value*ncol(count.mat)
+}
+```
+
+
 
 ```{r}
 tab.1 <- table(t.cell.tiss@meta.data$res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
