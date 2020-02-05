@@ -14,7 +14,8 @@ library(Matrix)
 Set the full path to the github directory 
 ```{r set wd path}
 rm(list=ls())
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 # dir <- "~/Downloads/scell_lung_adenocarcinoma/"
 ```
 
