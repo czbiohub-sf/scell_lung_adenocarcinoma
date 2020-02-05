@@ -7,7 +7,8 @@ output: html_document
 Load RData object 
 ```{r}
 rm(list=ls())
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file = paste(dir,"Data_input/objects/S01_Data_and_metadata.RData", sep=""))
 ```
 
@@ -22,14 +23,14 @@ dim(raw.data)
 
 Create the Seurat object with all the data (unfiltered)
 ```{r}
-main_tiss <- CreateSeuratObject(raw.data = raw.data)
+require(Seurat)
+main_tiss <- CreateSeuratObject(counts = raw.data, assay = "SmartSeq2")
 # add rownames to metadta 
 row.names(metadata) <- metadata$cell_id
 # add metadata to Seurat object 
 main_tiss <- AddMetaData(object = main_tiss, metadata = metadata)
 main_tiss <- AddMetaData(object = main_tiss, percent.ercc, col.name = "percent.ercc")
-# Changing nUMI column name to nReads
-colnames(main_tiss@meta.data)[colnames(main_tiss@meta.data) == 'nUMI'] <- 'nReads'
+# Head to check
 head(main_tiss@meta.data)
 ```
 
@@ -41,15 +42,15 @@ save(main_tiss, file=paste(dir,"Data_input/objects/S02_Main_Seurat_object_prefil
 
 Calculate percent ribosomal genes and add to metadata
 ```{r}
-ribo.genes <- grep(pattern = "^RP[SL][[:digit:]]", x = rownames(x = main_tiss@data), value = TRUE)
-percent.ribo <- Matrix::colSums(main_tiss@raw.data[ribo.genes, ])/Matrix::colSums(main_tiss@raw.data)
+ribo.genes <- grep(pattern = "^RP[SL][[:digit:]]", x = rownames(x = main_tiss@assays$SmartSeq2@data), value = TRUE)
+percent.ribo <- Matrix::colSums(main_tiss@assays$SmartSeq2@counts[ribo.genes, ])/Matrix::colSums(main_tiss@assays$SmartSeq2@data)
 main_tiss <- AddMetaData(object = main_tiss, metadata = percent.ribo, col.name = "percent.ribo")
 main_tiss
 ```
 
 Filter cells so that remaining cells have nGenes >= 500 and nReads >= 50000
 ```{r}
-main_tiss_filtered <- FilterCells(object = main_tiss, subset.names = c("nGene", "nReads"), low.thresholds = c(500, 50000))
+main_tiss_filtered <- subset(x=main_tiss, subset = nCount_SmartSeq2 > 50000 & nFeature_SmartSeq2 > 500)
 main_tiss_filtered
 ```
 
