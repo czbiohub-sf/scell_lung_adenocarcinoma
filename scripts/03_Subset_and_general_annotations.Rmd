@@ -127,7 +127,7 @@ dev.off()
 Plot genes of interest and save 
 ```{r}
 # Specify genes  
-genes_to_check = c("PTPRC","CD3G","CD3E", "CD79A", "BLNK", "CD68", "CSF1R", "MARCO", "CD207", "EPCAM")
+genes_to_check = c("PTPRC","CD3G","CD3E", "CD79A", "BLNK", "CD68", "CSF1R", "MARCO", "CD207", "EPCAM", "PMEL")
 # All on Dotplot 
 p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
 ggsave(paste(dir,"plot_out/S03/dotplot_of_gene_markers.pdf", sep=""), p, width = 10, height = 10)
@@ -151,7 +151,7 @@ tiss_subset@meta.data$main_seurat_cluster <- tiss_subset@meta.data$SmartSeq2_snn
 cluster.ids <- sort(as.numeric(unique(as.character(tiss_subset@meta.data$SmartSeq2_snn_res.0.5))))
 # Manually check and ananotate each cluster to immmune and non-immune   
 immune_annotation <- c("immune","immune","immune","immune","immune",
-                       "non-immune","immune","non-immune","non-immune","immune",
+                       "non-immune","immune","non-immune","non-immune","non-immune",
                        "non-immune","immune","non-immune","immune","non-immune",
                        "non-immune","non-immune","immune","immune","non-immune",
                        "immune")
