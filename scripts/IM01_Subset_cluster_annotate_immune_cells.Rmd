@@ -75,12 +75,11 @@ TSNEPlot(object = tiss_immune, do.label = F, group.by = "patient_id")
 ```
 
 
-HERE ! 
-
-Find markers for each cluster
+Find markers for each cluster using MAST 
 ```{r}
 tiss.markers.immune <- FindAllMarkers(object = tiss_immune, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25, 
-                                      do.print=T)
+                                      do.print=T, max.cells.per.ident = 500)
+
 ```
 
 Write differential gene table
