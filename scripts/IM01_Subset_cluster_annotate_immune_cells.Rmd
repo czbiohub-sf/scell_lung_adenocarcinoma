@@ -9,8 +9,9 @@ Clear environment (optional) and load Seurat object containing Immune cells (fro
 variable "dir" should be changed to point to the location of the cloned github repo locally
 ```{r}
 # rm(list=ls())
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/S03_Immune_Seurat_object.RData", sep=""))
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
 tiss_immune
 ```
 
@@ -22,78 +23,65 @@ table(tiss_immune@meta.data$immune_annotation)
 Find variable genes
 ```{r}
 require(Seurat)
-tiss_immune <- FindVariableGenes(object = tiss_immune, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 1, num.bin = 20, binning.method = "equal_width", do.recalc = T, x.low.cutoff=1)
-length(tiss_immune@var.genes)
+tiss_immune <- FindVariableFeatures(object = tiss_immune)
 ```
 
 Perform PCA
 ```{r}
 tiss_immune <- RunPCA(object = tiss_immune, do.print = FALSE)
-tiss_immune <- ProjectPCA(object = tiss_immune, do.print = FALSE)
 ```
-
-Visualize top genes across principal components
+Visualize variance along each component
 ```{r}
-PCHeatmap(object = tiss_immune, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+ElbowPlot(tiss_immune)
 ```
 
-Perform correlation of PCs and metadata fields
+Visualize first two PCs
 ```{r}
-require(corrplot)
-pca.obj <- tiss_immune@dr$pca
-pc.coords <- pca.obj@cell.embeddings
-df1 <- tiss_immune@meta.data[,c("nGene","nReads","percent.ribo")]
-df2 <- pc.coords[,c(1:10)]
-cordf12 <- cor(df1,df2)
-# Make a correlation plot
-corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
+PCAPlot(object = tiss_immune)
 ```
 
-Also visaulize PC variance
+Visualize top genes and their loadings 
 ```{r}
-#comp.dev <-pca.obj@sdev
-PCElbowPlot(object = tiss_immune)
+VizDimLoadings(tiss_immune, dims = 1:5, reduction = "pca", nfeatures = 10)
 ```
 
-Choose the number of principal components to use.
+Visualize top genes in principal components
 ```{r}
-n.pcs = 20
+DimHeatmap(tiss_immune, dims = 1:10, cells = 100, balanced = TRUE)
 ```
-
-Set resolution and perform clustering
+Construct Neighbor graph 
 ```{r}
-res.used <- 0.3
-tiss_immune <- FindClusters(object = tiss_immune, reduction.type = "pca", dims.use = 1:n.pcs, 
-    resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10)
+tiss_immune <- FindNeighbors(object = tiss_immune, verbose = T)
 ```
 
-Perform  tSNE
+Find Clusters 
 ```{r}
-tiss_immune <- RunTSNE(object = tiss_immune, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+tiss_immune <- FindClusters(object = tiss_immune, verbose = T, resolution = 0.3)
 ```
-
-Visualize TSNE colored by cluster
+Run and project TSNEs
 ```{r}
-TSNEPlot(object = tiss_immune, do.label = T)
+tiss_immune <- RunTSNE(tiss_immune, dims = 1:20)
+DimPlot(tiss_immune, reduction = "tsne")
 ```
 
-Visualize TSNE metadata field
+Visualize metadata fields on TSNE 
 ```{r}
 TSNEPlot(object = tiss_immune, do.label = F, group.by = "driver_gene")
 ```
 
-Visualize TSNE metadata field
+Visualize metadata fields on TSNE 
 ```{r}
 TSNEPlot(object = tiss_immune, do.label = F, group.by = "patient_id")
 ```
 
+
+HERE ! 
 
 Find markers for each cluster
 ```{r}
 tiss.markers.immune <- FindAllMarkers(object = tiss_immune, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25, 
                                       do.print=T)
 ```
-
 
 Write differential gene table
 ```{r}
