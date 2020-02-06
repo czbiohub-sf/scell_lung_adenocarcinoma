@@ -89,7 +89,7 @@ tiss_subset <- FindClusters(object = tiss_subset, verbose = T, resolution = 0.5)
 Run and project TSNEs
 ```{r}
 tiss_subset <- RunTSNE(tiss_subset, dims = 1:20)
-DimPlot(tiss_subset, reduction = "tsne")
+DimPlot(tiss_subset, reduction = "tsne", label = T)
 ```
 
 
@@ -147,21 +147,13 @@ tiss.markers %>% group_by(cluster) %>% top_n(10, avg_logFC)
 Plot genes of interest and save 
 ```{r}
 # Specify genes  
-genes_to_check = c("PTPRC","EPCAM","CD3G","CD3E", "CD79A", "BLNK","MS4A1", "CD68", "CSF1R", "MARCO", "CD207", "PMEL", "ALB", "C1QB", "CLDN5")
+genes_to_check = c("PTPRC","EPCAM","CD3G","CD3E", "CD79A", "BLNK","MS4A1", "CD68", "CSF1R", "MARCO", "CD207", "PMEL", "ALB", "C1QB", "CLDN5", "FCGR3B", "COL1A1")
 # All on Dotplot 
 p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
 ggsave(paste(dir,"plot_out/S03/dotplot_of_gene_markers.pdf", sep=""), p, width = 10, height = 10)
 p
 ```
-Plot genes of interest on dotplot  
-```{r}
-# Specify genes  
-genes_to_check = c("PTPRC","EPCAM", "MLANA", "PMEL")
-# All on Dotplot 
-p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
-ggsave(paste(dir,"plot_out/S03/dotplot_of_PTPRC_EPCAM.pdf", sep=""), p, width = 10, height = 10)
-p
-```
+
 Annotate Immune vs Nonimmune clusters
 At this point we dont care for a more detailed annotation as we will annotate immune and non-immune separately later
 ```{r}

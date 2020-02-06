@@ -8,11 +8,11 @@ output: html_document
 Clear environment (optional) and load Seurat object containing Immune cells (from script S03)
 variable "dir" should be changed to point to the location of the cloned github repo locally
 ```{r}
-# rm(list=ls())
+rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
-# dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
-# load(file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
-# tiss_immune
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
+tiss_immune
 ```
 
 Table of immune/non-immune cells (sanity check)
@@ -61,7 +61,7 @@ tiss_immune <- FindClusters(object = tiss_immune, verbose = T, resolution = 0.3)
 Run and project TSNEs
 ```{r}
 tiss_immune <- RunTSNE(tiss_immune, dims = 1:20)
-DimPlot(tiss_immune, reduction = "tsne")
+DimPlot(tiss_immune, reduction = "tsne", label = T)
 ```
 
 Visualize metadata fields on TSNE 
@@ -96,7 +96,7 @@ Display the top markers you computed above.
 ```{r}
 require(tidyverse)
 require(dplyr)
-tiss.markers.immune %>% group_by(cluster) %>% top_n(5, avg_logFC)
+tiss.markers.immune %>% group_by(cluster) %>% top_n(10, avg_logFC)
 ```
 
 Short list of genes (top5) per cluster
@@ -109,7 +109,8 @@ Create plot pdf bundle
 ```{r}
 pdf(paste(dir,"plot_out/IM01/Immune_cells_first_annotation_plots.pdf", sep=""),10,10)
 # Plot TSNEs with different annotations 
-TSNEPlot(object = tiss_immune, do.label = T)
+DimPlot(tiss_immune, reduction = "tsne", label = F)
+DimPlot(tiss_immune, reduction = "tsne", label = T)
 TSNEPlot(object = tiss_immune, do.label = F, group.by = "driver_gene")
 TSNEPlot(object = tiss_immune, do.label = F, group.by = "patient_id")
 # Create Dotplot 
@@ -209,18 +210,18 @@ tiss.markers.immune %>% group_by(cluster) %>% top_n(5, avg_logFC)
 # stash current cluster IDs
 tiss_immune <- StashIdent(object = tiss_immune, save.name = "immune.subcluster.ids")
 # enumerate current cluster IDs and the labels for them
-cluster.ids <- c(0:16)
+cluster.ids <- 0:(length(unique(tiss_immune@meta.data$immune.subcluster.ids))-1)
 # Annotate each of the clusters 
 # free_annotation <- c("0","1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18")
 # free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Neutrophils", "T-cells", "T-cells", 
 #                      "B-cells-M", "MF-Monocytes", "Dendritic", "Mast-cells", "T-cells", "pDCs", "T-cells", "Dendritic", "MF-Monocytes", "MF-Monocytes")
-free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Dendritic", "Neutrophils", "Mast-cells", "B-cells-M", "T-cells", "MF-Monocytes", "pDCs", "T-cells", "13")
+free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "MF-Monocytes", "Neutrophils", "B-cells-M", "T-cells", "Mast-cells", "MF-Monocytes", "Unknown", "T-cells", "pDCs", "T-cells", "B-cells-M", "Dendritic")
 # Map free annotation to cluster numbers and store as immune_subtype_annotation
 tiss_immune@meta.data[,'immune_subtype_annotation'] <- plyr::mapvalues(x = tiss_immune@meta.data$immune.subcluster.ids, from = cluster.ids, to = free_annotation)
 # Plot 
 pdf(paste(dir,"plot_out/IM01/Immune_cells_free_annotation_on_TSNE.pdf", sep=""),width = 10,height = 10)
-TSNEPlot(object = tiss_immune, do.label = TRUE, pt.size = 0.5, group.by='immune_subtype_annotation', label.size = 6)
-TSNEPlot(object = tiss_immune, do.label = F, pt.size = 0.5, group.by='immune_subtype_annotation')
+DimPlot(tiss_immune, reduction = "tsne", label = F, group.by = 'immune_subtype_annotation')
+DimPlot(tiss_immune, reduction = "tsne", label = T, group.by = 'immune_subtype_annotation')
 dev.off()
 ```
 # Barplot of all immune cell counts 
@@ -244,8 +245,9 @@ tab1$cell.type <- row.names(tab1)
 # 
 tab1$cell.type <- factor(tab1$cell.type,levels = as.character(table.temp$Var1[order(table.temp$Freq,decreasing=F)]))
 p <-  ggplot(data=tab1, aes(x=cell.type, y=value)) +
-      geom_bar(stat="identity") + coord_flip()
+      geom_bar(stat="identity") + coord_flip() + theme_bw()
 ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), width = 90, height = 90, units = "mm")
+p
 ```
 
 
