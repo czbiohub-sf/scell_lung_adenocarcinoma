@@ -18,7 +18,8 @@ require(GGally)
 Load immune workspace
 ```{r}
 #rm(list=ls())
-dir <- "~/Downloads/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
 ```
 
@@ -102,6 +103,7 @@ for(i in 1:ncol(count.mat)){
   test <- chisq.test(count.mat[,i])
   p.mat[i,1] <- test$p.value*ncol(count.mat)
 }
+as.data.frame(p.mat)
 ```
 
 Changes of specific cell populations across clinical fields 
@@ -182,53 +184,4 @@ Save immune cell workspace
 ```{r}
 save(tiss_immune, file=paste(dir,"Data_input/objects/IM02_Immune_Seurat_object.RData", sep=""))
 ```
-
-Calculate the fractions per patient 
-```{r}
-require(reshape2)
-require(ggpubr)
-# 
-metadata <- tiss_immune@meta.data
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
-# Create table and keep selected cell types 
-meta.temp <- metadata[,c("immune_subtype_annotation", "analysis", "sample_name")]
-# Unique samples and cell types
-samples <- unique(meta.temp$sample_name)
-cells <- unique(meta.temp$immune_subtype_annotation)
-# Make table to store fractions per patient 
-tab.pats <- as.data.frame(matrix(nrow=length(samples), ncol=length(cells)+2))
-colnames(tab.pats) <- c(cells, "group", "total_cells")
-row.names(tab.pats) <- samples
-# Calculate fractions for each sample  
-for(i in 1:length(samples)){
-  rows <- which(meta.temp$sample_name==samples[i])  
-  tab.temp <- table(meta.temp[rows,"immune_subtype_annotation"])/sum(table(meta.temp[rows,"immune_subtype_annotation"]))
-    for(j in 1:ncol(tab.pats)){
-      a <- which(names(tab.temp)==colnames(tab.pats)[j])
-      if(length(a) !=0) {tab.pats[i,j] <-  tab.temp[a]} else {tab.pats[i,j] <- 0}
-    }
-  tab.pats[i,"group"] <- as.character(unique(meta.temp$analysis[rows]))
-  tab.pats[i,"total_cells"] <- sum(table(meta.temp[rows,"immune_subtype_annotation"]))
-}
-# Consider patients with more 50 cells 
-tab.pats.filtered <- tab.pats[which(tab.pats$total_cells > 50),]
-tab.pats.filtered$sample <- row.names(tab.pats.filtered)
-tab.pats.filtered <- tab.pats.filtered[,-which(colnames(tab.pats.filtered)=="total_cells")]
-tab.pats.filtered <- melt(tab.pats.filtered)
-tab.pats.filtered$group <- factor(tab.pats.filtered$group, levels = c("naive", "grouped_pr", "grouped_pd"))
-# Make boxplots and add wilcoxon test p.values between groups
-my_comparisons <- list( c("naive", "grouped_pr"), c("grouped_pr", "grouped_pd"), c("grouped_pd", "naive") )
-bp <- ggplot(tab.pats.filtered, aes(x = group, y = value)) +
-    geom_boxplot(size = .75, aes(fill=group), outlier.colour=NA) +
-    facet_grid(. ~ variable) + 
-    theme_bw() + 
-    theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5), legend.position = "none") + 
-    geom_jitter(shape=16, position=position_jitter(0.2)) + 
-    stat_compare_means(comparisons = my_comparisons, method = "wilcox.test")
-ggsave(filename = paste(dir,"plot_out/IM02/Immune_cell_population_fractions_per_patient.pdf", sep=""), plot = bp,width = 11, height = 8)
-```
-
 
