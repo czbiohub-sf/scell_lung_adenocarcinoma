@@ -10,9 +10,9 @@ variable "dir" should be changed to point to the location of the cloned github r
 ```{r}
 # rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
-dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
-tiss_immune
+# dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+# load(file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
+# tiss_immune
 ```
 
 Table of immune/non-immune cells (sanity check)
@@ -75,7 +75,7 @@ TSNEPlot(object = tiss_immune, do.label = F, group.by = "patient_id")
 ```
 
 
-Find markers for each cluster using MAST 
+Find markers for each cluster
 ```{r}
 tiss.markers.immune <- FindAllMarkers(object = tiss_immune, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25, 
                                       do.print=T, max.cells.per.ident = 500)
@@ -214,7 +214,7 @@ cluster.ids <- c(0:16)
 # free_annotation <- c("0","1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18")
 # free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Neutrophils", "T-cells", "T-cells", 
 #                      "B-cells-M", "MF-Monocytes", "Dendritic", "Mast-cells", "T-cells", "pDCs", "T-cells", "Dendritic", "MF-Monocytes", "MF-Monocytes")
-free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Dendritic", "T-cells", "Neutrophils", "Mast-cells", "B-cells-M", "10", "T-cells", "T-cells", "pDCs", "Dendritic")
+free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Dendritic", "Neutrophils", "Mast-cells", "B-cells-M", "T-cells", "MF-Monocytes", "pDCs", "T-cells", "13")
 # Map free annotation to cluster numbers and store as immune_subtype_annotation
 tiss_immune@meta.data[,'immune_subtype_annotation'] <- plyr::mapvalues(x = tiss_immune@meta.data$immune.subcluster.ids, from = cluster.ids, to = free_annotation)
 # Plot 
