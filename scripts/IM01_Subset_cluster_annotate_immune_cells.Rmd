@@ -215,7 +215,7 @@ cluster.ids <- 0:(length(unique(tiss_immune@meta.data$immune.subcluster.ids))-1)
 # free_annotation <- c("0","1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18")
 # free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Neutrophils", "T-cells", "T-cells", 
 #                      "B-cells-M", "MF-Monocytes", "Dendritic", "Mast-cells", "T-cells", "pDCs", "T-cells", "Dendritic", "MF-Monocytes", "MF-Monocytes")
-free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "MF-Monocytes", "Neutrophils", "B-cells-M", "T-cells", "Mast-cells", "MF-Monocytes", "Unknown", "T-cells", "pDCs", "T-cells", "B-cells-M", "Dendritic")
+free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "MF-Monocytes", "Neutrophils", "B-cells-M", "T-cells", "Mast-cells", "MF-Monocytes", "NK-cells", "T-cells", "pDCs", "T-cells", "B-cells-M", "Dendritic")
 # Map free annotation to cluster numbers and store as immune_subtype_annotation
 tiss_immune@meta.data[,'immune_subtype_annotation'] <- plyr::mapvalues(x = tiss_immune@meta.data$immune.subcluster.ids, from = cluster.ids, to = free_annotation)
 # Plot 
@@ -255,3 +255,7 @@ Save immune cell workspace
 ```{r}
 save(tiss_immune, file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
 ```
+
+
+
+
