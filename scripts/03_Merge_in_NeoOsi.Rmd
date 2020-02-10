@@ -1,0 +1,35 @@
+---
+title: "03_Merge_in_NeoOsi"
+output: html_document
+---
+
+Libraries
+```{r}
+library(Seurat)
+library(devtools)
+library(clustree)
+library(tidyverse)
+library(gridExtra)
+library(ggridges)
+library(ggplot2)
+library(ggExtra)
+```
+
+Clear environment and load filtered Seurat object 
+```{r}
+# rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file = paste(dir,"Data_input/objects/S02_Main_Seurat_object_filtered.RData", sep=""))
+load(file = paste(dir,"Data_input/objects/S02.1_Main_Seurat_object_filtered_neo_osi.RData", sep=""))
+```
+
+Merge Seurat Objects
+```{r}
+main_tiss_filtered1 <- merge(x = main_tiss_filtered, y = osi_object_filtered)
+main_tiss_filtered1
+```
+
+Save filtered Merged Seurat Object
+```{r}
+save(main_tiss_filtered1, file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
+```

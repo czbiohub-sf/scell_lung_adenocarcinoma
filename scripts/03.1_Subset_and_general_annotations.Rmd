@@ -1,5 +1,5 @@
 ---
-title: "03_Subset_and_general_annotations"
+title: "03.1_Subset_and_general_annotations"
 output: html_document
 ---
 
@@ -20,26 +20,33 @@ Clear environment and load filtered Seurat object
 # rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/S02_Main_Seurat_object_filtered.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
 ```
 
 Drop any samples with 10 or less cells
 ```{r}
-main_tiss_filtered@meta.data$sample_name <- as.character(main_tiss_filtered@meta.data$sample_name)
-sample_name <- as.character(main_tiss_filtered@meta.data$sample_name)
+main_tiss_filtered1@meta.data$sample_name <- as.character(main_tiss_filtered1@meta.data$sample_name)
+sample_name <- as.character(main_tiss_filtered1@meta.data$sample_name)
 # Make table 
-tab.1 <- table(main_tiss_filtered@meta.data$sample_name) 
+tab.1 <- table(main_tiss_filtered1@meta.data$sample_name) 
 # Which samples have less than 10 cells 
 samples.keep <- names(which(tab.1 > 10))
-metadata_keep <- filter(main_tiss_filtered@meta.data, sample_name %in% samples.keep)
+metadata_keep <- filter(main_tiss_filtered1@meta.data, sample_name %in% samples.keep)
 # Subset Seurat object 
-tiss_subset <- subset(main_tiss_filtered, cells=as.character(metadata_keep$cell_id))
+tiss_subset <- subset(main_tiss_filtered1, cells=as.character(metadata_keep$cell_id))
 tiss_subset
 ```
 
+Check sample and patient counts
+```{r}
+table(tiss_subset@meta.data$sample_name)
+table(tiss_subset@meta.data$patient_id)
+```
+
+
 Save subseted Seurat object
 ```{r}
-save(tiss_subset, file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
+save(tiss_subset, file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
 ```
 
 Normalize and scale the data

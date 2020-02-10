@@ -1,0 +1,89 @@
+---
+title: "02.1_Create_Seurat_object"
+output: html_document
+---
+
+load libraries
+```{r}
+require(Seurat)
+library(tidyverse)
+```
+
+Load RData object 
+```{r}
+rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+```
+
+load and clean rawdata
+```{r}
+osi.raw.data <- read.csv(paste(dir,"Data_input/csv_files/neo-osi_rawdata.csv", sep=""), row.names = 1)
+colnames(osi.raw.data) <- gsub("_S.*.homo", "", colnames(osi.raw.data))
+head(osi.raw.data)
+tail(osi.raw.data)
+
+# drop sequencing details from gene count table
+row.names(osi.raw.data)[grep("__", row.names(osi.raw.data))]
+osi.raw.data <- osi.raw.data[-grep("__", row.names(osi.raw.data)),]
+```
+
+Make osi.metadata by cell from osi.metadata by plate
+```{r}
+osi.metadata <- read.csv(paste(dir, "Data_input/csv_files/neo-osi_metadata.csv", sep = ""))
+osi.meta.cell <- as.data.frame(colnames(osi.raw.data))
+osi.meta.cell <- data.frame(do.call('rbind', strsplit(as.character(osi.meta.cell$`colnames(osi.raw.data)`),'_',fixed=TRUE)))
+rownames(osi.meta.cell) <- paste(osi.meta.cell$X1, osi.meta.cell$X2, sep = "_")
+colnames(osi.meta.cell) <- c("well", "plate")
+osi.meta.cell$cell_id <- rownames(osi.meta.cell)
+
+osi.metadata <- left_join(osi.meta.cell, osi.metadata, by = "plate")
+rownames(osi.metadata) <- osi.metadata$cell_id
+head(osi.metadata)
+
+unique(osi.metadata$plate)
+```
+
+Find ERCC's, compute the percent ERCC, and drop them from the raw data.
+```{r}
+erccs <- grep(pattern = "^ERCC-", x = rownames(x = osi.raw.data), value = TRUE)
+percent.ercc <- Matrix::colSums(osi.raw.data[erccs, ])/Matrix::colSums(osi.raw.data)
+ercc.index <- grep(pattern = "^ERCC-", x = rownames(x = osi.raw.data), value = FALSE)
+osi.raw.data <- osi.raw.data[-ercc.index,]
+dim(osi.raw.data)
+```
+
+Create the Seurat object with all the data (unfiltered)
+```{r}
+osi_object <- CreateSeuratObject(counts = osi.raw.data, meta.data = osi.metadata)
+osi_object <- AddMetaData(object = osi_object, metadata = osi.metadata)
+osi_object <- AddMetaData(object = osi_object, percent.ercc, col.name = "percent.ercc")
+# Changing nUMI column name to nReads
+colnames(osi_object@meta.data)[colnames(osi_object@meta.data) == 'nUMI'] <- 'nReads'
+head(osi_object@meta.data)
+```
+
+Calculate percent ribosomal genes and add to osi.metadata
+```{r}
+ribo.genes <- grep(pattern = "^RP[SL][[:digit:]]", x = rownames(x = osi_object@assays$RNA@data), value = TRUE)
+percent.ribo <- Matrix::colSums(osi_object@assays$RNA@data[ribo.genes, ])/Matrix::colSums(osi_object@assays$RNA@data)
+osi_object <- AddMetaData(object = osi_object, metadata = percent.ribo, col.name = "percent.ribo")
+osi_object
+```
+
+Save prefiltered Seurat object 
+```{r}
+save(osi_object, file=paste(dir,"Data_input/objects/S02.1_Main_Seurat_object_prefilter_neo_osi.RData", sep=""))
+```
+
+Filter cells so that remaining cells have nGenes >= 500 and nReads >= 50000
+```{r}
+osi_object_filtered <- subset(x=osi_object, subset = nCount_RNA > 50000 & nFeature_RNA > 500)
+osi_object_filtered
+osi_object_filtered
+```
+
+Save filtered Seurat object
+```{r}
+save(osi_object_filtered, file=paste(dir,"Data_input/objects/S02.1_Main_Seurat_object_filtered_neo_osi.RData", sep=""))
+```

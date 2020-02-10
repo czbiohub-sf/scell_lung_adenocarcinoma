@@ -3,6 +3,10 @@ title: "02_Create_Seurat_object"
 output: html_document
 ---
 
+load libraries
+```{r}
+require(Seurat)
+```
 
 Load RData object 
 ```{r}
@@ -23,7 +27,6 @@ dim(raw.data)
 
 Create the Seurat object with all the data (unfiltered)
 ```{r}
-require(Seurat)
 main_tiss <- CreateSeuratObject(counts = raw.data, assay = "SmartSeq2")
 # add rownames to metadta 
 row.names(metadata) <- metadata$cell_id
