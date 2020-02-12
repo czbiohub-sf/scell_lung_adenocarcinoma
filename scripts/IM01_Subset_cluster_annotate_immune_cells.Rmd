@@ -11,7 +11,7 @@ variable "dir" should be changed to point to the location of the cloned github r
 rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/S03_Immune_Seurat_object_new.RData", sep=""))
 tiss_immune
 ```
 
@@ -83,6 +83,7 @@ tiss.markers.immune <- FindAllMarkers(object = tiss_immune, only.pos = TRUE, min
 ```
 
 Write differential gene table
+HERE 
 ```{r}
 write.table(tiss.markers.immune, file=paste(dir,"data_out/IM01/Immune_cells_DE_genes_among_Seurat_clusters.csv", sep=""))
 # In case you want to load the differentially expressed genes without running the FindAllMarkers use : 
@@ -215,7 +216,9 @@ cluster.ids <- 0:(length(unique(tiss_immune@meta.data$immune.subcluster.ids))-1)
 # free_annotation <- c("0","1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18")
 # free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "Neutrophils", "T-cells", "T-cells", 
 #                      "B-cells-M", "MF-Monocytes", "Dendritic", "Mast-cells", "T-cells", "pDCs", "T-cells", "Dendritic", "MF-Monocytes", "MF-Monocytes")
-free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "MF-Monocytes", "Neutrophils", "B-cells-M", "T-cells", "Mast-cells", "MF-Monocytes", "NK-cells", "T-cells", "pDCs", "T-cells", "B-cells-M", "Dendritic")
+# Annotate cells 
+free_annotation <- c("T-cells","MF-Monocytes", "MF-Monocytes", "B-cells-PB", "B-cells-M", "Neutrophils", "Mast-cells", "MF-Monocytes", "Unknown", "T-cells", "T-cells", "MF-Monocytes", "pDCs", "Dendritic")
+
 # Map free annotation to cluster numbers and store as immune_subtype_annotation
 tiss_immune@meta.data[,'immune_subtype_annotation'] <- plyr::mapvalues(x = tiss_immune@meta.data$immune.subcluster.ids, from = cluster.ids, to = free_annotation)
 # Plot 
@@ -242,6 +245,9 @@ tab1 <- table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$immune_sub
 # 
 tab1 <- melt((apply(tab1, MARGIN = 2, max)/colSums(tab1))*100)
 tab1$cell.type <- row.names(tab1)
+# # Order 
+# tab1 <- tab1[order(tab1$value),]
+# tab1$cell.type <- factor(tab1$cell.type, levels = tab1$cell.type)
 # 
 tab1$cell.type <- factor(tab1$cell.type,levels = as.character(table.temp$Var1[order(table.temp$Freq,decreasing=F)]))
 p <-  ggplot(data=tab1, aes(x=cell.type, y=value)) +
