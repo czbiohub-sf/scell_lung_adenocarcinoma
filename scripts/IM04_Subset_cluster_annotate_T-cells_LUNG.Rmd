@@ -10,7 +10,7 @@ Load immune workspace
 rm(list=ls())
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_new.RData", sep=""))
 ```
 
 Biopsy site vs analysis all cell types 
@@ -195,6 +195,7 @@ p.mat[,1]
 tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.5, as.character(t.cell.tiss@meta.data$patient_id))
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
+table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$biopsy_site)
 ```
 
 ```{r}

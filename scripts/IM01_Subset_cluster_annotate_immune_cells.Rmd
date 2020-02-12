@@ -256,10 +256,14 @@ ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), wid
 p
 ```
 
+Change lung to Lung 
+```{r}
+tiss_immune@meta.data$biopsy_site <- gsub("lung", "Lung", tiss_immune@meta.data$biopsy_site)
+```
 
 Save immune cell workspace 
 ```{r}
-save(tiss_immune, file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
+save(tiss_immune, file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_new.RData", sep=""))
 ```
 
 

@@ -17,10 +17,10 @@ require(GGally)
 
 Load immune workspace
 ```{r}
-#rm(list=ls())
+rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_new.RData", sep=""))
 ```
 
 # Subset metadata 
@@ -103,7 +103,7 @@ for(i in 1:ncol(count.mat)){
   test <- chisq.test(count.mat[,i])
   p.mat[i,1] <- test$p.value*ncol(count.mat)
 }
-as.data.frame(p.mat)
+0.01- as.data.frame(p.mat)
 ```
 
 Changes of specific cell populations across clinical fields 
@@ -182,6 +182,6 @@ p.all
 
 Save immune cell workspace 
 ```{r}
-save(tiss_immune, file=paste(dir,"Data_input/objects/IM02_Immune_Seurat_object.RData", sep=""))
+save(tiss_immune, file=paste(dir,"Data_input/objects/IM02_Immune_Seurat_object_new.RData", sep=""))
 ```
 
