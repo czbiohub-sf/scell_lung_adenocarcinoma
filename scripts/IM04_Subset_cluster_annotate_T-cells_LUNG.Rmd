@@ -244,25 +244,22 @@ Cluster5: FOXP3 positive Tregs in cluster 5 (Less in PR)
 
 
 
-Find all cluster markers 
+Find all cluster markers and
 ```{r}
 t.cell.markers <- FindAllMarkers(object = t.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
 t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
-top10
+top10$gene[1:10]
 # t.cell.markers <- read.table(paste(dir, "data_out/IM04/T-cells_DE_genes_between_subclusters_Lung.csv",sep=""))
 ```
 
 Plot top genes 
 ```{r}
 require(tidyverse)
-FeaturePlot(t.cell.tiss, features = "CD3G")
 t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 t.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
 t.cell.markers %>% group_by(cluster) %>% top_n(50, avg_logFC) -> top50
-pdf(paste(dir, "plot_out/IM04/Heatmap_markers_of_Tcell_clusters.pdf",sep=""), 7,7)
-DoHeatmap(t.cell.tiss, features = top10$gene)
-dev.off()
-# DoHeatmap(t.cell.tiss, genes.use = c("CD8A", "CD4", "PDCD1", "CD3E", "TOP2A"), slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, use.scaled = F)
+a <- DoHeatmap(t.cell.tiss, features = top20$gene, raster = F)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_Tcell_clusters_heatmap.pdf",sep=""),plot = a,width = 10,height = 15)
 ```
 
 Write table of top genes 

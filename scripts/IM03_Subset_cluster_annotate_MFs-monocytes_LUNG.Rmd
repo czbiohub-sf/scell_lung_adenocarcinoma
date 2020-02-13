@@ -235,9 +235,9 @@ Plot top genes
 require(tidyverse)
 mf.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 mf.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
-pdf(paste(dir, "plot_out/IM03/Heatmap_markers_of_MFcell_clusters.pdf",sep=""), 7,7)
-DoHeatmap(mf.cell.tiss, features = top10$gene)
-dev.off()
+mf.cell.markers %>% group_by(cluster) %>% top_n(50, avg_logFC) -> top50
+a <- DoHeatmap(mf.cell.tiss, features = top20$gene, raster = F)
+ggsave(filename = paste(dir, "plot_out/IM03/Markers_of_MFcell_clusters_heatmap.pdf",sep=""),plot = a,width = 10,height = 15)
 ```
 
 Plot top genes 
