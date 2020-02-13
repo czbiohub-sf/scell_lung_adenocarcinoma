@@ -89,11 +89,11 @@ t.cell.tiss <- FindNeighbors(object = t.cell.tiss, verbose = T)
 
 Find Clusters 
 ```{r}
-t.cell.tiss <- FindClusters(object = t.cell.tiss, verbose = T, resolution = 0.5)
+t.cell.tiss <- FindClusters(object = t.cell.tiss, verbose = T, resolution = 0.3)
 ```
 Run and project TSNEs
 ```{r}
-t.cell.tiss <- RunTSNE(t.cell.tiss, dims = 1:10)
+t.cell.tiss <- RunTSNE(t.cell.tiss, dims = 1:5)
 DimPlot(t.cell.tiss, reduction = "tsne")
 ```
 
@@ -108,24 +108,33 @@ dev.off()
 ```{r}
 Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$analysis
 DimPlot(t.cell.tiss, reduction = "tsne", label = T)
-Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.5
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
 # DimPlot(t.cell.tiss, reduction = "tsne", label = T)
 ```
 
+# Plot TSNE with analysis colors 
 ```{r}
-tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.5, t.cell.tiss@meta.data$analysis)
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$patient_id
+DimPlot(t.cell.tiss, reduction = "tsne", label = F)
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
+# DimPlot(t.cell.tiss, reduction = "tsne", label = T)
+```
+
+
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, t.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
 ```{r}
 require(reshape)
-tab.1 <- prop.table(table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.5, t.cell.tiss@meta.data$analysis), margin = 1)
+tab.1 <- prop.table(table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, t.cell.tiss@meta.data$analysis), margin = 1)
 tab.1 <- melt(tab.1)
 tab.1$Var1 <- as.factor(tab.1$Var1)
 fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var1, fill = Var2), data = tab.1,
                            stat="identity" , position=position_dodge())
-ggsave(filename = paste(dir, "plot_out/IM03/Tcell_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
+ggsave(filename = paste(dir, "plot_out/IM04/Tcell_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
 fraction.plot
 ```
 
@@ -136,9 +145,9 @@ require(qdapTools)
 require(REdaS)
 require(plyr)
 meta.temp <- t.cell.tiss@meta.data
-meta.temp$SmartSeq2_snn_res.0.5 <- as.numeric(as.character(meta.temp$SmartSeq2_snn_res.0.5))
+meta.temp$SmartSeq2_snn_res.0.3 <- as.numeric(as.character(meta.temp$SmartSeq2_snn_res.0.3))
 # Change res clusters to MF clusters 
-meta.temp$cluster <- mapvalues(meta.temp$SmartSeq2_snn_res.0.5, from=c(0,1,2,3,4,5,6), to=c("TC0", "TC1", "TC2","TC3", "TC4", "TC5", "TC6"))
+meta.temp$cluster <- mapvalues(meta.temp$SmartSeq2_snn_res.0.3, from=c(0,1,2,3,4,5), to=c("TC0", "TC1", "TC2","TC3", "TC4", "TC5"))
 # Calculate fractions and error bars 
 prop.table.error <- list()
 for(i in 1:length(unique(meta.temp$cluster))){
@@ -163,7 +172,7 @@ for(i in names(prop.table.error)){
 tab.1$cluster <- b
 tab.1$cell <- rep(row.names(tab.1)[1:3], length(unique(tab.1$cluster)))
 # Resort factor analysis 
-tab.1$cluster <- factor(tab.1$cluster, levels = c("TC0", "TC1", "TC2","TC3", "TC4", "TC5", "TC6"))
+tab.1$cluster <- factor(tab.1$cluster, levels = c("TC0", "TC1", "TC2","TC3", "TC4", "TC5"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -173,7 +182,7 @@ p <- ggplot(tab.1, aes(x=cluster, y=Estimate, fill=cell)) +
     geom_errorbar(aes(ymin=lower, ymax=upper), width=.2,position=position_dodge(0.9)) + 
     theme(legend.position="bottom")
 # Save plot 
-ggsave(filename = paste(dir, "plot_out/IM03/Tcell_TSNE_clusters_by_treatment_with_error_bars_manuscript.pdf",sep=""), plot = p, width = 7,height = 5)
+ggsave(filename = paste(dir, "plot_out/IM04/Tcell_TSNE_clusters_by_treatment_with_error_bars_manuscript.pdf",sep=""), plot = p, width = 7,height = 5)
 p
 ```
 
@@ -192,7 +201,7 @@ p.mat[,1]
 
 
 ```{r}
-tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.5, as.character(t.cell.tiss@meta.data$patient_id))
+tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$biopsy_site)
@@ -215,11 +224,25 @@ a
 
 Plot top genes annotate by reponse
 ```{r}
-genes <- c("CD4","CTLA4","PDCD1","FOXP3","IL2RA", "CXCL13", "FCGR3A", "TOP2A", "CD8A")
+genes <- c("CD3E","CD4","CD8A","CTLA4","PDCD1","IFNG","LAG3", "FOXP3", "EOMES", "GZMK", "FCGR3A", "TOP2A")
 a <- VlnPlot(t.cell.tiss, features = genes,pt.size = 0)
 ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells.pdf",sep=""),plot = a,width = 10,height = 10)
+a <- DoHeatmap(t.cell.tiss, features = genes)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells_heatmap.pdf",sep=""),plot = a,width = 10,height = 10)
 a
 ```
+Cluster0: generic dont really know. 
+Cluster1: Exhaustion in the pD cluster (1) and the PD/PR cluster (4). (PR/PD feature) 
+Cluster2: Cluster 2 is cytotoxic (GZMK, EOMES, CD8pos, IFNG) (Less in PD)
+Cluster3: Cluster 3 is enriched for NK cells  (Naive feature)
+Cluster4: Exhaustion in the pD cluster (1) and the PD/PR cluster (4). (PR/PD feature) 
+Cluster5: FOXP3 positive Tregs in cluster 5 (Less in PR)
+
+
+
+
+
+
 
 Find all cluster markers 
 ```{r}
@@ -237,76 +260,73 @@ t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 t.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
 t.cell.markers %>% group_by(cluster) %>% top_n(50, avg_logFC) -> top50
 pdf(paste(dir, "plot_out/IM04/Heatmap_markers_of_Tcell_clusters.pdf",sep=""), 7,7)
-DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
+DoHeatmap(t.cell.tiss, features = top10$gene)
 dev.off()
 # DoHeatmap(t.cell.tiss, genes.use = c("CD8A", "CD4", "PDCD1", "CD3E", "TOP2A"), slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, use.scaled = F)
 ```
-
-Plot top genes annotate by reponse
-```{r}
-t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$analysis)
-#t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
-DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5)
-t.cell.tiss <- SetIdent(t.cell.tiss,ident.use = t.cell.tiss@meta.data$res.0.3)
-```
-
-
 
 Write table of top genes 
 ```{r}
 write.csv(t.cell.markers, paste(dir, "data_out/IM04/T-cells_DE_genes_between_subclusters_Lung.csv",sep=""), row.names=F)
 ```
 
-Plot CD16 across treatment groups 
-```{r}
-temp <- cbind(as.data.frame(t.cell.tiss@meta.data$res.0.3), as.data.frame(t.cell.tiss@meta.data$analysis), as.data.frame(t.cell.tiss@data["FCGR3A",]))
-colnames(temp) <- c("cluster", "response","FCGR3A")
-bp <- ggplot(temp, aes(x=response, y=FCGR3A, group=response)) + 
-  geom_boxplot(aes(fill=response)) + facet_grid(cluster ~ .) +
-  geom_jitter(position=position_jitter(0.2))
-ggsave(filename = paste(dir, "plot_out/IM04/FCGR3A_T_cells.pdf",sep=""),plot = bp,width = 10,height = 15)
-```
-
-
 Plot all relevant, PCA, tSNE and Clustering plots as pdf 
 ```{r}
 pdf(paste(dir, "plot_out/IM04/T-cells_subclustering_TSNE_LUNG.pdf",sep=""),width = 10,height = 7)
 # Tables
 # 1
-tab.1 <- table(t.cell.tiss@meta.data$res.0.3, t.cell.tiss@meta.data$analysis)
+tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, t.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="T-cell subcluster vs Response group", xlab ="", ylab="",
             label = T, show.margins = F)
 # 2
-tab.1 <- table(t.cell.tiss@meta.data$res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
+tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 # TSNE plots 
-TSNEPlot(object = t.cell.tiss, do.label = T, group.by="res.0.3")
-TSNEPlot(object = t.cell.tiss, do.label = T, group.by="analysis")
+DimPlot(object = t.cell.tiss, group.by="SmartSeq2_snn_res.0.3", reduction = "tsne", label = T)
+DimPlot(object = t.cell.tiss, group.by="analysis", reduction = "tsne", label = T)
 # Heatmaps
-DoHeatmap(t.cell.tiss, genes.use = top10$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 10 DE genes")
-DoHeatmap(t.cell.tiss, genes.use = top20$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 20 DE genes")
-DoHeatmap(t.cell.tiss, genes.use = top50$gene, slim.col.label = TRUE, remove.key = TRUE, cex.row = 5, title = "Top 50 DE genes")
+# DoHeatmap(t.cell.tiss, features = top10$gene)
+# DoHeatmap(t.cell.tiss, features = top20$gene)
+# DoHeatmap(t.cell.tiss, features = top50$gene)
 genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2", "CXCL13")
-DoHeatmap(t.cell.tiss, genes.use = genes, slim.col.label = TRUE,remove.key = TRUE, cex.row = 5, use.scaled = T)
+DoHeatmap(t.cell.tiss, features = genes)
 # Violin plot 
-t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = t.cell.tiss@meta.data$res.0.3)
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
 genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2")
-VlnPlot(t.cell.tiss, features.plot = genes)
-t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = as.character(t.cell.tiss@meta.data$analysis))
-VlnPlot(t.cell.tiss, features.plot = genes)
-t.cell.tiss <- SetIdent(object = t.cell.tiss, ident.use = t.cell.tiss@meta.data$res.0.3)
+VlnPlot(t.cell.tiss, features =  genes)
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$analysis
+VlnPlot(t.cell.tiss, features= genes)
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
 # PCA plots 
-PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
-PCElbowPlot(object = t.cell.tiss)
+# PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+# PCElbowPlot(object = t.cell.tiss)
 #JackStrawPlot(t.cell.tiss, PCs = 1:12)
 # Feature plot
-DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T)
+# DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T)
 # DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T, group.by = "analysis")
 dev.off()
 ```
 Save immune cell workspace 
 ```{r}
 save(t.cell.tiss, file=paste(dir,"Data_input/objects/IM04_Tcells_Seurat_object.RData", sep=""))
+```
+
+
+T-cell subset analysis from derLeun et al (2020)
+Unfinished
+```{r}
+t_temp <- read.csv(paste(dir,"gene_lists/T_cell_subset_markers_derLeun.csv", sep=""))
+t_temp$gene <- as.character(t_temp$gene)
+t_list <- split(t_temp$gene, t_temp$subset)
+# Calculate Module scores with Seurat 
+t.cell.tiss <- AddModuleScore(t.cell.tiss, features = t_list, name = names(t_list))
+# Change metadata names cause Seurat seems to append a number that I am not sure how to change at this point 
+colnames(t.cell.tiss@meta.data[(ncol(t.cell.tiss@meta.data)-(length(t_list)-1)):ncol(t.cell.tiss@meta.data)]) <- paste(names(t_list), c(1:7), sep = "")
+names <- colnames(t.cell.tiss@meta.data[(ncol(t.cell.tiss@meta.data)-(length(t_list)-1)):ncol(t.cell.tiss@meta.data)])
+# Plot 
+VlnPlot(t.cell.tiss, features = names)
+# Heatmap 
+DoHeatmap(t.cell.tiss, features = t_temp$gene)
 ```
 

@@ -147,7 +147,7 @@ require(plyr)
 meta.temp <- mf.cell.tiss@meta.data
 meta.temp$SmartSeq2_snn_res.0.3 <- as.numeric(as.character(meta.temp$SmartSeq2_snn_res.0.3))
 # Change res clusters to MF clusters 
-meta.temp$cluster <- mapvalues(meta.temp$SmartSeq2_snn_res.0.3, from=c(0,1,2,3,4,5), to=c("MF0", "MF1", "MF2","MF3", "MF4", "MF5"))
+meta.temp$cluster <- mapvalues(meta.temp$SmartSeq2_snn_res.0.3, from=c(0,1,2,3,4,5,6), to=c("MF0", "MF1", "MF2","MF3", "MF4", "MF5", "MF6"))
 # Calculate fractions and error bars 
 prop.table.error <- list()
 for(i in 1:length(unique(meta.temp$cluster))){
@@ -172,7 +172,7 @@ for(i in names(prop.table.error)){
 tab.1$cluster <- b
 tab.1$cell <- rep(row.names(tab.1)[1:3], length(unique(tab.1$cluster)))
 # Resort factor analysis 
-tab.1$cluster <- factor(tab.1$cluster, levels = c("MF0", "MF1", "MF2", "MF3", "MF4", "MF5"))
+tab.1$cluster <- factor(tab.1$cluster, levels = c("MF0", "MF1", "MF2", "MF3", "MF4", "MF5", "MF6"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -249,6 +249,7 @@ DoHeatmap(mf.cell.tiss, features = top10$gene)
 Write table of top genes 
 ```{r}
 write.csv(mf.cell.markers, paste(dir, "data_out/IM03/MFs_DE_genes_between_subclusters_Lung.csv",sep=""), row.names=F)
+# mf.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC)
 ```
 
 
@@ -266,6 +267,7 @@ Plot top genes
 # Violin plot 
 a <- VlnPlot(tiss_immune, features= "CXCR3", group.by = "immune_subtype_annotation")
 ggsave(filename = paste(dir, "plot_out/IM03/CXCR3_expression_all_immune_cells.pdf",sep=""),plot = a,width = 7,height = 5)
+a
 ```
 
 
@@ -282,8 +284,8 @@ tab.1 <- table(mf.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, as.character(mf.cel
 balloonplot(tab.1, main ="Patient ID vs MF-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 # TSNE plots 
-DimPlot(object = mf.cell.tiss, do.label = T, reduction = "tsne")
-DimPlot(object = mf.cell.tiss, do.label = T, group.by="analysis", reduction = "tsne")
+DimPlot(mf.cell.tiss, reduction = "tsne")
+DimPlot(mf.cell.tiss, reduction = "tsne", label = T)
 # Heatmaps
 DoHeatmap(mf.cell.tiss, features = top10$gene)
 DoHeatmap(mf.cell.tiss, features = top20$gene)
