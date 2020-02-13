@@ -8,7 +8,7 @@ output: html_document
 Clear environment (optional) and load Seurat object containing Immune cells (from script S03)
 variable "dir" should be changed to point to the location of the cloned github repo locally
 ```{r}
-rm(list=ls())
+# rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/S03_Immune_Seurat_object_new.RData", sep=""))
