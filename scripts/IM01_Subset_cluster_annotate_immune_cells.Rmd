@@ -256,6 +256,26 @@ ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), wid
 p
 ```
 
+Patient occupancy per cluster
+```{r}
+require(reshape)
+# Barplot of patients per cluster 
+tab1 <- table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$SmartSeq2_snn_res.0.3)
+# 
+tab1 <- melt((apply(tab1, MARGIN = 2, max)/colSums(tab1))*100)
+tab1$cell.type <- row.names(tab1)
+# # Order 
+# tab1 <- tab1[order(tab1$value),]
+# tab1$cell.type <- factor(tab1$cell.type, levels = tab1$cell.type)
+# 
+tab1$cell.type <- factor(tab1$cell.type,levels = tab1$cell.type)
+p <-  ggplot(data=tab1, aes(x=cell.type, y=value)) +
+      geom_bar(stat="identity") + coord_flip() + theme_bw()
+ggsave(paste(dir,"plot_out/IM01/Immune_cell_patient_occupancy.pdf", sep=""), width = 90, height = 90, units = "mm")
+p
+```
+
+
 Change lung to Lung 
 ```{r}
 tiss_immune@meta.data$biopsy_site <- gsub("lung", "Lung", tiss_immune@meta.data$biopsy_site)
