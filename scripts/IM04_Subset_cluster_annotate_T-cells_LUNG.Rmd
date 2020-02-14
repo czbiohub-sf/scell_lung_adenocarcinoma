@@ -224,12 +224,13 @@ a
 
 Plot top genes annotate by reponse
 ```{r}
-genes <- c("CD3E","CD4","CD8A","CTLA4","PDCD1","IFNG","LAG3", "FOXP3", "EOMES", "GZMK", "FCGR3A", "TOP2A")
-a <- VlnPlot(t.cell.tiss, features = genes,pt.size = 0)
-ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells.pdf",sep=""),plot = a,width = 10,height = 10)
-a <- DoHeatmap(t.cell.tiss, features = genes)
-ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells_heatmap.pdf",sep=""),plot = a,width = 10,height = 10)
-a
+genes_1 <- c("CD4","CD8A","IL7R","CCR7","CTLA4","PDCD1","GZMA", "GZMB", "FCGR3A", "PRF1", "TOP2A", "FOXP3")
+a <- VlnPlot(t.cell.tiss, features = genes_1,pt.size = 0)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells_violin_1.pdf",sep=""),plot = a,width = 10,height = 10)
+a <- DoHeatmap(t.cell.tiss, features = genes_1)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells_heatmap_1.pdf",sep=""),plot = a,width = 10,height = 10)
+a <- DotPlot(t.cell.tiss, features = genes_1) +coord_flip()
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells_dotplot_1.pdf",sep=""),plot = a,width = 10,height = 10)
 ```
 Cluster0: generic dont really know. 
 Cluster1: Exhaustion in the pD cluster (1) and the PD/PR cluster (4). (PR/PD feature) 
