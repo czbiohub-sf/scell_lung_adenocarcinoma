@@ -328,3 +328,17 @@ VlnPlot(t.cell.tiss, features = names)
 DoHeatmap(t.cell.tiss, features = t_temp$gene)
 ```
 
+
+Plot custom genes 
+```{r}
+# Violin
+genes <- c("IFNG", "GZMK", "FCGR3A", "KIR2DL3", "KIR2DL4", "IL7R", "CCR7")
+a <- VlnPlot(t.cell.tiss,features = genes)
+# 
+FeatureScatter(t.cell.tiss, feature1 = "FCGR3A", feature2 = "KIR2DL3", group.by = "analysis")
+FeatureScatter(t.cell.tiss, feature1 = "FCGR3A", feature2 = "KIR2DL4", group.by = "analysis")
+
+genes <- c("FCGR3A")
+a <- VlnPlot(t.cell.tiss,features = genes,group.by = "analysis")
+a
+```

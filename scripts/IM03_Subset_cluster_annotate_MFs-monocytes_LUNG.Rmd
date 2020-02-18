@@ -8,7 +8,7 @@ Macrophages and Monocytes of the lung
 
 Load immune workspace
 ```{r}
-rm(list=ls())
+# rm(list=ls())
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_new.RData", sep=""))
@@ -300,12 +300,11 @@ DotPlot(mf.cell.tiss, features = top10$gene) + coord_flip()
 dev.off()
 ```
 
-Plot top genes 
+Plot custom genes 
 ```{r}
-# # Violin 
-# genes <- c("TGFB1", "IL10", "IL1B", "TNF", "IL6", "IL12A", "IL12B")
-# a <- VlnPlot(mf.cell.tiss, features.plot = genes, do.return = T, point.size.use = 1)
-
+# Violin
+genes <- c("CD1A", "CD1C", "TOP2A")
+a <- VlnPlot(mf.cell.tiss,features = genes)
 ```
 
 
