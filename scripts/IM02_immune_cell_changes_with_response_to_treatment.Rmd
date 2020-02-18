@@ -17,7 +17,7 @@ require(GGally)
 
 Load immune workspace
 ```{r}
-rm(list=ls())
+# rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))
