@@ -11,7 +11,7 @@ Load immune workspace
 # rm(list=ls())
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_new.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))
 ```
 
 Biopsy site vs analysis all cell types 
@@ -51,9 +51,11 @@ balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
 
 Unsupervised clustering of Myeloid cells
 
-Find variable genes
+Find variable genes, Normalize and scale
 ```{r}
+mf.cell.tiss <- NormalizeData(object = mf.cell.tiss)
 mf.cell.tiss <- FindVariableFeatures(object = mf.cell.tiss, num.bin = 20, binning.method = "equal_width")
+mf.cell.tiss <- ScaleData(object = mf.cell.tiss, features = rownames(mf.cell.tiss))
 ```
 
 Unsupervised clustering of Myeloid cells
@@ -98,13 +100,6 @@ mf.cell.tiss <- RunTSNE(mf.cell.tiss, dims = 1:10)
 DimPlot(mf.cell.tiss, reduction = "tsne")
 ```
 
-<!-- pick resolution parameter -->
-<!-- ```{r} -->
-<!-- res.used <- 0.3 -->
-<!-- mf.cell.tiss <- FindClusters(object = mf.cell.tiss, reduction.type = "pca", dims.use = n.pcs.min:n.pcs.max,  -->
-<!--     resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T) -->
-<!-- ``` -->
-
 # Plot TSNE and save 
 ```{r}
 pdf(paste(dir, "plot_out/IM03/MF_TSNE_manuscript.pdf",sep=""), 5,5)
@@ -117,19 +112,19 @@ dev.off()
 ```{r}
 Idents(object = mf.cell.tiss) <- mf.cell.tiss@meta.data$analysis
 DimPlot(mf.cell.tiss, reduction = "tsne", label = T)
-Idents(object = mf.cell.tiss) <- mf.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
+Idents(object = mf.cell.tiss) <- mf.cell.tiss@meta.data$RNA_snn_res.0.3
 # DimPlot(mf.cell.tiss, reduction = "tsne", label = T)
 ```
 
 ```{r}
-tab.1 <- table(mf.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, mf.cell.tiss@meta.data$analysis)
+tab.1 <- table(mf.cell.tiss@meta.data$RNA_snn_res.0.3, mf.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
 ```{r}
 require(reshape)
-tab.1 <- prop.table(table(mf.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, mf.cell.tiss@meta.data$analysis), margin = 1)
+tab.1 <- prop.table(table(mf.cell.tiss@meta.data$RNA_snn_res.0.3, mf.cell.tiss@meta.data$analysis), margin = 1)
 tab.1 <- melt(tab.1)
 tab.1$Var1 <- as.factor(tab.1$Var1)
 fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var1, fill = Var2), data = tab.1,
@@ -147,7 +142,7 @@ require(plyr)
 meta.temp <- mf.cell.tiss@meta.data
 meta.temp$SmartSeq2_snn_res.0.3 <- as.numeric(as.character(meta.temp$SmartSeq2_snn_res.0.3))
 # Change res clusters to MF clusters 
-meta.temp$cluster <- mapvalues(meta.temp$SmartSeq2_snn_res.0.3, from=c(0,1,2,3,4,5,6), to=c("MF0", "MF1", "MF2","MF3", "MF4", "MF5", "MF6"))
+meta.temp$cluster <- mapvalues(meta.temp$SmartSeq2_snn_res.0.3, from=c(0,1,2,3,4,5,6,7), to=c("MF0", "MF1", "MF2","MF3", "MF4", "MF5", "MF6", "MF7"))
 # Calculate fractions and error bars 
 prop.table.error <- list()
 for(i in 1:length(unique(meta.temp$cluster))){
@@ -172,7 +167,7 @@ for(i in names(prop.table.error)){
 tab.1$cluster <- b
 tab.1$cell <- rep(row.names(tab.1)[1:3], length(unique(tab.1$cluster)))
 # Resort factor analysis 
-tab.1$cluster <- factor(tab.1$cluster, levels = c("MF0", "MF1", "MF2", "MF3", "MF4", "MF5", "MF6"))
+tab.1$cluster <- factor(tab.1$cluster, levels = c("MF0", "MF1", "MF2", "MF3", "MF4", "MF5", "MF6", "MF7"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -303,12 +298,12 @@ dev.off()
 Plot custom genes 
 ```{r}
 # Violin
-genes <- c("CD1A", "CD1C", "TOP2A")
+genes <- c("CD1A", "CD1C", "TOP2A", "IL1B")
 a <- VlnPlot(mf.cell.tiss,features = genes)
 ```
 
-
 Save immune cell workspace 
 ```{r}
-save(mf.cell.tiss, file=paste(dir,"Data_input/objects/IM03_MFs_Seurat_object_new.RData", sep=""))
+save(mf.cell.tiss, file=paste(dir,"Data_input/objects/IM03_MFs_Seurat_object_nodups_new.RData", sep=""))
 ```
+

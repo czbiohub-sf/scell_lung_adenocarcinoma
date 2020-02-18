@@ -20,7 +20,7 @@ Load immune workspace
 rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_new.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))
 ```
 
 # Subset metadata 
@@ -182,6 +182,6 @@ p.all
 
 Save immune cell workspace 
 ```{r}
-save(tiss_immune, file=paste(dir,"Data_input/objects/IM02_Immune_Seurat_object_new.RData", sep=""))
+save(tiss_immune, file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))
 ```
 
