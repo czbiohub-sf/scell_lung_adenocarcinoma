@@ -193,6 +193,7 @@ All vs All correlation plots
 ```{r}
 library(ggrepel)
 # Create table and keep selected cell types 
+metadata <- tiss_immune@meta.data
 meta.temp <- metadata[,c("immune_subtype_annotation", "driver_gene")]
 # Create table for PD and PR
 tab.1 <- as.data.frame.array(prop.table(table(meta.temp$immune_subtype_annotation, meta.temp$driver_gene), margin = 2))
@@ -207,9 +208,17 @@ dev.off()
 corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F)
 ```
 
+Table of Biopsy site vs analysis 
+```{r}
+tab.1 <- table(tiss_immune@meta.data$driver_gene, tiss_immune@meta.data$biopsy_site)
+balloonplot(tab.1, main ="Driver gene vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
 ```{r}
 library(ggrepel)
 # Create table and keep selected cell types 
+metadata <- tiss_immune@meta.data
 meta.temp <- metadata[,c("immune_subtype_annotation", "driver_gene")]
 # Create table for PD and PR
 tab.1 <- as.data.frame.array(prop.table(table(meta.temp$immune_subtype_annotation, meta.temp$driver_gene), margin = 2))
@@ -235,19 +244,53 @@ p.2 <-  ggplot(tab.1, aes(x=BRAF, y=EGFR, label = cell.type)) +
         geom_abline(intercept = 0, slope = 1,linetype = "dashed", color="gray80") + 
         annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
         xlim(0,0.5) + ylim(0,0.5)
-# KRAS vs EGFR 
-cor.v <- cor(tab.1$KRAS, tab.1$EGFR)
-p.3 <-  ggplot(tab.1, aes(x=KRAS, y=EGFR, label = cell.type)) +
+# BRAF vs ALK
+cor.v <- cor(tab.1$BRAF, tab.1$ALK)
+p.3 <-  ggplot(tab.1, aes(x=BRAF, y=ALK, label = cell.type)) +
         geom_point(position = position_jitter()) + 
         geom_label_repel(nudge_y = 0.15,direction = "y",hjust= 1,segment.size = 0.1, 
                          label.size = 0, xlim = x_limits) + 
         geom_abline(intercept = 0, slope = 1,linetype = "dashed", color="gray80") + 
         annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
         xlim(0,0.5) + ylim(0,0.5)
+# KRAS vs EGFR 
+cor.v <- cor(tab.1$KRAS, tab.1$EGFR)
+p.4 <-  ggplot(tab.1, aes(x=KRAS, y=EGFR, label = cell.type)) +
+        geom_point(position = position_jitter()) + 
+        geom_label_repel(nudge_y = 0.15,direction = "y",hjust= 1,segment.size = 0.1, 
+                         label.size = 0, xlim = x_limits) + 
+        geom_abline(intercept = 0, slope = 1,linetype = "dashed", color="gray80") + 
+        annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
+        xlim(0,0.5) + ylim(0,0.5)
+
 # Plot all together
-p.all <- grid.arrange(p.1,p.2,p.3,ncol=2)
+p.all <- grid.arrange(p.1,p.2,p.3,p.4,ncol=2)
 # Save 
 ggsave(filename = paste(dir,"plot_out/IM02/Immune_cell_population_fractions_pairwise_Driver_genes.pdf", sep=""), plot = p.all, width = 12, height = 12)
 p.all
 ```
 
+
+
+Correlation of immune cell fractions between different biopsy sites 
+All vs All correlation plots 
+```{r}
+library(ggrepel)
+# Create table and keep selected cell types 
+metadata <- tiss_immune@meta.data
+meta.temp <- metadata[,c("immune_subtype_annotation", "biopsy_site")]
+# Create table for PD and PR
+tab.1 <- as.data.frame.array(prop.table(table(meta.temp$immune_subtype_annotation, meta.temp$biopsy_site), margin = 2))
+# Correlation matrix 
+cor.v <- as.matrix(cor(tab.1))
+# Plot 
+require(corrplot)
+pdf(paste(dir,"plot_out/IM02/All_immune_population_correlations_across_biopsy_sites.pdf", sep=""), width = 5, height = 5)
+corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F, mar=c(2,2,2,2))
+dev.off()
+# 
+corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F)
+```
+
+
+Create type&site category and perform DE between T and MFs across all organs with more than XX number of cells 
