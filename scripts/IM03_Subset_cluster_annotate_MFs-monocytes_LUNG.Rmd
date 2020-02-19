@@ -116,6 +116,7 @@ Idents(object = mf.cell.tiss) <- mf.cell.tiss@meta.data$RNA_snn_res.0.3
 # DimPlot(mf.cell.tiss, reduction = "tsne", label = T)
 ```
 
+
 ```{r}
 tab.1 <- table(mf.cell.tiss@meta.data$RNA_snn_res.0.3, mf.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",

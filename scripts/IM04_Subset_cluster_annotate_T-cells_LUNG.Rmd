@@ -7,10 +7,10 @@ More detailed Immune phenotyping of different immune cell types
 T-cels 
 Load immune workspace
 ```{r}
-rm(list=ls())
+# rm(list=ls())
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_new.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))
 ```
 
 Biopsy site vs analysis all cell types 
@@ -50,12 +50,12 @@ balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
 
 Unsupervised clustering of Myeloid cells
 
-Find variable genes
+Find variable genes, Normalize and scale
 ```{r}
+t.cell.tiss <- NormalizeData(object = t.cell.tiss)
 t.cell.tiss <- FindVariableFeatures(object = t.cell.tiss, num.bin = 20, binning.method = "equal_width")
+t.cell.tiss <- ScaleData(object = t.cell.tiss, features = rownames(t.cell.tiss))
 ```
-
-Unsupervised clustering of Myeloid cells
 
 Perform PCA
 ```{r}
@@ -108,7 +108,7 @@ dev.off()
 ```{r}
 Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$analysis
 DimPlot(t.cell.tiss, reduction = "tsne", label = T)
-Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$RNA_snn_res.0.3
 # DimPlot(t.cell.tiss, reduction = "tsne", label = T)
 ```
 
@@ -116,20 +116,20 @@ Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
 ```{r}
 Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$patient_id
 DimPlot(t.cell.tiss, reduction = "tsne", label = F)
-Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$RNA_snn_res.0.3
 # DimPlot(t.cell.tiss, reduction = "tsne", label = T)
 ```
 
 
 ```{r}
-tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, t.cell.tiss@meta.data$analysis)
+tab.1 <- table(t.cell.tiss@meta.data$RNA_snn_res.0.3, t.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="Response vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
 ```{r}
 require(reshape)
-tab.1 <- prop.table(table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, t.cell.tiss@meta.data$analysis), margin = 1)
+tab.1 <- prop.table(table(t.cell.tiss@meta.data$RNA_snn_res.0.3, t.cell.tiss@meta.data$analysis), margin = 1)
 tab.1 <- melt(tab.1)
 tab.1$Var1 <- as.factor(tab.1$Var1)
 fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var1, fill = Var2), data = tab.1,
@@ -145,9 +145,9 @@ require(qdapTools)
 require(REdaS)
 require(plyr)
 meta.temp <- t.cell.tiss@meta.data
-meta.temp$SmartSeq2_snn_res.0.3 <- as.numeric(as.character(meta.temp$SmartSeq2_snn_res.0.3))
+meta.temp$RNA_snn_res.0.3 <- as.numeric(as.character(meta.temp$RNA_snn_res.0.3))
 # Change res clusters to MF clusters 
-meta.temp$cluster <- mapvalues(meta.temp$SmartSeq2_snn_res.0.3, from=c(0,1,2,3,4,5), to=c("TC0", "TC1", "TC2","TC3", "TC4", "TC5"))
+meta.temp$cluster <- mapvalues(meta.temp$RNA_snn_res.0.3, from=c(0,1,2,3,4), to=c("TC0", "TC1", "TC2","TC3", "TC4"))
 # Calculate fractions and error bars 
 prop.table.error <- list()
 for(i in 1:length(unique(meta.temp$cluster))){
@@ -172,7 +172,7 @@ for(i in names(prop.table.error)){
 tab.1$cluster <- b
 tab.1$cell <- rep(row.names(tab.1)[1:3], length(unique(tab.1$cluster)))
 # Resort factor analysis 
-tab.1$cluster <- factor(tab.1$cluster, levels = c("TC0", "TC1", "TC2","TC3", "TC4", "TC5"))
+tab.1$cluster <- factor(tab.1$cluster, levels = c("TC0", "TC1", "TC2","TC3", "TC4"))
 # Rename percentile columns 
 colnames(tab.1)[1] <- "lower"
 colnames(tab.1)[3] <- "upper"
@@ -201,7 +201,7 @@ p.mat[,1]
 
 
 ```{r}
-tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
+tab.1 <- table(t.cell.tiss@meta.data$RNA_snn_res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 table(tiss_immune@meta.data$patient_id, tiss_immune@meta.data$biopsy_site)
@@ -273,15 +273,15 @@ Plot all relevant, PCA, tSNE and Clustering plots as pdf
 pdf(paste(dir, "plot_out/IM04/T-cells_subclustering_TSNE_LUNG.pdf",sep=""),width = 10,height = 7)
 # Tables
 # 1
-tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, t.cell.tiss@meta.data$analysis)
+tab.1 <- table(t.cell.tiss@meta.data$RNA_snn_res.0.3, t.cell.tiss@meta.data$analysis)
 balloonplot(tab.1, main ="T-cell subcluster vs Response group", xlab ="", ylab="",
             label = T, show.margins = F)
 # 2
-tab.1 <- table(t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
+tab.1 <- table(t.cell.tiss@meta.data$RNA_snn_res.0.3, as.character(t.cell.tiss@meta.data$patient_id))
 balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
             label = T, show.margins = F)
 # TSNE plots 
-DimPlot(object = t.cell.tiss, group.by="SmartSeq2_snn_res.0.3", reduction = "tsne", label = T)
+DimPlot(object = t.cell.tiss, group.by="RNA_snn_res.0.3", reduction = "tsne", label = T)
 DimPlot(object = t.cell.tiss, group.by="analysis", reduction = "tsne", label = T)
 # Heatmaps
 # DoHeatmap(t.cell.tiss, features = top10$gene)
@@ -290,12 +290,12 @@ DimPlot(object = t.cell.tiss, group.by="analysis", reduction = "tsne", label = T
 genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2", "CXCL13")
 DoHeatmap(t.cell.tiss, features = genes)
 # Violin plot 
-Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$RNA_snn_res.0.3
 genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2")
 VlnPlot(t.cell.tiss, features =  genes)
 Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$analysis
 VlnPlot(t.cell.tiss, features= genes)
-Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$SmartSeq2_snn_res.0.3
+Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$RNA_snn_res.0.3
 # PCA plots 
 # PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
 # PCElbowPlot(object = t.cell.tiss)
