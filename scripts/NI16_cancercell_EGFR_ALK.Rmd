@@ -1,0 +1,110 @@
+---
+title: "EGFR vs ALK"
+output: html_notebook
+---
+```{r}
+library(Seurat)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(devtools)
+library(ggsignif)
+library(ggpubr)
+library(viridis)
+library(plotly)
+library(ggridges)
+library(reshape)
+library(gridExtra)
+library(ggrepel)
+library(ggExtra)
+```
+
+Read in tumor object
+```{r}
+rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
+```
+
+```{r}
+table(tiss_subset_tumor2@meta.data$driver_gene, tiss_subset_tumor2@meta.data$analysis)
+```
+
+Subset to EGFR and ALK
+```{r}
+cells.use <- filter(tiss_subset_tumor2@meta.data, driver_gene == 'ALK' | driver_gene == 'EGFR')
+
+EGFR_ALK <- subset(tiss_subset_tumor2, cells = cells.use$cell_id)
+```
+
+Make sure all data is scaled
+```{r}
+EGFR_ALK <- ScaleData(object = EGFR_ALK, features = rownames(EGFR_ALK))
+```
+
+AT2
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+
+AT2 <- FetchData(EGFR_ALK, c(AT2_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene'))
+
+AT2$AT2_diff_mean <- rowMeans(AT2[c(AT2_genes)], na.rm=TRUE)
+
+# plot
+AT2_p <- ggplot(AT2, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("AT2 Differentiation Signature Expression per Group") + ggtitle("AT2 Differentiation Signature Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + facet_grid(~driver_gene)
+AT2_p
+```
+
+AT2
+```{r}
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+
+Plasminogen <- FetchData(EGFR_ALK, c(Plasminogen_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene'))
+
+Plasminogen$Plasminogen_activating_mean <- rowMeans(Plasminogen[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
+
+# plot
+Plasminogen_p <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_activating_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Plasminogen Differentiation Signature Expression per Group") + ggtitle("Plasminogen Differentiation Signature Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + facet_grid(~driver_gene)
+
+Plasminogen_p1 <- ggplot(Plasminogen, aes(x = analysis, y = SERPINE1, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("SERPINE1 Expression per Group") + ggtitle("SERPINE1 Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + facet_grid(~driver_gene)
+Plasminogen_p 
+Plasminogen_p1
+```
+
+
+Kynurenine Pathway
+```{r}
+Kynurenine_genes <- c('IDO1', 'KYNU')
+
+Kynurenine <- FetchData(EGFR_ALK, c(Kynurenine_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene'))
+
+Kynurenine$Kynurenine_diff_mean <- rowMeans(Kynurenine[c(Kynurenine_genes)], na.rm=TRUE)
+
+# plot
+Kynurenine_p <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Kynurenine Differentiation Signature Expression per Group") + ggtitle("Kynurenine Differentiation Signature Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + facet_grid(~driver_gene)
+Kynurenine_p
+```
+
+Gap Junction Signatures
+```{r}
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+GJB <- FetchData(EGFR_ALK, c(GJB_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene'))
+
+GJB$GJB_diff_mean <- rowMeans(GJB[c(GJB_genes)], na.rm=TRUE)
+
+# plot
+GJB_p <- ggplot(GJB, aes(x = analysis, y = GJB_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("GJB Differentiation Signature Expression per Group") + ggtitle("GJB Differentiation Signature Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + facet_grid(~driver_gene)
+GJB_p
+```
+
+save all
+```{r}
+ggsave(AT2_p, filename = paste(dir,"plot_out/NI16/AT2_p.pdf", sep = ""))
+ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI16/Plasminogen_act.pdf", sep = ""))
+ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI16/SERPINE1.pdf", sep = ""))
+ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI16/Kynurenine_p.pdf", sep = ""))
+ggsave(GJB_p, filename = paste(dir,"plot_out/NI16/GJB_p.pdf", sep = ""))
+```
+
+

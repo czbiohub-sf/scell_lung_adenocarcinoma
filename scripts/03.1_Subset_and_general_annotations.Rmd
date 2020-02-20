@@ -13,11 +13,13 @@ library(gridExtra)
 library(ggridges)
 library(ggplot2)
 library(ggExtra)
+library(clustree)
+library(DoubletFinder)
 ```
 
 Clear environment and load filtered Seurat object 
 ```{r}
-# rm(list=ls())
+rm(list=ls())
 # dir <- "/myVolume/scell_lung_adenocarcinoma/"
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
@@ -43,10 +45,10 @@ table(tiss_subset@meta.data$sample_name)
 table(tiss_subset@meta.data$patient_id)
 ```
 
-
-Save subseted Seurat object
+Save Tiss Subset
 ```{r}
-save(tiss_subset, file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
+save(tiss_subset, file=paste(dir,"Data_input/objects/S03_subset_preprocessed.RData", sep=""))
+# load(file="~/scell_lung_adenocarcinoma/Data_input/objects/S03_subset_preprocessed.RData")
 ```
 
 Normalize and scale the data
@@ -57,7 +59,7 @@ tiss_subset <- ScaleData(object = tiss_subset)
 
 Find variable genes
 ```{r}
-tiss_subset <- FindVariableFeatures(object = tiss_subset, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+tiss_subset <- FindVariableFeatures(object = tiss_subset)
 ```
 
 Perform PCA
@@ -72,7 +74,7 @@ ElbowPlot(tiss_subset)
 
 Visualize first two PCs
 ```{r}
-PCAPlot(object = tiss_subset)
+DimPlot(tiss_subset, reduction = 'pca')
 ```
 
 Visualize top genes and their loadings 
@@ -84,49 +86,120 @@ Visualize top genes in principal components
 ```{r}
 DimHeatmap(tiss_subset, dims = 1:10, cells = 100, balanced = TRUE)
 ```
+
+Set nPCs from above visualizations
+```{r}
+n.pcs <- 20
+```
+
 Construct Neighbor graph 
 ```{r}
-tiss_subset <- FindNeighbors(object = tiss_subset, verbose = T)
+tiss_subset <- FindNeighbors(object = tiss_subset, dims = 1:20, verbose = T)
+```
+
+Check clustering stability at given resolution
+```{r}
+# Set different resolutions
+res.used <- seq(0.1,1,by=0.2)
+# Loop over and perform clustering of different resolutions
+for(i in res.used){
+        tiss_subset <- FindClusters(object = tiss_subset, reduction.type = "pca", dims.use = 1:n.pcs,
+        resolution = i, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+        }
+# rename best response column to best_reaction as to not confuse clustree with res
+colnames(tiss_subset@meta.data)
+colnames(tiss_subset@meta.data)[colnames(tiss_subset@meta.data) == 'best_response_status'] <- 'best_rxn_status'
+# Make plot
+clus.tree.out <- clustree(tiss_subset) +
+    theme(legend.position = "bottom") +
+    scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+# Plot
+clus.tree.out
 ```
 
 Find Clusters 
 ```{r}
 tiss_subset <- FindClusters(object = tiss_subset, verbose = T, resolution = 0.5)
 ```
+
 Run and project TSNEs
 ```{r}
 tiss_subset <- RunTSNE(tiss_subset, dims = 1:20)
-DimPlot(tiss_subset, reduction = "tsne")
+DimPlot(tiss_subset, reduction = "tsne", label = TRUE)
 ```
 
+Find Doublets, pK Identification (no ground-truth)
+```{r}
+sweep.res.tiss_subset <- paramSweep_v3(tiss_subset, PCs = 1:20, sct = FALSE)
+sweep.stats_tiss_subset <- summarizeSweep(sweep.res.tiss_subset, GT = FALSE)
+bcmvn_tiss_subset <- find.pK(sweep.stats_tiss_subset)
+```
 
-<!-- Check clustering stability at given resolution  -->
-<!-- ```{r} -->
-<!-- # Set different resolutions  -->
-<!-- res.used <- seq(0.1,1,by=0.2) -->
-<!-- # Loop over and perform clustering of different resolutions  -->
-<!-- for(i in res.used){ -->
-<!--         tiss_subset <- FindClusters(object = tiss_subset, reduction.type = "pca", dims.use = 1:n.pcs,  -->
-<!--         resolution = i, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T) -->
-<!--         } -->
-<!-- # rename best response column to best_reaction as to not confuse clustree with res -->
-<!-- colnames(tiss_subset@meta.data) -->
-<!-- colnames(tiss_subset@meta.data)[colnames(tiss_subset@meta.data) == 'best_response_status'] <- 'best_rxn_status' -->
-<!-- # Make plot  -->
-<!-- clus.tree.out <- clustree(tiss_subset) + -->
-<!--     theme(legend.position = "bottom") +  -->
-<!--     scale_color_brewer(palette = "Set1") + -->
-<!--     scale_edge_color_continuous(low = "grey80", high = "red") -->
-<!-- # Save pdf  -->
-<!-- ggsave(clus.tree.out, filename = paste(dir,"plot_out/S03/Cluster_resolutions_clustree_output_all.pdf", sep=""), width = 15, height = 15) -->
-<!-- # Plot  -->
-<!-- clus.tree.out -->
-<!-- ``` -->
+Homotypic Doublet Proportion Estimate
+```{r}
+homotypic.prop <- modelHomotypic(tiss_subset$seurat_clusters)
+nExp_poi <- round(0.01*length(tiss_subset@meta.data$cell_id))  ## Assuming 1% doublet formation rate for SmartSeq2
+nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+```
 
+Run DoubletFinder using nExp_poi.adj
+```{r}
+tiss_subset <- doubletFinder_v3(tiss_subset, PCs = 1:10, pN = 0.25, pK = 0.09, nExp = nExp_poi.adj, sct = FALSE)
+```
+
+Check Doublet outputs
+```{r}
+hist(tiss_subset@meta.data$pANN_0.25_0.09_218)
+table(tiss_subset@meta.data$DF.classifications_0.25_0.09_218)
+table(tiss_subset@meta.data$DF.classifications_0.25_0.09_218, tiss_subset1@meta.data$immune_annotation)
+DimPlot(tiss_subset, reduction = "tsne", group.by = "DF.classifications_0.25_0.09_218")
+VlnPlot(tiss_subset, features = "nFeature_RNA", group.by = "DF.classifications_0.25_0.09_218")
+```
+
+Remove doublets (estimated at 1%)
+```{r}
+singlet_cells <- row.names(tiss_subset@meta.data)[which(tiss_subset@meta.data$DF.classifications_0.25_0.09_218=='Singlet')]
+length(singlet_cells)
+# Subset only the singlet cells
+tiss_subset <-subset(tiss_subset, cells = singlet_cells)
+```
+
+Construct Neighbor graph 
+```{r}
+tiss_subset <- FindNeighbors(object = tiss_subset, dims = 1:20, verbose = T)
+```
+
+Check clustering stability at given resolution
+```{r}
+# Set different resolutions
+res.used <- seq(0.1,1,by=0.2)
+# Loop over and perform clustering of different resolutions
+for(i in res.used){
+        tiss_subset <- FindClusters(object = tiss_subset, reduction.type = "pca", dims.use = 1:n.pcs,
+        resolution = i, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+        }
+# rename best response column to best_reaction as to not confuse clustree with res
+colnames(tiss_subset@meta.data)
+colnames(tiss_subset@meta.data)[colnames(tiss_subset@meta.data) == 'best_response_status'] <- 'best_rxn_status'
+# Make plot
+clus.tree.out <- clustree(tiss_subset) +
+    theme(legend.position = "bottom") +
+    scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+# Plot
+clus.tree.out
+```
+
+Find Clusters 
+```{r}
+tiss_subset <- FindClusters(object = tiss_subset, verbose = T, resolution = 0.5)
+```
 
 Visualize TSNE colored by cluster
 ```{r}
-pdf(paste(dir,"plot_out/S03/main_tSNE.pdf", sep=""),10,10)
+pdf(paste(dir,"plot_out/S03/main_tSNE_nodups.pdf", sep=""),10,10)
+DimPlot(tiss_subset, reduction = "tsne", label = T)
 DimPlot(tiss_subset, reduction = "tsne", label = T)
 dev.off()
 ```
@@ -134,7 +207,7 @@ dev.off()
 Plot genes of interest and save 
 ```{r}
 # Specify genes  
-genes_to_check = c("PTPRC","CD3G","CD3E", "CD79A", "BLNK", "CD68", "CSF1R", "MARCO", "CD207", "EPCAM")
+genes_to_check = c("PTPRC","CD3G","CD3E", "CD79A", "BLNK", "CD68", "CSF1R", "MARCO", "CD207", "FCGR2B", "EPCAM","MYLK","THY1","CD34","PMEL")
 # All on Dotplot 
 p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
 ggsave(paste(dir,"plot_out/S03/dotplot_of_gene_markers.pdf", sep=""), p, width = 10, height = 10)
@@ -149,29 +222,26 @@ p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
 ggsave(paste(dir,"plot_out/S03/dotplot_of_PTPRC_EPCAM.pdf", sep=""), p, width = 10, height = 10)
 p
 ```
+
 Annotate Immune vs Nonimmune clusters
 At this point we dont care for a more detailed annotation as we will annotate immune and non-immune separately later
 ```{r}
 #add column 'main_seurat_cluster' to store cluster ids from this step.
-tiss_subset@meta.data$main_seurat_cluster <- tiss_subset@meta.data$SmartSeq2_snn_res.0.5
+tiss_subset@meta.data$main_seurat_cluster <- tiss_subset@meta.data$seurat_clusters
 # Change the column of the resolution if you ended up using a different one than 0.5 
-cluster.ids <- sort(as.numeric(unique(as.character(tiss_subset@meta.data$SmartSeq2_snn_res.0.5))))
+cluster.ids <- sort(as.numeric(unique(as.character(tiss_subset@meta.data$RNA_snn_res.0.5))))
 # Manually check and ananotate each cluster to immmune and non-immune   
-immune_annotation <- c("immune","immune","immune","immune","immune",
+immune_annotation <- c("immune","non-immune","immune","immune","immune","non-immune",
+                       "immune","non-immune","non-immune","immune", "non-immune",
+                       "non-immune","immune","immune","immune","non-immune",
                        "non-immune","immune","non-immune","non-immune","immune",
-                       "non-immune","immune","non-immune","immune","non-immune",
-                       "non-immune","non-immune","immune","immune","non-immune",
-                       "immune")
-# immune_annotation <- c("0","1","2","3","4",
-#                        "5","6","7","8","9",
-#                        "10","11","12","13","14",
-#                        "15","16","17","18","19",
-#                        "20","21","22","23","24")
-# Add annotation to the Seurat objedct 
-tiss_subset@meta.data$immune_annotation <- tiss_subset@meta.data$SmartSeq2_snn_res.0.5 
+                       "immune","non-immune","non-immune","non-immune","immune")
+# Add annotation to the Seurat object 
+tiss_subset@meta.data$immune_annotation <- tiss_subset@meta.data$seurat_clusters 
 tiss_subset@meta.data$immune_annotation <- plyr::mapvalues(x = tiss_subset@meta.data$immune_annotation, from = cluster.ids, to = immune_annotation)
-# MAke a table 
+# Make a table 
 table(tiss_subset@meta.data$immune_annotation)
+table(tiss_subset@meta.data$immune_annotation, tiss_subset@meta.data$main_seurat_cluster)
 ```
 
 Make and save relevant plots 
@@ -185,7 +255,7 @@ p <- ggplot(tiss_subset@meta.data, aes(immune_annotation)) + geom_bar() +
   ylab("count")
 ggsave(paste(dir,"plot_out/S03/annotation_count.pdf", sep=""), p, width = 10, height = 10)
 # Reads vs Genes 
-p <- ggplot(tiss_subset@meta.data, aes(x = nFeature_SmartSeq2, y = nCount_SmartSeq2)) + geom_point() + theme_bw() + scale_y_log10()
+p <- ggplot(tiss_subset@meta.data, aes(x = nFeature_RNA, y = nCount_RNA)) + geom_point() + theme_bw() + scale_y_log10()
 ggsave(paste(dir,"plot_out/S03/reads_vs_genes.pdf", sep=""), p, width = 10, height = 10)
 ```
 

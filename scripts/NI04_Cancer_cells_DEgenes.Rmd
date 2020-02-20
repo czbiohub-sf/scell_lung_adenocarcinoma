@@ -9,61 +9,93 @@ library(corrplot)
 library(Seurat)
 library(tidyverse)
 library(ggplot2)
+library(ggrepel)
 ```
 
 ```{r}
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
+rm(list=ls())
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 load(file = paste(dir,"Data_input/objects/NI03_epithelial_annotated_tumor.RData", sep=""))
 ```
 
 Check nGenes and nReads for tumor vs nontumor
 ```{r}
-x1 <- ggplot(data = tiss_nonimmune_epi@meta.data, aes(x = inferCNV_annotation, y = nGene)) + geom_boxplot() + geom_signif(comparisons = list(c("nontumor", "tumor")), map_signif_level=TRUE)
+x1 <- ggplot(data = tiss_nonimmune_epi@meta.data, aes(x = inferCNV_annotation, y = nFeature_RNA)) + geom_boxplot() + geom_signif(comparisons = list(c("nontumor", "tumor")), map_signif_level=TRUE)
+x1
+
 ggsave(plot = x1, paste(dir,"plot_out/NI04/tumor_nontumor_uniquegenes.pdf", sep=""), width = 90, height = 90, units = "mm")
 
 x <- filter(tiss_nonimmune_epi@meta.data, inferCNV_annotation == 'tumor')
-mean(x$nGene) # mean genes expressed by tumor 5576 1726195(nReads)
+mean(x$nCount_RNA) # mean genes expressed by tumor 5504.7 1698347(nReads)
 y <- filter(tiss_nonimmune_epi@meta.data, inferCNV_annotation == 'nontumor')
-mean(y$nGene) # mean genes expressed by tumor 2588 1395728(nReads)
+mean(y$nCount_RNA) # mean genes expressed by tumor 2657.663 1220097(nReads)
 
-cor(x = tiss_nonimmune_epi@meta.data$nGene, y = tiss_nonimmune_epi@meta.data$nReads, method = "pearson")
-cor(x = tiss_nonimmune_epi@meta.data$nGene, y = tiss_nonimmune_epi@meta.data$nReads, method = "spearman")
+cor(x = tiss_nonimmune_epi@meta.data$nFeature_RNA, y = tiss_nonimmune_epi@meta.data$nCount_RNA, method = "pearson") #0.188009
+cor(x = tiss_nonimmune_epi@meta.data$nFeature_RNA, y = tiss_nonimmune_epi@meta.data$nCount_RNA, method = "spearman") #0.4915608
 ```
 
 Subset tumor cells from epi_cells object
 ```{r}
 cells.use <- row.names(tiss_nonimmune_epi@meta.data)[which(tiss_nonimmune_epi@meta.data$inferCNV_annotation=="tumor")]
 length(cells.use)
-tiss_subset_tumor2 <- SubsetData(tiss_nonimmune_epi, cells.use = cells.use)
+tiss_subset_tumor2 <- subset(tiss_nonimmune_epi, cells = cells.use)
+```
+
+compare CNV_scores
+```{r}
+cnv_scores <- read.csv(file = paste(dir, "data_out/NI03/results/cnv_scores.csv", sep = ""))
+colnames(cnv_scores) <- c("cell_id", "cnv_score")
+
+# add cnv_scores to cancer cell metadata
+tiss_subset_tumor2@meta.data <- left_join(x = tiss_subset_tumor2@meta.data, y = cnv_scores, by = "cell_id")
+rownames(tiss_subset_tumor2@meta.data) <- tiss_subset_tumor2@meta.data$cell_id
+
+cnv_score_plot <- ggplot(tiss_subset_tumor2@meta.data, aes(x = analysis, y = cnv_score)) + geom_boxplot() + geom_signif(comparisons = list(c("naive", "grouped_pr")), map_signif_level=TRUE, y_position = 11000) + geom_signif(comparisons = list(c("naive", "grouped_pd")), map_signif_level=TRUE, y_position = 13000) + geom_signif(comparisons = list(c("grouped_pr", "grouped_pd")), map_signif_level=TRUE, y_position = 12000)
+
+ggsave(cnv_score_plot, filename = paste(dir, "plot_out/NI04/cnv_score_plot_bycell.pdf", sep = ""))
+
+#find mean cnv for each sample
+mean_cnv <- aggregate(tiss_subset_tumor2@meta.data[, "cnv_score"], list(tiss_subset_tumor2@meta.data$sample_name), mean)
+colnames(mean_cnv) <- c("sample_name", "mean_cnv_score")
+mean_cnv1 <- left_join(mean_cnv, tiss_subset_tumor2@meta.data[ ,c("sample_name", "analysis")], by = "sample_name")
+mean_cnv2 <- unique(mean_cnv1)
+
+cnv_score_plot1 <- ggplot(mean_cnv2, aes(x = analysis, y = mean_cnv_score)) + geom_boxplot() + geom_signif(comparisons = list(c("naive", "grouped_pr")), map_signif_level=TRUE) + geom_signif(comparisons = list(c("naive", "grouped_pd")), map_signif_level=TRUE) + geom_signif(comparisons = list(c("grouped_pr", "grouped_pd")), map_signif_level=TRUE)
+
+ggsave(cnv_score_plot1, filename = paste(dir, "plot_out/NI04/cnv_score_plot_bulkized.pdf", sep = ""))
 ```
 
 Normalize and scale the data
 ```{r}
 tiss_subset_tumor2 <- NormalizeData(object = tiss_subset_tumor2)
-tiss_subset_tumor2 <- ScaleData(object = tiss_subset_tumor2)
 ```
 
 Find variable genes
 ```{r}
-tiss_subset_tumor2 <- FindVariableGenes(object = tiss_subset_tumor2, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+tiss_subset_tumor2 <- FindVariableFeatures(object = tiss_subset_tumor2)
+```
+
+Scale data
+```{r}
+tiss_subset_tumor2 <- ScaleData(object = tiss_subset_tumor2)
 ```
 
 Perform PCA
 ```{r}
-tiss_subset_tumor2 <- RunPCA(object = tiss_subset_tumor2, do.print = FALSE)
-tiss_subset_tumor2 <- ProjectPCA(object = tiss_subset_tumor2, do.print = FALSE)
+tiss_subset_tumor2 <- RunPCA(object = tiss_subset_tumor2)
 ```
 
 Visualize top genes in principal components
 ```{r}
-PCHeatmap(object = tiss_subset_tumor2, pc.use = 1:6, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 20)
+DimHeatmap(object = tiss_subset_tumor2, dims = 1:10, cells = 100, balanced = TRUE)
 ```
 
 Perform correlation of PCs and metadata fields
 ```{r}
-pca.obj <- tiss_subset_tumor2@dr$pca
+pca.obj <- tiss_subset_tumor2@reductions$pca
 pc.coords <- pca.obj@cell.embeddings
-df1 <- tiss_subset_tumor2@meta.data[,c("nGene","nReads","percent.ribo")]
+df1 <- tiss_subset_tumor2@meta.data[,c("nFeature_RNA","nCount_RNA","percent.ribo")]
 df2 <- pc.coords[,c(1:10)]
 cordf12 <- cor(df1,df2)
 # Make a correlation plot
@@ -72,12 +104,17 @@ corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
 
 Also visaulize PC variance
 ```{r}
-PCElbowPlot(object = tiss_subset_tumor2)
+ElbowPlot(object = tiss_subset_tumor2, ndims = 30)
 ```
 
 Choose the number of principal components to use.
 ```{r}
 n.pcs = 20
+```
+
+Find Neighbors
+```{r}
+tiss_subset_tumor2 <- FindNeighbors(object = tiss_subset_tumor2, dims = 1:n.pcs, verbose = T, k.param = 10)
 ```
 
 Check clustering stability at given resolution (Clustree)
@@ -86,40 +123,39 @@ Check clustering stability at given resolution (Clustree)
 res.used <- seq(0.1,1,by=0.2)
 # Loop over and perform clustering of different resolutions 
 for(i in res.used){
-tiss_subset_tumor2 <- FindClusters(object = tiss_subset_tumor2, reduction.type = "pca", dims.use = 1:n.pcs, 
-    resolution = i, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)}
+tiss_subset_tumor2 <- FindClusters(object = tiss_subset_tumor2, verbose = T, resolution = res.used)}
 # Make Plot
 clus.tree.out <- clustree(tiss_subset_tumor2, layout="sugiyama") +
     theme(legend.position = "bottom") + 
   scale_color_brewer(palette = "Set1") +
     scale_edge_color_continuous(low = "grey80", high = "red")
-
+ggsave(clus.tree.out, filename = paste(dir, "plot_out/NI04/clustree_out.pdf", sep = ""))
 clus.tree.out
 ```
 
 Set resolution and perform clustering
 ```{r}
 res.used <- 0.9
-tiss_subset_tumor2 <- FindClusters(object = tiss_subset_tumor2, reduction.type = "pca", dims.use = 1:n.pcs, resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+tiss_subset_tumor2 <- FindClusters(object = tiss_subset_tumor2, verbose = T, resolution = res.used)
 ```
 
 Perform  tSNE
 ```{r}
-tiss_subset_tumor2 <- RunTSNE(object = tiss_subset_tumor2, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+tiss_subset_tumor2 <- RunTSNE(object = tiss_subset_tumor2, dims.use = 1:n.pcs, seed.use = 10)
 ```
 
 Visualize TSNE colroed by cluster
 ```{r}
 pdf(file = paste(dir, "plot_out/NI04/NI04_tumor_tsne.pdf", sep = ""))
-TSNEPlot(object = tiss_subset_tumor2, do.label = T, group.by = "res.0.9")
-TSNEPlot(object = tiss_subset_tumor2, do.label = F, group.by = "analysis")
+DimPlot(object = tiss_subset_tumor2, reduction = 'tsne', group.by = "seurat_clusters", label = TRUE)
+DimPlot(object = tiss_subset_tumor2, reduction = 'tsne', group.by = "analysis")
 dev.off()
 ```
 
 Cluster Occ by patient
 ```{r}
 # Calculate mixing score for each cluster 
-tab.1 <- table(tiss_subset_tumor2@meta.data$patient_id, tiss_subset_tumor2@meta.data$res.0.9)
+tab.1 <- table(tiss_subset_tumor2@meta.data$patient_id, tiss_subset_tumor2@meta.data$seurat_clusters)
 occ_score <- apply(tab.1, 2, max)/colSums(tab.1)
 # Plot mixing score
 pdf(file = paste(dir, "plot_out/NI04/NI04_tumor_clusocc_bargraph.pdf", sep = ""))
@@ -129,9 +165,9 @@ dev.off()
 
 ```{r}
 # set the ident of the object to the "analysis" column
-unique(tiss_subset_tumor2@ident) # check current ident
-tiss_subset_tumor2 <- SetIdent(tiss_subset_tumor2, ident.use = tiss_subset_tumor2@meta.data$analysis)
-unique(tiss_subset_tumor2@ident) # check current ident
+unique(tiss_subset_tumor2@active.ident) # check current ident
+tiss_subset_tumor2 <- SetIdent(tiss_subset_tumor2, value = tiss_subset_tumor2@meta.data$analysis)
+unique(tiss_subset_tumor2@active.ident) # check current ident
 ```
 
 Calculate the pairwise comparisons between treatment groups of naive vs pr
@@ -157,7 +193,7 @@ groups <- c("naive", "grouped_pr")
 for(i in 1:nrow(naive_v_pr.1)){
   # gene <- as.character(naive_v_pr.1$gene)[i]
   gene <- row.names(naive_v_pr.1)[i]
-  gene.vec <- tiss_subset_tumor2@data[gene,]
+  gene.vec <- tiss_subset_tumor2@assays$RNA@counts[gene,]
     for(j in 1:length(groups)){
       cells <- row.names(tiss_subset_tumor2@meta.data)[which(tiss_subset_tumor2@meta.data$analysis==groups[j])]
       all.no.zero.cells <- names(which(gene.vec[cells] !=0 )) # Set threshold
@@ -176,7 +212,7 @@ groups <- c("naive", "grouped_pd")
 for(i in 1:nrow(naive_v_pd.1)){
   # gene <- as.character(naive_v_pd.1$gene)[i]
   gene <- row.names(naive_v_pd.1)[i]
-  gene.vec <- tiss_subset_tumor2@data[gene,]
+  gene.vec <- tiss_subset_tumor2@assays$RNA@counts[gene,]
     for(j in 1:length(groups)){
       cells <- row.names(tiss_subset_tumor2@meta.data)[which(tiss_subset_tumor2@meta.data$analysis==groups[j])]
       all.no.zero.cells <- names(which(gene.vec[cells] !=0 )) # Set threshold
@@ -195,7 +231,7 @@ groups <- c("grouped_pr", "grouped_pd")
 for(i in 1:nrow(pr_v_pd.1)){
   # gene <- as.character(pr_v_pd.1$gene)[i]
   gene <- row.names(pr_v_pd.1)[i]
-  gene.vec <- tiss_subset_tumor2@data[gene,]
+  gene.vec <- tiss_subset_tumor2@assays$RNA@counts[gene,]
     for(j in 1:length(groups)){
       cells <- row.names(tiss_subset_tumor2@meta.data)[which(tiss_subset_tumor2@meta.data$analysis==groups[j])]
       all.no.zero.cells <- names(which(gene.vec[cells] !=0 )) # Set threshold
@@ -246,10 +282,11 @@ naive_vs_pr_volc.1 <- volc + geom_text_repel(data=head(input_naive_pr.1, 20), ae
   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+
 # save volcano plot
 ggsave(naive_vs_pr_volc.1, filename = paste(dir,"plot_out/NI04/naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
-table(input_naive_pr.1$sig) # find number of genes that are sig for PER compared to TN
+table(input_naive_pr.1$sig) # find number of genes that are sig for PER compared to TN (645)
 ```
 
 
@@ -287,10 +324,11 @@ naive_vs_pd_volc.1 <- volc + geom_text_repel(data=head(input_naive_pd.1, 40), ae
   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
   theme(legend.title = element_blank(), legend.position = "top") + 
   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+
 # save volcano plot
 ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI04/naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
-table(input_naive_pd.1$sig) # find number of genes that are sig for PD compared to TN
+table(input_naive_pd.1$sig) # find number of genes that are sig for PD compared to TN (989)
 ```
 
 PER vs PD
@@ -363,12 +401,12 @@ PD_only_volc.1 <- PD_only_volc + geom_text_repel(data=head(pd.1, 50), aes(label=
 ggsave(PR_only_volc.1, filename = paste(dir,"plot_out/NI04/pr_vs_pd_pronly_volcanoplot.pdf", sep=""), width = 15, height = 15, units = "in")
 ggsave(PD_only_volc.1, filename = paste(dir,"plot_out/NI04/pr_vs_pd_pdonly_volcanoplot.pdf", sep=""), width = 15, height = 15, units = "in")
 
-table(input_pr_pd_PR$sig) # find number of genes that are sig for PER compared to PD
-table(input_pr_pd_PD$sig) # find number of genes that are sig for PD compared to PER
+table(input_pr_pd_PR$sig) # find number of genes that are sig for PER compared to PD (857)
+table(input_pr_pd_PD$sig) # find number of genes that are sig for PD compared to PER (1050)
 ```
 
 ```{r}
-save(tiss_subset_tumor2, file = paste(dir, "Data_input/objects/objects/NI04_tumor_seurat_object.RData", sep = ""))
+save(tiss_subset_tumor2, file= paste(dir,"/Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
 ```
 
 

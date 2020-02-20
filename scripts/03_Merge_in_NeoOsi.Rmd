@@ -17,7 +17,7 @@ library(ggExtra)
 
 Clear environment and load filtered Seurat object 
 ```{r}
-# rm(list=ls())
+rm(list=ls())
 dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 load(file = paste(dir,"Data_input/objects/S02_Main_Seurat_object_filtered.RData", sep=""))
 load(file = paste(dir,"Data_input/objects/S02.1_Main_Seurat_object_filtered_neo_osi.RData", sep=""))
@@ -32,4 +32,10 @@ main_tiss_filtered1
 Save filtered Merged Seurat Object
 ```{r}
 save(main_tiss_filtered1, file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
+# load(file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
 ```
+
+```{r}
+VlnPlot(main_tiss_filtered1, features = 'nFeature_RNA', group.by = 'sample_name')
+```
+

@@ -55,7 +55,7 @@ dim(osi.raw.data)
 
 Create the Seurat object with all the data (unfiltered)
 ```{r}
-osi_object <- CreateSeuratObject(counts = osi.raw.data, meta.data = osi.metadata)
+osi_object <- CreateSeuratObject(counts = osi.raw.data)
 osi_object <- AddMetaData(object = osi_object, metadata = osi.metadata)
 osi_object <- AddMetaData(object = osi_object, percent.ercc, col.name = "percent.ercc")
 # Changing nUMI column name to nReads
@@ -83,7 +83,16 @@ osi_object_filtered
 osi_object_filtered
 ```
 
+```{r}
+VlnPlot(osi_object_filtered, features = "nFeature_RNA")
+VlnPlot(osi_object_filtered, features = "nCount_RNA", log = TRUE)
+```
+
 Save filtered Seurat object
 ```{r}
 save(osi_object_filtered, file=paste(dir,"Data_input/objects/S02.1_Main_Seurat_object_filtered_neo_osi.RData", sep=""))
+# load(file=paste(dir,"Data_input/objects/S02.1_Main_Seurat_object_filtered_neo_osi.RData", sep=""))
 ```
+
+
+

@@ -1,0 +1,35 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+DoubletDecon
+```{r}
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install(version = "3.10")
+# source("https://bioconductor.org/biocLite.R")
+# BiocManager::install(c("DeconRNASeq", "clusterProfiler", "hopach", "mygene", "tidyr", "R.utils", "foreach", "doParallel", "stringr"))
+# install.packages("MCL")
+# devtools::install_github('EDePasquale/DoubletDecon')
+library(DoubletDecon)
+```
+
+Run DoubletDecon
+```{r}
+location <- paste(dir, "data_out/NI01/", sep = "")
+
+newFiles <- Improved_Seurat_Pre_Process(tiss_subset, num_genes=50, write_files=FALSE)
+
+filename="NI01_doublet"
+write.table(newFiles$newExpressionFile, paste0(location, filename, "_expression"), sep="\t")
+write.table(newFiles$newFullExpressionFile, paste0(location, filename, "_fullExpression"), sep="\t")
+write.table(newFiles$newGroupsFile, paste0(location, filename , "_groups"), sep="\t", col.names = F)
+
+doublets_result <- Main_Doublet_Decon(rawDataFile=newFiles$newExpressionFile, 
+                      groupsFile=newFiles$newGroupsFile, filename = filename, 
+                      location = location,fullDataFile = NULL, 
+                      removeCC = FALSE, species = "hsa")
+
+table(doublets_result$DRS_doublet_table$isADoublet)
+```

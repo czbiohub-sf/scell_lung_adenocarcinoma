@@ -22,12 +22,23 @@ library(ggExtra)
 
 Read in tumor object
 ```{r}
-# rm(list=ls())
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
+rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
-load(file = paste(dir, "Data_input/objects/Immuune_Seurat_object.RData", sep = ""))
-load(file = paste(dir, "Data_input/S03_Main_Seurat_object_filtered_and_subset.RData", sep = ""))
-load(file = paste(dir, "Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData"))
+load(file = paste(dir, "Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep = ))
+```
+
+Make sure all data is scaled
+```{r}
+tiss_subset_tumor2 <- ScaleData(object = tiss_subset_tumor2, features = rownames(tiss_subset_tumor2))
+```
+
+```{r}
+# Re-level object@ident
+my_levels <- c("naive", "grouped_pr", "grouped_pd")
+
+tiss_subset_tumor2@active.ident <- factor(x = tiss_subset_tumor2@active.ident, levels = my_levels)
 ```
 
 AT2 Sig Plotting
@@ -36,12 +47,12 @@ AT2 Sig Plotting
 AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
 
 # make a heatmap
-pdf(file = paste(dir, "plot_out/NI10/AT2_Sig_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, genes.use = AT2_genes, slim.col.label = TRUE, use.scaled = TRUE, group.order = c("naive","grouped_pr","grouped_pd"))
+pdf(file = paste(dir, "plot_out/NI08/AT2_Sig_heatmap.pdf", sep = ""))
+DoHeatmap(tiss_subset_tumor2, features = AT2_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
 # Fetch Data for AT2 Sig in Tumor Cells
-AT2_diff <- FetchData(tiss_subset_tumor2, c(AT2_genes, 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site', 'cell_id'))
+AT2_diff <- FetchData(tiss_subset_tumor2, c(AT2_genes,'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id'))
 AT2_diff$AT2_diff_mean <- rowMeans(AT2_diff[c(AT2_genes)], na.rm=TRUE)
 AT2_diff$cell_name <- rownames(AT2_diff)
 AT2_diff$group <- "tumor"
@@ -51,12 +62,15 @@ AT2_diff$group <- "tumor"
 # Fetch Data for AT2 Sig in Normal AT2 Cells
 table(tiss_nonimmune_epi@meta.data$epi_anno_final) #434 AT2 cells
 normal_at2 <- filter(tiss_nonimmune_epi@meta.data, epi_anno_final == "alveolar type 2 cell")
-normal_at2_sub <- SubsetData(tiss_nonimmune_epi, cells.use = normal_at2$cell_id)
-Norm_at2 <- FetchData(normal_at2_sub, c(AT2_genes, 'nGene', 'nReads', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id'))
+
+normal_at2_sub <- subset(tiss_nonimmune_epi, cells = normal_at2$cell_id)
+
+Norm_at2 <- FetchData(normal_at2_sub, c(AT2_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id'))
+
 Norm_at2$cell_name <- rownames(Norm_at2)
 Norm_at2$AT2_diff_mean <- rowMeans(Norm_at2[c(AT2_genes)], na.rm=TRUE)
 Norm_at2$group <- "normal"
-table(Norm_at2$analysis) # PD = 80, PER = 245, TN = 109
+table(Norm_at2$analysis) # PD = 187, PER = 492, TN = 247
 ```
 
 combine normal and tumor cell tables
@@ -75,9 +89,9 @@ AT2_diff_test <- pairwise.wilcox.test(x = AT2_combine$AT2_diff_mean, g = AT2_com
 AT2_diff_test <- as.data.frame(AT2_diff_test$p.value)
 
 # plot
-AT2_combine_p1 <- ggplot(AT2_combine, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("AT2 Differentiation Signature Expression per Group") + ggtitle("AT2 Differentiation Signature Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 5, annotations = '1.40e-235') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 7, annotations = '1.06e-173') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 6, annotations = '6.90e-138') + geom_signif(comparisons = list(c("Normal AT2", "grouped_pr")), map_signif_level=TRUE, y_position = 8, annotations = '3.29e-155') + scale_x_discrete(limits=c("Normal AT2", "naive", "grouped_pr", "grouped_pd"))
+AT2_combine_p1 <- ggplot(AT2_combine, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("AT2 Differentiation Signature Expression per Group") + ggtitle("AT2 Differentiation Signature Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + geom_signif(comparisons = list(c("Normal AT2", "grouped_pr")), map_signif_level=TRUE, y_position = 5) + scale_x_discrete(limits=c("Normal AT2", "naive", "grouped_pr", "grouped_pd"))
 
-ggsave(AT2_combine_p1, filename = paste(dir, "plot_out/NI10/AT2_pertumor_v_normal_box.pdf", sep = ""), height = 5, width = 5)
+ggsave(AT2_combine_p1, filename = paste(dir, "plot_out/NI08/AT2_pertumor_v_normal_box.pdf", sep = ""), height = 5, width = 5)
 ```
 
 ```{r}
@@ -88,13 +102,13 @@ rownames(AT2_lung_only) <- AT2_lung_only$cell_id
 AT2_diff_test.1 <- pairwise.wilcox.test(x = AT2_lung_only$AT2_diff_mean, g = AT2_lung_only$analysis)
 AT2_diff_test.1 <- as.data.frame(AT2_diff_test.1$p.value)
 
-AT2_combine_p2 <- ggplot(AT2_lung_only, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("AT2 Differentiation Signature Expression per Group") + ggtitle("AT2 Differentiation Signature Expression per Group (Lung)") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 5, annotations = '4.84-18') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 7, annotations = '8.71e-14') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 6, annotations = '3.43e-109') + geom_signif(comparisons = list(c("Normal AT2", "grouped_pr")), map_signif_level=TRUE, y_position = 8, annotations = '2.96-150') + scale_x_discrete(limits=c("Normal AT2", "naive", "grouped_pr", "grouped_pd"))
+AT2_combine_p2 <- ggplot(AT2_lung_only, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("AT2 Differentiation Signature Expression per Group") + ggtitle("AT2 Differentiation Signature Expression per Group (Lung)") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + geom_signif(comparisons = list(c("Normal AT2", "grouped_pr")), map_signif_level=TRUE, y_position = 5) + scale_x_discrete(limits=c("Normal AT2", "naive", "grouped_pr", "grouped_pd"))
 
-ggsave(AT2_combine_p2, filename = paste(dir, "plot_out/NI10/AT2_pertumor_v_normal_box_lungonly.pdf", sep = ""), height = 5, width = 5)
+ggsave(AT2_combine_p2, filename = paste(dir, "plot_out/NI08/AT2_pertumor_v_normal_box_lungonly.pdf", sep = ""), height = 5, width = 5)
 ```
 
 ```{r}
-AT2_combine_seurat <- SubsetData(tiss_nonimmune_epi, cells.use = c(AT2_combine$cell_id))
+AT2_combine_seurat <- subset(tiss_nonimmune_epi, cells = c(AT2_combine$cell_id))
 ```
 
 Find DE genes between PER tumor cells and AT2 normal cells
@@ -107,13 +121,14 @@ tumor_pr <- filter(tiss_nonimmune_epi@meta.data, epi_anno_final == "tumor", anal
 
 at2_normal <- filter(tiss_nonimmune_epi@meta.data, epi_anno_final == "alveolar type 2 cell")
 
-at2_normal_and_tumor1 <- SubsetData(tiss_nonimmune_epi, cells.use = c(tumor_pr$cell_id, at2_normal$cell_id))
+at2_normal_and_tumor1 <- subset(tiss_nonimmune_epi, cells = c(tumor_pr$cell_id, at2_normal$cell_id))
 table(at2_normal_and_tumor1@meta.data$epi_anno_final)
-at2_normal_and_tumor1 <- SetAllIdent(at2_normal_and_tumor1, id = "epi_anno_final")
-table(at2_normal_and_tumor1@ident)
+
+Idents(at2_normal_and_tumor1) <- "epi_anno_final"
+table(at2_normal_and_tumor1@active.ident)
 at2_normal_and_tumor1_DE <- FindAllMarkers(at2_normal_and_tumor1)
 
-write.csv(x = at2_normal_and_tumor1_DE, file = paste(dir, "data_out/NI10/at2_normal_vsPERtumor.csv", sep = ""))
+write.csv(x = at2_normal_and_tumor1_DE, file = paste(dir, "data_out/NI08/at2_normal_vsPERtumor.csv", sep = ""))
 
 table(at2_normal_and_tumor1_DE$cluster)
 at2_list <- filter(at2_normal_and_tumor1_DE, cluster == "alveolar type 2 cell")
@@ -122,44 +137,47 @@ at2_list.1 <- at2_list[order(at2_list$avg_logFC, decreasing = TRUE), ]
 tumor_list <- filter(at2_normal_and_tumor1_DE, cluster == "tumor")
 tumor_list.1 <- tumor_list[order(tumor_list$avg_logFC, decreasing = TRUE), ]
 
-pdf(file = paste(dir, "plot_out/NI10/AT2_topDE_heatmap.pdf", sep = ""))
-DoHeatmap(at2_normal_and_tumor1, genes.use = c(at2_list.1$gene[1:25], tumor_list.1$gene[1:25]), slim.col.label = TRUE)
+at2_normal_and_tumor1 <- ScaleData(object = at2_normal_and_tumor1, features = rownames(at2_normal_and_tumor1))
+
+pdf(file = paste(dir, "plot_out/NI08/AT2_topDE_heatmap.pdf", sep = ""))
+DoHeatmap(at2_normal_and_tumor1, features = c(at2_list.1$gene[1:25], tumor_list.1$gene[1:25])) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
-pdf(file = paste(dir, "plot_out/NI10/AT2_topDE_bypval_heatmap.pdf", sep = ""))
-DoHeatmap(at2_normal_and_tumor1, genes.use = at2_normal_and_tumor1_DE$gene[1:10], slim.col.label = TRUE)
+pdf(file = paste(dir, "plot_out/NI08/AT2_topDE_bypval_heatmap.pdf", sep = ""))
+DoHeatmap(at2_normal_and_tumor1, features = at2_normal_and_tumor1_DE$gene[1:10]) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
-pdf(file = paste(dir, "plot_out/NI10/AT2_AT2genesig_heatmap.pdf", sep = ""))
-DoHeatmap(at2_normal_and_tumor1, genes.use = AT2_genes, slim.col.label = TRUE)
+pdf(file = paste(dir, "plot_out/NI08/AT2_AT2genesig_heatmap.pdf", sep = ""))
+DoHeatmap(at2_normal_and_tumor1, features = AT2_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 ```
 
 AT2 Normal + PER Tumor Cells Clustered Alone
 ```{r}
 # Find variable genes
-at2_normal_and_tumor1 <- FindVariableGenes(object = at2_normal_and_tumor1, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+at2_normal_and_tumor1 <- FindVariableFeatures(object = at2_normal_and_tumor1)
+
+#scale data
+at2_normal_and_tumor1 <- ScaleData(at2_normal_and_tumor1)
 
 # Perform PCA
-at2_normal_and_tumor1 <- RunPCA(object = at2_normal_and_tumor1, do.print = FALSE)
-at2_normal_and_tumor1 <- ProjectPCA(object = at2_normal_and_tumor1, do.print = FALSE)
-
-# Visualize top genes in principal components
-PCHeatmap(object = at2_normal_and_tumor1, pc.use = 1:6, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 20)
+at2_normal_and_tumor1 <- RunPCA(object = at2_normal_and_tumor1)
 
 # Also visaulize PC variance
-PCElbowPlot(object = at2_normal_and_tumor1)
+ElbowPlot(object = at2_normal_and_tumor1)
 
 # Choose the number of principal components to use.
 n.pcs = 15
+
+# Find neighbors
+at2_normal_and_tumor1 <- FindNeighbors(at2_normal_and_tumor1, dims = 1:n.pcs)
 
 # Set different resolutions 
 res.used <- seq(0.1,1,by=0.2)
 
 # Loop over and perform clustering of different resolutions 
 for(i in res.used){
-at2_normal_and_tumor1 <- FindClusters(object = at2_normal_and_tumor1, reduction.type = "pca", dims.use = 1:n.pcs, 
-    resolution = i, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)}
+at2_normal_and_tumor1 <- FindClusters(object = at2_normal_and_tumor1, verbose = T, resolution = res.used)}
 # Make Plot
 clus.tree.out <- clustree(at2_normal_and_tumor1, layout="sugiyama") +
     theme(legend.position = "bottom") + 
@@ -168,22 +186,18 @@ clus.tree.out <- clustree(at2_normal_and_tumor1, layout="sugiyama") +
 clus.tree.out
 
 # Set resolution and perform clustering
-res.used <- 0.25
-at2_normal_and_tumor1 <- FindClusters(object = at2_normal_and_tumor1, reduction.type = "pca", dims.use = 1:n.pcs, resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+res.used <- 0.3
+at2_normal_and_tumor1 <- FindClusters(object = at2_normal_and_tumor1, verbose = T, resolution = res.used)
 
 # Perform  tSNE
-at2_normal_and_tumor1 <- RunTSNE(object = at2_normal_and_tumor1, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+at2_normal_and_tumor1 <- RunTSNE(object = at2_normal_and_tumor1, dims.use = 1:n.pcs, seed.use = 10)
 
 #Visualize TSNE colroed by cluster
-at2_normal_and_tumor1 <- SetAllIdent(at2_normal_and_tumor1, id = "epi_anno_final")
-table(at2_normal_and_tumor1@ident)
+Idents(at2_normal_and_tumor1) <- "epi_anno_final"
+table(at2_normal_and_tumor1@active.ident)
 
-pdf(file = paste(dir, "plot_out/NI10/at2_normal_and_tumor1.pdf", sep = ""))
-TSNEPlot(object = at2_normal_and_tumor1, do.label = F)
-dev.off()
-
-pdf(file = paste(dir, "plot_out/NI10/at2_normal_and_tumor.pdf", sep = ""))
-TSNEPlot(object = at2_normal_and_tumor1, do.label = T)
+pdf(file = paste(dir, "plot_out/NI08/at2_normal_and_tumor1.pdf", sep = ""))
+TSNEPlot(object = at2_normal_and_tumor1)
 dev.off()
 ```
 
@@ -191,7 +205,7 @@ Plasminogen Pathway
 ```{r}
 Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
 
-Plasminogen <- FetchData(tiss_subset_tumor2, c(Plasminogen_genes, 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site'))
+Plasminogen <- FetchData(tiss_subset_tumor2, c(Plasminogen_genes, 'analysis','patient_id','sample_name','biopsy_site'))
 
 Plasminogen$Plasminogen_activating_mean <- rowMeans(Plasminogen[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
 Plasminogen$cell_name <- rownames(Plasminogen)
@@ -202,92 +216,77 @@ Plasminogen_test <- as.data.frame(Plasminogen_test$p.value)
 Plasminogen_test1 <- pairwise.wilcox.test(x = Plasminogen$SERPINE1, g = Plasminogen$analysis)
 Plasminogen_test1 <- as.data.frame(Plasminogen_test1$p.value)
 
-pdf(file = paste(dir, "plot_out/NI10/Plasminogen_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, genes.use = Plasminogen_genes, slim.col.label = TRUE, use.scaled = TRUE, group.order = c('naive','grouped_pr','grouped_pd'))
+pdf(file = paste(dir, "plot_out/NI08/Plasminogen_heatmap.pdf", sep = ""))
+DoHeatmap(tiss_subset_tumor2, features = Plasminogen_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
-ggplot(Plasminogen, aes(x = ANXA2, y = analysis, fill = sample_name)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab("ANXA2 Expression") + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
+Plasminogen_act_vln <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_activating_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("Plasminogen Activation") + ggtitle("Plasminogen Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
 
-ggplot(Plasminogen, aes(x = PLAT, y = analysis, fill = sample_name)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab("PLAT Expression") + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
+Plasminogen_SERPINE1 <- ggplot(Plasminogen, aes(x = analysis, y = SERPINE1, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("SERPINE1") + ggtitle("SERPINE1") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 5.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 6) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 5) +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
 
-ggplot(Plasminogen, aes(x = PLAU, y = analysis, fill = sample_name)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab("PLAU Expression") + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
-
-ggplot(Plasminogen, aes(x = SERPINE1, y = analysis, fill = sample_name)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab("SERPINE1 Expression") + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
-
-Plasminogen_act_vln <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_activating_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("Plasminogen Activation") + ggtitle("Plasminogen Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 4.5, annotations = '4.63-232') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 5, annotations = '2.77e-100') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4, annotations = '3.41e-111') +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
-
-Plasminogen_SERPINE1 <- ggplot(Plasminogen, aes(x = analysis, y = SERPINE1, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("SERPINE1") + ggtitle("SERPINE1") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 5.5, annotations = '2.26e-130') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 6, annotations = '2.57e-136') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 5, annotations = '4.38e-19') +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
-
-ggsave(Plasminogen_act_vln, filename = paste(dir, "plot_out/NI10/Plasminogen_act_vln.pdf", sep = ""), height = 5, width = 5)
-ggsave(Plasminogen_SERPINE1, filename = paste(dir, "plot_out/NI10/Plasminogen_SERPINE1.pdf", sep = ""), height = 5, width = 5)
+ggsave(Plasminogen_act_vln, filename = paste(dir, "plot_out/NI08/Plasminogen_act_vln.pdf", sep = ""), height = 5, width = 5)
+ggsave(Plasminogen_SERPINE1, filename = paste(dir, "plot_out/NI08/Plasminogen_SERPINE1.pdf", sep = ""), height = 5, width = 5)
 ```
 
 Kynurenine Pathway
 ```{r}
-Kynurenine_genes <- c('IDO1', 'KYNU', 'QPRT')
+Kynurenine_genes <- c('IDO1', 'KYNU')
 
-Kynurenine <- FetchData(tiss_subset_tumor2, c(Kynurenine_genes, 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site'))
+Kynurenine <- FetchData(tiss_subset_tumor2, c(Kynurenine_genes, 'analysis','patient_id','sample_name','biopsy_site'))
 
-Kynurenine$Kynurenine_mean <- rowMeans(Kynurenine[c("IDO1", "KYNU", "QPRT")], na.rm=TRUE)
+Kynurenine$Kynurenine_mean <- rowMeans(Kynurenine[c("IDO1", "KYNU")], na.rm=TRUE)
 
 Kynurenine$cell_name <- rownames(Kynurenine)
 
 Kynurenine_test <- pairwise.wilcox.test(x = Kynurenine$Kynurenine_mean, g = Kynurenine$analysis)
 Kynurenine_test <- as.data.frame(Kynurenine_test$p.value)
 
-pdf(file = paste(dir, "plot_out/NI10/Kynurenine_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, genes.use = Kynurenine_genes, slim.col.label = TRUE, group.order = c('naive','grouped_pr','grouped_pd'))
+pdf(file = paste(dir, "plot_out/NI08/Kynurenine_heatmap.pdf", sep = ""))
+DoHeatmap(tiss_subset_tumor2, features = Kynurenine_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
-ggplot(Kynurenine, aes(x = IDO1, y = analysis, fill = sample_name)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab("IDO1 Expression") + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
+Kynurenine_act_vln <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("Kynurenine Activation") + ggtitle("Kynurenine Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 3) +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
 
-ggplot(Kynurenine, aes(x = KYNU, y = analysis, fill = sample_name)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab("KYNU Expression") + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
-
-ggplot(Kynurenine, aes(x = QPRT, y = analysis, fill = sample_name)) + geom_density_ridges(alpha=1/2) + theme(axis.title.y = element_blank()) + xlab("QPRT Expression") + guides(colour = FALSE, fill = FALSE) + scale_y_discrete(labels = c("Progressor", "Presister", "Naive"))
-
-Kynurenine_act_vln <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("Kynurenine Activation") + ggtitle("Kynurenine Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5, annotations = '2.05e-128') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4, annotations = '0.00') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 3, annotations = '1.74e-47') +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
-
-ggsave(Kynurenine_act_vln, filename = paste(dir, "plot_out/NI10/Kynurenine_act_vln.pdf", sep = ""), height = 5, width = 5)
+ggsave(Kynurenine_act_vln, filename = paste(dir, "plot_out/NI08/Kynurenine_act_vln.pdf", sep = ""), height = 5, width = 5)
 ```
 
 Gap Junction Signatures
 ```{r}
-GJBs_genes <- c('GJB3', 'GJB2', 'GJB4','GJB5')
+GJBs_genes <- c('GJB3', 'GJB2','GJB5')
 
-GJBs <- FetchData(tiss_subset_tumor2, c(GJBs_genes, 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site'))
+GJBs <- FetchData(tiss_subset_tumor2, c(GJBs_genes, 'analysis','patient_id','sample_name','biopsy_site'))
 
-GJBs$GJBs_mean <- rowMeans(GJBs[c('GJB3', 'GJB2', 'GJB4','GJB5')], na.rm=TRUE)
+GJBs$GJBs_mean <- rowMeans(GJBs[c('GJB3', 'GJB2','GJB5')], na.rm=TRUE)
 
 GJBs$cell_name <- rownames(GJBs)
 
 GJBs_test <- pairwise.wilcox.test(x = GJBs$GJBs_mean, g = GJBs$analysis)
 GJBs_test <- as.data.frame(GJBs_test$p.value)
 
-pdf(file = paste(dir, "plot_out/NI10/GJBs_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, genes.use = GJBs_genes, slim.col.label = TRUE, group.order = c('naive','grouped_pr','grouped_pd'))
+pdf(file = paste(dir, "plot_out/NI08/GJBs_heatmap.pdf", sep = ""))
+DoHeatmap(tiss_subset_tumor2, features = GJBs_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
-GJBs_box <- ggplot(GJBs, aes(x = analysis, y = GJBs_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("GJBs Activation") + ggtitle("GJBs Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 2.2, annotations = '1.06e-189') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 2.7, annotations = '3.42e-212') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 1.7, annotations = '2.56e-30') +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+GJBs_box <- ggplot(GJBs, aes(x = analysis, y = GJBs_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("GJBs Activation") + ggtitle("GJBs Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 2.2) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 2.7) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 1.7) +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
 
-ggsave(GJBs_box, filename = paste(dir, "plot_out/NI10/GJBs_boxplot.pdf", sep = ""), height = 5, width = 5)
+ggsave(GJBs_box, filename = paste(dir, "plot_out/NI08/GJBs_boxplot.pdf", sep = ""), height = 5, width = 5)
 ```
 
 VlnPlot for CRABP2
 ```{r}
-CRABP2_analysis <- FetchData(tiss_subset_tumor2, c('CRABP2', 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site', 'cell_id'))
+CRABP2_analysis <- FetchData(tiss_subset_tumor2, c('CRABP2', 'analysis','patient_id','sample_name','biopsy_site', 'cell_id'))
 
 CRABP2_test <- pairwise.wilcox.test(x = CRABP2_analysis$CRABP2, g = CRABP2_analysis$analysis)
 CRABP2_test.1 <- as.data.frame(CRABP2_test$p.value)
 
-CRABP2_vln <- ggplot(CRABP2_analysis, aes(x = analysis, y = CRABP2, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("CRABP2 Expression per Group") + ggtitle("CRABP2 Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 4.5, annotations = '3.47e-75') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 5, annotations = '0.00') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4, annotations = '1.66e-84') + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+CRABP2_vln <- ggplot(CRABP2_analysis, aes(x = analysis, y = CRABP2, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("CRABP2 Expression per Group") + ggtitle("CRABP2 Expression per Group") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
 
-ggsave(CRABP2_vln, filename = paste(dir, "plot_out/NI10/CRABP2_only_vln.pdf", sep = ""), height = 10, width = 5)
+ggsave(CRABP2_vln, filename = paste(dir, "plot_out/NI08/CRABP2_only_vln.pdf", sep = ""), height = 10, width = 5)
 ```
-
 
 Look for Co-expression of genes of interest
 ```{r}
-gene_compare <- FetchData(tiss_subset_tumor2, c('PLAT', 'PLAU', 'ANXA2', 'PLAUR', 'SERPINE1', 'IDO1', 'KYNU', 'nGene', 'nReads', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id'))
+gene_compare <- FetchData(tiss_subset_tumor2, c('PLAT', 'PLAU', 'ANXA2', 'PLAUR', 'SERPINE1', 'IDO1', 'KYNU', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id'))
 
 p1 <- ggplot(gene_compare, aes(x = PLAU, y = PLAUR)) + geom_point(aes(colour = analysis))
 m1 <- ggMarginal(p1, groupColour = TRUE, groupFill = TRUE)
@@ -297,23 +296,17 @@ p3 <- ggplot(gene_compare, aes(x = PLAU, y = SERPINE1)) + geom_point(aes(colour 
 m3 <- ggMarginal(p3, groupColour = TRUE, groupFill = TRUE)
 p4 <- ggplot(gene_compare, aes(x = IDO1, y = KYNU)) + geom_point(aes(colour = analysis))
 m4 <- ggMarginal(p4, groupColour = TRUE, groupFill = TRUE) #can add histogram with type = "histogram"
+m1
+m2
+m3
+m4
 
-
-ggsave(m1, filename = paste(dir,"plot_out/NI10/PLAUvsPLAUR.pdf", sep = ""))
-ggsave(m2, filename = paste(dir,"plot_out/NI10/PLATvsANXA2.pdf", sep = ""))
-ggsave(m3, filename = paste(dir,"plot_out/NI10/PLAUvsSERPINE1.pdf", sep = ""))
-ggsave(m4, filename = paste(dir,"plot_out/NI10/IDO1vsKYNU.pdf", sep = ""))
+ggsave(m1, filename = paste(dir,"plot_out/NI08/PLAUvsPLAUR.pdf", sep = ""))
+ggsave(m2, filename = paste(dir,"plot_out/NI08/PLATvsANXA2.pdf", sep = ""))
+ggsave(m3, filename = paste(dir,"plot_out/NI08/PLAUvsSERPINE1.pdf", sep = ""))
+ggsave(m4, filename = paste(dir,"plot_out/NI08/IDO1vsKYNU.pdf", sep = ""))
 ```
 
-PD patient only gene compare
-```{r}
-pd_gene_compare <- filter(gene_compare, analysis == "grouped_pd")
 
-p5 <- ggplot(pd_gene_compare, aes(x = PLAU, y = SERPINE1)) + geom_point(aes(colour = sample_name))
-m5 <- ggMarginal(p5, groupColour = TRUE, groupFill = TRUE)
-p6 <- ggplot(pd_gene_compare, aes(x = IDO1, y = KYNU)) + geom_point(aes(colour = sample_name))
-m6 <- ggMarginal(p6, groupColour = TRUE, groupFill = TRUE)
 
-ggsave(m5, filename = paste(dir,"plot_out/NI10/PLAUvsSERPINE1_pdalone.pdf", sep = ""))
-ggsave(m6, filename = paste(dir,"plot_out/NI10/IDO1vsKYNU_pdalone.pdf", sep = ""))
-```
+

@@ -1,0 +1,317 @@
+filename: NI01_doublet
+location: /home/ubuntu/scell_lung_adenocarcinoma/data_out/NI01/
+removeCC: FALSE
+species: hsa
+rhop: 1
+write: TRUE
+PMF: TRUE
+useFull: FALSE
+heatmap: TRUE
+centroids: FALSE
+num_doubs: 100
+only50: FALSE
+min_uniq: 4
+Reading data...
+filename: NI01_doublet
+location: /home/ubuntu/scell_lung_adenocarcinoma/data_out/NI01/
+removeCC: FALSE
+species: hsa
+rhop: 1
+write: TRUE
+PMF: TRUE
+useFull: FALSE
+heatmap: TRUE
+centroids: FALSE
+num_doubs: 100
+only50: FALSE
+min_uniq: 4
+Reading data...
+filename: NI01_doublet
+location: /home/ubuntu/scell_lung_adenocarcinoma/data_out/NI01/
+removeCC: FALSE
+species: hsa
+rhop: 1
+write: TRUE
+PMF: TRUE
+useFull: FALSE
+heatmap: TRUE
+centroids: FALSE
+num_doubs: 100
+only50: FALSE
+min_uniq: 4
+Reading data...
+Processing raw data...
+filename: NI01_doublet
+location: /home/ubuntu/scell_lung_adenocarcinoma/data_out/NI01/
+removeCC: FALSE
+species: hsa
+rhop: 1
+write: TRUE
+PMF: TRUE
+useFull: FALSE
+heatmap: TRUE
+centroids: FALSE
+num_doubs: 100
+only50: FALSE
+min_uniq: 4
+filename: NI01_doublet
+location: /home/ubuntu/scell_lung_adenocarcinoma/data_out/NI01/
+removeCC: FALSE
+species: hsa
+rhop: 1
+write: TRUE
+PMF: TRUE
+useFull: FALSE
+heatmap: TRUE
+centroids: FALSE
+num_doubs: 100
+only50: FALSE
+min_uniq: 4
+Reading data...
+Processing raw data...
+23478 samples after processing
+1242 genes after processing
+Creating original data heatmap...
+Combining similar clusters...
+New blacklisted clusters: 17-10-20, 8-7-2-23-22-11-27-18-13-3-5, 26, 25, 24, 21, 19, 16, 15, 14, 12, 9, 4, 6
+Creating synthetic doublet profiles...
+Step 1: Removing possible doublets...
+6845/23479 possible doublets removed
+Step 2: Re-clustering possible doublets...
+23478 samples after processing
+1242 genes after processing
+Step 3: Rescuing cells with unique gene expression...
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 11
+Unique Genes By Cluster: 6
+Unique Genes By Cluster: 10
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 9
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 16
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 11
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 6
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 26
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 6
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 17
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 16
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 14
+Unique Genes By Cluster: 16
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 6
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 15
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 30
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 9
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 12
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 13
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 11
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 15
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 6
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 12
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 16
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 10
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 12
+Unique Genes By Cluster: 19
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 16
+Unique Genes By Cluster: 16
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 10
+Unique Genes By Cluster: 19
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 9
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 11
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 7
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 9
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 6
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 16
+Unique Genes By Cluster: 25
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 6
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 26
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 12
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 20
+Unique Genes By Cluster: 9
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 3
+Unique Genes By Cluster: 9
+Unique Genes By Cluster: 9
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 2
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 34
+Unique Genes By Cluster: 12
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 8
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 1
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 4
+Unique Genes By Cluster: 13
+Unique Genes By Cluster: 5
+Unique Genes By Cluster: 23
+Creating doublets heatmap...
+Creating non-doublets heatmap...
+Finished!
