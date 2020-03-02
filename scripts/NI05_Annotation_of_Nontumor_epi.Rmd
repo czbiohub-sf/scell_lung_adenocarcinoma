@@ -266,10 +266,18 @@ dev.off()
 TSNEPlot(object = tiss_subset_normalepi, group.by='biopsy_site')
 ```
 
+```{r}
+pdf(file = paste(dir, "plot_out/NI05/NI05_normepi_tsne_patientid.pdf", sep = ""))
+DimPlot(object = tiss_subset_normalepi, reduction = 'tsne', group.by = "patient_id")
+dev.off()
+```
+
+
 Save object
 ```{r}
 save(tiss_subset_normalepi, file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
 # load(file = paste(dir, "Data_input/objects/NI03_epithelial_annotated_tumor.RData", sep = ""))
+# load(file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
 ```
 
 save normal epi annotations to all epi seurat object

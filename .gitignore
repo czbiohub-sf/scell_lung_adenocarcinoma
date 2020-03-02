@@ -10,3 +10,8 @@
 scripts/.ipynb_checkpoints/
 *.ipynb_checkpoints*
 *SRA_upload*
+*data_processed_NI01_doublet.txt*
+*NI01_doublet_expression*
+*data_processed_reclust_NI01_doublet.txt*
+*Final_nondoublets_exp_NI01_doublet.txt*
+*data_out/NI01/NI01_doublet_fullExpression*

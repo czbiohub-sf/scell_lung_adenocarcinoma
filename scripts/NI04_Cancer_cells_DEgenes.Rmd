@@ -152,6 +152,13 @@ DimPlot(object = tiss_subset_tumor2, reduction = 'tsne', group.by = "analysis")
 dev.off()
 ```
 
+```{r}
+pdf(file = paste(dir, "plot_out/NI04/NI04_tumor_tsne_bypatient.pdf", sep = ""))
+DimPlot(object = tiss_subset_tumor2, reduction = 'tsne', group.by = "patient_id")
+dev.off()
+```
+
+
 Cluster Occ by patient
 ```{r}
 # Calculate mixing score for each cluster 
@@ -292,6 +299,7 @@ table(input_naive_pr.1$sig) # find number of genes that are sig for PER compared
 
 Naive vs PD plotting
 ```{r}
+naive_v_pd.1 <- read.csv(file = paste(dir, "data_out/NI04/naive_v_pd1.csv", sep = ""), row.names = 1)
 naive_v_pd.2 <- naive_v_pd.1
 naive_v_pd.2$gene <- rownames(naive_v_pd.2)
 naive_v_pd.2 <- filter(naive_v_pd.2, avg_logFC <= 0)
@@ -299,11 +307,11 @@ rownames(naive_v_pd.2) <- naive_v_pd.2$gene
 # change avglogFC to positive number
 naive_v_pd.2$avg_logFC <- naive_v_pd.2$avg_logFC * -1
 # filter out any genes that are explained by less than 6 patients contributing
-hist(naive_v_pd.2$`grouped_pd n.nonzero.pts`) # set threshold for 6 or more patients
-hist(naive_v_pd.2$`naive n.nonzero.pts`) # set threshold for 6 or more patients
+hist(naive_v_pd.2$grouped_pd.n.nonzero.pts) # set threshold for 6 or more patients
+hist(naive_v_pd.2$naive.n.nonzero.pts) # set threshold for 6 or more patients
 # filter for genes explained by few pateints
-naive_v_pd.2 <- filter(naive_v_pd.2, naive_v_pd.2$`grouped_pd n.nonzero.pts` > 6)
-naive_v_pd.2 <- filter(naive_v_pd.2, naive_v_pd.2$`naive n.nonzero.pts` > 6)
+naive_v_pd.2 <- filter(naive_v_pd.2, naive_v_pd.2$grouped_pd.n.nonzero.pts > 6)
+naive_v_pd.2 <- filter(naive_v_pd.2, naive_v_pd.2$naive.n.nonzero.pts > 6)
 rownames(naive_v_pd.2) <- naive_v_pd.2$gene
 #Will have different colors depending on significance
 mutateddf <- mutate(naive_v_pd.2, sig = ifelse(naive_v_pd.2$p_val_adj < 0.05, "p_val_adj<0.05", "NS")) 
@@ -409,8 +417,29 @@ table(input_pr_pd_PD$sig) # find number of genes that are sig for PD compared to
 save(tiss_subset_tumor2, file= paste(dir,"/Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
 ```
 
+Cell-cycle genes
+```{r}
+tiss_subset_tumor2@active.ident <- factor(tiss_subset_tumor2@active.ident, 
+                            levels=c("naive", "grouped_pr", "grouped_pd"))
 
+cc_genes <- c('TOP2A','CDK1','UBE2C','CDT1', 'MKI67')
 
+cc_analysis <- FetchData(tiss_subset_tumor2, vars = c(cc_genes, 'analysis', 'sample_name','cell_id','patient_id'))
+cc_analysis$average_cc <- rowMeans(cc_analysis[c(cc_genes)], na.rm=TRUE)
+
+cc_diff_test <- pairwise.wilcox.test(x = cc_analysis$average_cc, g = cc_analysis$analysis)
+cc_diff_test <- as.data.frame(cc_diff_test$p.value)
+
+ggplot(cc_analysis, aes(x = analysis, y = average_cc, fill = analysis)) + geom_boxplot() + 
+  guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("CC Signature Expresion per Group") + 
+  ggtitle("CC Signature Expression per Group") + scale_y_log10() + 
+  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 2) +
+  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 2.5) +
+  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 1.5) +
+  scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+
+DotPlot(object = tiss_subset_tumor2, features = cc_genes) + coord_flip()
+```
 
 
 

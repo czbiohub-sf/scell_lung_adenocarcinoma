@@ -10,20 +10,25 @@ library(matrixStats)
 ```
 
 ```{r}
-# load dropseq data from 	Vieira Braga FA, Kar G, Berg M, Carpaij OA et al. A cellular census of human lungs identifies novel cell states in health and in asthma. Nat Med 2019 Jun 17. PMID: 31209336
-dropseq_metadat <- read.csv(file = "/myVolume/scell_lung_adenocarcinoma/Data_input/GSE130148_data/GSE130148_barcodes_cell_types.txt", header = TRUE, sep = "\t")
-rownames(dropseq_metadat) <- dropseq_metadat$cell.barcode
-load(file = paste(dir, "Data_input/GSE130148_data/GSE130148_raw_counts.RData", sep = ""))
-head(raw_counts)
+dir = "/home/ubuntu/scell_lung_adenocarcinoma/"
+```
 
-load(file = paste(dir, "Data_input/objects/NI05_normalepi_seurat_object_annotated.RData", sep = ""))
+
+```{r}
+# load dropseq data from 	Vieira Braga FA, Kar G, Berg M, Carpaij OA et al. A cellular census of human lungs identifies novel cell states in health and in asthma. Nat Med 2019 Jun 17. PMID: 31209336
+dropseq_metadat <- read.csv(file = paste(dir, "Data_input/GSE130148_data/GSE130148_barcodes_cell_types.txt",sep = ""), header = TRUE, sep = "\t")
+rownames(dropseq_metadat) <- dropseq_metadat$cell.barcode
+
+load(file = paste(dir, "Data_input/GSE130148_data/GSE130148_raw_counts.RData", sep = ""))
+
 load(file=paste(dir,"Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
-load("/myVolume/scell_lung_adenocarcinoma/Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData")
+
+load(paste(dir,"Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep = ""))
 ```
 
 Create Seurat object for Dropseq Data
 ```{r}
-dropseq_data <- CreateSeuratObject(raw.data = raw_counts, meta.data = dropseq_metadat)
+dropseq_data <- CreateSeuratObject(counts = raw_counts, meta.data = dropseq_metadat)
 ```
 
 Assign AT2 signature
@@ -40,8 +45,8 @@ dropseq_type2 <- filter(dropseq_data@meta.data, celltype == "Type 2")
 rownames(dropseq_type2) <- dropseq_type2$cell.barcode
 table(dropseq_type2$GEO_Sample)
 
-dropseq_Type2 <- SubsetData(object = dropseq_data, cells.use = dropseq_type2$cell.barcode)
-dropseq_at2exp <- as.data.frame(t(FetchData(dropseq_Type2, vars.all = AT2_sig_genes)))
+dropseq_Type2 <- subset(dropseq_data, cells = dropseq_type2$cell.barcode)
+dropseq_at2exp <- as.data.frame(t(FetchData(dropseq_Type2, vars = AT2_sig_genes)))
 dropseq_at2exp$score <- rowMeans(dropseq_at2exp)
 ```
 
@@ -49,9 +54,9 @@ Pull data for scRNAseq non cancer AT2s
 ```{r}
 # Fetch Data for AT2 Sig in Normal AT2 Cells
 normal_at2 <- filter(tiss_nonimmune_epi@meta.data, epi_anno_final == "alveolar type 2 cell")
-normal_at2_sub <- SubsetData(tiss_nonimmune_epi, cells.use = normal_at2$cell_id)
+normal_at2_sub <- subset(tiss_nonimmune_epi, cells = normal_at2$cell_id)
 
-norm_at2exp <- as.data.frame(t(FetchData(normal_at2_sub, vars.all = AT2_sig_genes)))
+norm_at2exp <- as.data.frame(t(FetchData(normal_at2_sub, vars = AT2_sig_genes)))
 ```
 
 Pull data for scRNAseq for cancer groups
@@ -63,7 +68,6 @@ rownames(TN_at2exp) <- TN_at2exp$cell_id
 TN_at2exp$analysis <- NULL
 TN_at2exp$cell_id <- NULL
 TN_at2exp <- as.data.frame(t(TN_at2exp))
-
 
 PER_at2exp <- filter(tumor_at2exp, analysis == 'grouped_pr')
 rownames(PER_at2exp) <- PER_at2exp$cell_id
@@ -139,7 +143,8 @@ mean(PDspear$corr)
 cor_test.2 <- pairwise.wilcox.test(x = spearmancorr_df$corr, g = spearmancorr_df$group)
 cor_test.2 <- as.data.frame(cor_test.2$p.value)
 
-spearman_corr_plot <- ggplot(spearmancorr_df, aes(x = group, y = corr, fill = group)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("spearman Correlation") + ylim(-1, 1)
-# ggsave(spearman_corr_plot, filename = paste(dir, "plot_out/NI09/spearman_corr_bycell.pdf", sep = ""), width = 5, height = 5)
+spearman_corr_plot <- ggplot(spearmancorr_df, aes(x = group, y = corr, fill = group)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("spearman Correlation") + scale_x_discrete(limits=c("normal at2", "TN", "PER", "PD")) + ylim(0, 1.5)
+
+ggsave(spearman_corr_plot, filename = paste(dir, "plot_out/NI09/spearman_corr_bycell.pdf", sep = ""), width = 5, height = 5)
 ```
 

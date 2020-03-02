@@ -12,7 +12,9 @@ library(ggplot2)
 ```
 
 ```{r}
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
+# rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
 load(file = paste(dir,"Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
 ```
 
@@ -20,16 +22,17 @@ Subset TH226 samples for longitudial analysis
 ```{r}
 # subset out Patient TH226 (samples 52, 57 and 82)
 TH226_patient <- filter(tiss_subset_tumor2@meta.data, patient_id == "TH226")
-TH226_samples <- SubsetData(tiss_subset_tumor2, cells.use = TH226_patient$cell_id)
+TH226_samples <- subset(tiss_subset_tumor2, cells = TH226_patient$cell_id)
 
 table(TH226_samples@meta.data$sample_name, TH226_samples@meta.data$analysis)
-TH226_samples <- SetIdent(object = TH226_samples, id = TH226_samples@meta.data$sample_name)
-unique(TH226_samples@ident)
+
+Idents(TH226_samples) <- "sample_name"
+unique(TH226_samples@active.ident)
 ```
 
 TH226 TN vs PER
 ```{r}
-# compare naive cells (n = 14) to pr cells (n = 187)
+# compare naive cells (n = 15) to pr cells (n = 194)
 TH226_TNvsPER <- FindMarkers(object = TH226_samples, ident.1 = "LT_S52", ident.2 = "LT_S57")
 TH226_TNvsPER$gene <- rownames(TH226_TNvsPER)
 TH226_TNvsPER.1 <- TH226_TNvsPER
@@ -45,23 +48,23 @@ TH226_TNvsPER.2 <- TH226_TNvsPER.1[order(TH226_TNvsPER.1$avg_logFC, decreasing =
 # save sorted gene lists
 write.csv(x = TH226_TNvsPER.1, file = paste(dir, "data_out/NI07/TH226_tn_v_pr_analysis.csv", sep = ""))
 
-# create volcano plot
-TH226volc <- ggplot(TH226_TNvsPER.1, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("TH226 TN vs PER") 
-
-TH226_TNvsPER_plot <- TH226volc + geom_text_repel(data=head(TH226_TNvsPER.1, 6), aes(label=gene), point.padding = 1, box.padding = .3) +
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-
-ggsave(TH226_TNvsPER_plot, filename = paste(dir, "plot_out/NI07/TH226_TNvPER_volcanoplot.pdf", sep = ""))
+# # create volcano plot
+# TH226volc <- ggplot(TH226_TNvsPER.1, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("TH226 TN vs PER") 
+# 
+# TH226_TNvsPER_plot <- TH226volc + geom_text_repel(data=head(TH226_TNvsPER.1, 6), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# 
+# ggsave(TH226_TNvsPER_plot, filename = paste(dir, "plot_out/NI07/TH226_TNvPER_volcanoplot.pdf", sep = ""))
 ```
 
 TH226 TN vs PD
 ```{r}
-# compare naive cells (n = 14) to pd cells (n = 13)
+# compare naive cells (n = 15) to pd cells (n = 13)
 TH226_TNvsPD <- FindMarkers(object = TH226_samples, ident.1 = "LT_S52", ident.2 = "LT_S82")
 TH226_TNvsPD$gene <- rownames(TH226_TNvsPD)
 TH226_TNvsPD.1 <- TH226_TNvsPD
@@ -76,19 +79,19 @@ TH226_TNvsPD.2 <- TH226_TNvsPD.1[order(TH226_TNvsPD.1$avg_logFC, decreasing = TR
 # save sorted gene lists
 write.csv(x = TH226_TNvsPD.1, file = paste(dir, "data_out/NI07/TH226_tn_v_pd_analysis.csv", sep = ""))
 
-# create volcano plot
-TH226volc <- ggplot(TH226_TNvsPD.1, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("TH226 TN vs PD") 
-
-TH226_TNvsPD_plot <- TH226volc + geom_text_repel(data=head(TH226_TNvsPD.1, 10), aes(label=gene), point.padding = 1, box.padding = .3) +
-  geom_text_repel(data=head(TH226_TNvsPD.2, 10), aes(label=gene), point.padding = 1, box.padding = .3)
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-
-ggsave(TH226_TNvsPD_plot, filename = paste(dir, "plot_out/NI07/TH226_TNvPD_volcanoplot.pdf", sep = ""))
+# # create volcano plot
+# TH226volc <- ggplot(TH226_TNvsPD.1, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("TH226 TN vs PD") 
+# 
+# TH226_TNvsPD_plot <- TH226volc + geom_text_repel(data=head(TH226_TNvsPD.1, 10), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   geom_text_repel(data=head(TH226_TNvsPD.2, 10), aes(label=gene), point.padding = 1, box.padding = .3)
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# 
+# ggsave(TH226_TNvsPD_plot, filename = paste(dir, "plot_out/NI07/TH226_TNvPD_volcanoplot.pdf", sep = ""))
 ```
 
 
@@ -103,8 +106,8 @@ mutate_TH226_PERvsPD <- mutate(TH226_PERvsPD.1, sig = ifelse(TH226_PERvsPD.1$p_v
 rownames(mutate_TH226_PERvsPD) <- mutate_TH226_PERvsPD$gene
 TH226_PERvsPD.1 <- mutate_TH226_PERvsPD # sorted by pval_adjust
 
-TH226_PERvsPD.1_sig_per <- filter(TH226_PERvsPD.1, avg_logFC > 0 & sig == "p_val_adj<0.05") #60 genes
-TH226_PERvsPD.1_sig_pd <- filter(TH226_PERvsPD.1, avg_logFC < 0 & sig == "p_val_adj<0.05") #334 genes
+TH226_PERvsPD.1_sig_per <- filter(TH226_PERvsPD.1, avg_logFC > 0 & sig == "p_val_adj<0.05") #52 genes
+TH226_PERvsPD.1_sig_pd <- filter(TH226_PERvsPD.1, avg_logFC < 0 & sig == "p_val_adj<0.05") #323 genes
 
 # save sorted gene lists
 write.csv(x = TH226_PERvsPD.1, file = paste(dir, "data_out/NI07/TH226_per_v_pd.csv", sep = ""))
@@ -112,46 +115,46 @@ write.csv(x = TH226_PERvsPD.1, file = paste(dir, "data_out/NI07/TH226_per_v_pd.c
 
 TH226 PER vs PD Plot (PR)
 ```{r}
-# sort PER VS PD list for PER only
-TH226_PERvsPD.1_pronly <- filter(TH226_PERvsPD.1, avg_logFC > 0)
-
-TH226_PERvsPD.1_pronly.1 <- TH226_PERvsPD.1_pronly[order(TH226_PERvsPD.1_pronly$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
-
-# create volcano plot
-volc <- ggplot(TH226_PERvsPD.1_pronly, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("TH226 PER vs PD (PER)") 
-
-TH226_PERvsPD_plot_per <- volc + geom_text_repel(data=head(TH226_PERvsPD.1_pronly.1, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
-  geom_text_repel(data=head(TH226_PERvsPD.1_pronly.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-ggsave(TH226_PERvsPD_plot_per, filename = paste(dir, "plot_out/NI07/TH226_PERvPD_PERonly_volcanoplot.pdf", sep = ""))
+# # sort PER VS PD list for PER only
+# TH226_PERvsPD.1_pronly <- filter(TH226_PERvsPD.1, avg_logFC > 0)
+# 
+# TH226_PERvsPD.1_pronly.1 <- TH226_PERvsPD.1_pronly[order(TH226_PERvsPD.1_pronly$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
+# 
+# # create volcano plot
+# volc <- ggplot(TH226_PERvsPD.1_pronly, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("TH226 PER vs PD (PER)") 
+# 
+# TH226_PERvsPD_plot_per <- volc + geom_text_repel(data=head(TH226_PERvsPD.1_pronly.1, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   geom_text_repel(data=head(TH226_PERvsPD.1_pronly.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# ggsave(TH226_PERvsPD_plot_per, filename = paste(dir, "plot_out/NI07/TH226_PERvPD_PERonly_volcanoplot.pdf", sep = ""))
 ```
 
 
 TH226 PER vs PD Plot (PD)
 ```{r}
-# sort PER VS PD list for PER only
-TH226_PERvsPD.1_pdonly <- filter(TH226_PERvsPD.1, avg_logFC < 0)
-TH226_PERvsPD.1_pdonly$avg_logFC <- TH226_PERvsPD.1_pdonly$avg_logFC * -1
-
-TH226_PERvsPD.1_pdonly.1 <- TH226_PERvsPD.1_pdonly[order(TH226_PERvsPD.1_pdonly$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
-
-# create volcano plot
-volc <- ggplot(TH226_PERvsPD.1_pdonly, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("TH226 PER vs PD (PD)") 
-
-TH226_PERvsPD_plot_pd <- volc + geom_text_repel(data=head(TH226_PERvsPD.1_pdonly, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
-  geom_text_repel(data=head(TH226_PERvsPD.1_pdonly.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-ggsave(TH226_PERvsPD_plot_pd, filename = paste(dir, "plot_out/NI07/TH226_PERvPD_PDonly_volcanoplot.pdf", sep = ""))
+# # sort PER VS PD list for PER only
+# TH226_PERvsPD.1_pdonly <- filter(TH226_PERvsPD.1, avg_logFC < 0)
+# TH226_PERvsPD.1_pdonly$avg_logFC <- TH226_PERvsPD.1_pdonly$avg_logFC * -1
+# 
+# TH226_PERvsPD.1_pdonly.1 <- TH226_PERvsPD.1_pdonly[order(TH226_PERvsPD.1_pdonly$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
+# 
+# # create volcano plot
+# volc <- ggplot(TH226_PERvsPD.1_pdonly, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("TH226 PER vs PD (PD)") 
+# 
+# TH226_PERvsPD_plot_pd <- volc + geom_text_repel(data=head(TH226_PERvsPD.1_pdonly, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   geom_text_repel(data=head(TH226_PERvsPD.1_pdonly.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# ggsave(TH226_PERvsPD_plot_pd, filename = paste(dir, "plot_out/NI07/TH226_PERvPD_PDonly_volcanoplot.pdf", sep = ""))
 ```
 
 Plasminogen Pathway
@@ -171,24 +174,25 @@ Plasminogen_test <- as.data.frame(Plasminogen_test$p.value)
 Plasminogen_test1 <- pairwise.wilcox.test(x = Plasminogen$Plasminogen_inhibiting, g = Plasminogen$analysis)
 Plasminogen_test1 <- as.data.frame(Plasminogen_test1$p.value)
 
-DoHeatmap(TH226_samples, genes.use = Plasminogen_genes, slim.col.label = TRUE)
-
 Plasminogen_act_vln <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_activating, fill = analysis)) +
   geom_boxplot() + xlab("Group") + ylab("Plasminogen Activation") + ggtitle("Plasminogen Activation") +
-  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 2.5, annotations = '0.76e-03') +
-  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 3, annotations = '0.001') +
-  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 2, annotations = '0.042') +
+  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 2.5) +
+  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 3) +
+  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 2) +
   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + 
   theme(legend.position = "none")
 
 Plasminogen_inhib_vln <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_inhibiting, fill = analysis)) +
   geom_boxplot() + xlab("Group") + ylab("Plasminogen Inhibition") + 
   ggtitle("Plasminogen Inhibition") + 
-  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5, annotations = '9.33e-11') + 
-  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4, annotations = '4.52e-03') +
-  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 3, annotations = '0.44') + 
+  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + 
+  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4) +
+  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 3) + 
   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + 
   theme(legend.position = "none")
+
+Plasminogen_act_vln
+Plasminogen_inhib_vln
 
 ggsave(Plasminogen_act_vln, filename = paste(dir, "plot_out/NI07/TH226_Plasminogen_act_sig.pdf", sep = ""), height = 5, width = 5)
 ggsave(Plasminogen_inhib_vln, filename = paste(dir, "plot_out/NI07/TH226_Plasminogen_inhib_sig.pdf", sep = ""), height = 5, width = 5)
@@ -205,14 +209,15 @@ AT2_sig$AT2_mean <- rowMeans(AT2_sig[c(AT2_genes)], na.rm=TRUE)
 AT2_test <- pairwise.wilcox.test(x = AT2_sig$AT2_mean, g = AT2_sig$analysis)
 AT2_test1 <- as.data.frame(AT2_test$p.value)
 
-DoHeatmap(TH226_samples, genes.use = AT2_genes, slim.col.label = TRUE)
-
 AT2_vln <- ggplot(AT2_sig, aes(x = analysis, y = AT2_mean, fill = analysis)) + 
   geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + 
   ggtitle("AT2 Differentiation Signature Expression per Group") + 
-  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 4, annotations = '5.70e-09') +
-  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5, annotations = '1.34e-05') + 
-  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 3.5, annotations = '0.052') +  scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 4) +
+  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4.5) + 
+  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 3.5) +
+  scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+
+AT2_vln
 
 ggsave(AT2_vln, filename = paste(dir, "plot_out/NI07/TH226_AT2_sig.pdf", sep = ""), height = 5, width = 5)
 ```
@@ -228,15 +233,15 @@ squamous_sig$squamous_mean <- rowMeans(squamous_sig[c(squamous_genes)], na.rm=TR
 squamous_test <- pairwise.wilcox.test(x = squamous_sig$squamous_mean, g = squamous_sig$analysis)
 squamous_test1 <- as.data.frame(squamous_test$p.value)
 
-
-DoHeatmap(TH226_samples, genes.use = squamous_genes, slim.col.label = TRUE)
-
 squamous_vln <- ggplot(squamous_sig, aes(x = analysis, y = squamous_mean, fill = analysis)) + 
   geom_boxplot(outlier.shape = NA) + guides(colour = FALSE, fill = FALSE) + xlab("Group") + 
   ggtitle("Squamous Differentiation Signature Expression per Group") + 
-  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5, annotations = '9.26e-19') + 
-  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4, annotations = '3.48e-05') + 
-  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 2, annotations = '0.24') +  scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + 
+  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4) + 
+  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 2) +
+  scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+
+squamous_vln
 
 ggsave(squamous_vln, filename = paste(dir, "plot_out/NI07/TH226_squamous_sig.pdf", sep = ""), height = 5, width = 5)
 ```
@@ -245,7 +250,7 @@ Kynurenine Pathway
 ```{r}
 Kynurenine_genes <- c('IDO1', 'KYNU', 'QPRT')
 
-Kynurenine <- FetchData(TH226_samples, c(Kynurenine_genes, 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site'))
+Kynurenine <- FetchData(TH226_samples, c(Kynurenine_genes,'analysis','patient_id','sample_name','biopsy_site'))
 
 Kynurenine$Kynurenine_mean <- rowMeans(Kynurenine[c("IDO1", "KYNU", "QPRT")], na.rm=TRUE)
 
@@ -254,23 +259,35 @@ Kynurenine$cell_name <- rownames(Kynurenine)
 Kynurenine_test <- pairwise.wilcox.test(x = Kynurenine$Kynurenine_mean, g = Kynurenine$analysis)
 Kynurenine_test <- as.data.frame(Kynurenine_test$p.value)
 
-Kynurenine_act_vln <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("Kynurenine Activation") + ggtitle("Kynurenine Activation") + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+Kynurenine_act_vln <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_mean, fill = analysis)) +
+  geom_boxplot() + xlab("Group") + ylab("Kynurenine Activation") + ggtitle("Kynurenine Activation") +
+  scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none") +
+  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + 
+  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4) + 
+  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 2) 
 ```
 
 Gap Junction Signatures
 ```{r}
-GJBs_genes <- c('GJB3', 'GJB2', 'GJB4','GJB5')
+GJBs_genes <- c('GJB3', 'GJB2','GJB5')
 
-GJBs <- FetchData(TH226_samples, c(GJBs_genes, 'nGene','nReads','analysis','patient_id','sample_name','biopsy_site'))
+GJBs <- FetchData(TH226_samples, c(GJBs_genes,'analysis','patient_id','sample_name','biopsy_site'))
 
-GJBs$GJBs_mean <- rowMeans(GJBs[c('GJB3', 'GJB2', 'GJB4','GJB5')], na.rm=TRUE)
+GJBs$GJBs_mean <- rowMeans(GJBs[c('GJB3', 'GJB2','GJB5')], na.rm=TRUE)
 
 GJBs$cell_name <- rownames(GJBs)
 
 GJBs_test <- pairwise.wilcox.test(x = GJBs$GJBs_mean, g = GJBs$analysis)
 GJBs_test <- as.data.frame(GJBs_test$p.value)
 
-GJBs_box <- ggplot(GJBs, aes(x = analysis, y = GJBs_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("GJBs Activation") + ggtitle("GJBs Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 1.5, annotations = '4.11e-13') + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 2, annotations = '1.41e-03') + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 1, annotations = '1') +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+GJBs_box <- ggplot(GJBs, aes(x = analysis, y = GJBs_mean, fill = analysis)) + geom_boxplot() + xlab("Group") +
+  ylab("GJBs Activation") + ggtitle("GJBs Activation") + 
+  geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 2) +
+  geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 2.25) +
+  geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 1.75) +  
+  scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
+
+GJBs_box
 
 ggsave(GJBs_box, filename = paste(dir, "plot_out/NI07/GJBs_boxplot.pdf", sep = ""), height = 5, width = 5)
 ```

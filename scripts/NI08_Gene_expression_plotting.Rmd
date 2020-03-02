@@ -307,6 +307,11 @@ ggsave(m3, filename = paste(dir,"plot_out/NI08/PLAUvsSERPINE1.pdf", sep = ""))
 ggsave(m4, filename = paste(dir,"plot_out/NI08/IDO1vsKYNU.pdf", sep = ""))
 ```
 
+```{r}
+IGFBP2 <- FetchData(object = tiss_subset_tumor2, vars = c("IGFBP2", "HOPX", "SFTPD", "analysis"))
 
+ggplot(data = IGFBP2, aes(x = analysis, y = IGFBP2)) + geom_boxplot()
+ggplot(data = IGFBP2, aes(x = HOPX, y = IGFBP2)) + geom_point()
+```
 
 
