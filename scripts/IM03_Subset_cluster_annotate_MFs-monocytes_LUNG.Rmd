@@ -234,7 +234,7 @@ fraction.plot
 Find all cluster markers 
 ```{r}
 mf.cell.markers <- FindAllMarkers(object = mf.cell.tiss, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25)
-# mf.cell.markers <- read.table(paste(dir, "data_out/IM03/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
+write.table(mf.cell.markers,paste(dir, "data_out/IM03/MFs_DE_genes_between_subclusters_Lung.csv",sep=""))
 ```
 
 Plot top genes 
@@ -263,7 +263,7 @@ write.csv(mf.cell.markers, paste(dir, "data_out/IM03/MFs_DE_genes_between_subclu
 Plot genes of choice
 ```{r}
 # Violin plot 
-genes <- c("IDO1","WARS","CXCL10","GBP5", "ANKRD22", "THBS1", "PTX3", "MARCO", "CCL13", "IL1B")
+genes <- c("IDO1","THBS1", "TREM2", "IL7R", "CCL5", "TOP2A", "CXCL10", "GBP5")
 a <- VlnPlot(mf.cell.tiss, features = genes, pt.size = 0)
 ggsave(filename = paste(dir, "plot_out/IM03/Markers_of_PD_MFs.pdf",sep=""),plot = a,width = 10,height = 10)
 a
@@ -310,8 +310,8 @@ dev.off()
 Plot custom genes 
 ```{r}
 # Violin
-genes <- c("CD1A", "CD1C", "TOP2A", "IL1B")
-a <- VlnPlot(mf.cell.tiss,features = genes)
+genes <- c("TOP2A", "CCL5")
+VlnPlot(mf.cell.tiss,features = genes)
 ```
 
 Save immune cell workspace 

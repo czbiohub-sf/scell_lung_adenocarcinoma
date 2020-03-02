@@ -136,6 +136,9 @@ fraction.plot <- ggplot() + geom_bar(aes(y = value, x = Var1, fill = Var2), data
                            stat="identity" , position=position_dodge())
 ggsave(filename = paste(dir, "plot_out/IM04/Tcell_TSNE_clusters_by_treatment_manuscript.pdf",sep=""), plot = fraction.plot, width = 7,height = 5)
 fraction.plot
+
+table(t.cell.tiss@meta.data$RNA_snn_res.0.3)
+
 ```
 
 Replot barplots using error bars 
@@ -268,6 +271,16 @@ Write table of top genes
 write.csv(t.cell.markers, paste(dir, "data_out/IM04/T-cells_DE_genes_between_subclusters_Lung.csv",sep=""), row.names=F)
 ```
 
+Plot genes of choice
+```{r}
+# Violin plot 
+genes <- c("CD4", "CD8A", "FOXP3", "CTLA4", "PDCD1", "IL2RA", "TOP2A", "CCR7", "FCGR3A")
+a <- VlnPlot(t.cell.tiss, features = genes, pt.size = 0)
+ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_PD_Tcells.pdf",sep=""),plot = a,width = 10,height = 10)
+a
+```
+
+
 Plot all relevant, PCA, tSNE and Clustering plots as pdf 
 ```{r}
 pdf(paste(dir, "plot_out/IM04/T-cells_subclustering_TSNE_LUNG.pdf",sep=""),width = 10,height = 7)
@@ -283,10 +296,7 @@ balloonplot(tab.1, main ="Patient ID vs T-cell cluster", xlab ="", ylab="",
 # TSNE plots 
 DimPlot(object = t.cell.tiss, group.by="RNA_snn_res.0.3", reduction = "tsne", label = T)
 DimPlot(object = t.cell.tiss, group.by="analysis", reduction = "tsne", label = T)
-# Heatmaps
-# DoHeatmap(t.cell.tiss, features = top10$gene)
-# DoHeatmap(t.cell.tiss, features = top20$gene)
-# DoHeatmap(t.cell.tiss, features = top50$gene)
+# Heatmap
 genes <- c("CD3E","CD3G","CD4", "CD8A", "TOP2A", "FOXP3","CTLA4", "IL2RA", "PDCD1","CD28", "IL2", "CXCL13")
 DoHeatmap(t.cell.tiss, features = genes)
 # Violin plot 
@@ -296,13 +306,6 @@ VlnPlot(t.cell.tiss, features =  genes)
 Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$analysis
 VlnPlot(t.cell.tiss, features= genes)
 Idents(object = t.cell.tiss) <- t.cell.tiss@meta.data$RNA_snn_res.0.3
-# PCA plots 
-# PCHeatmap(object = t.cell.tiss, pc.use = 1:15, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
-# PCElbowPlot(object = t.cell.tiss)
-#JackStrawPlot(t.cell.tiss, PCs = 1:12)
-# Feature plot
-# DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T)
-# DotPlot(t.cell.tiss, top10$gene, x.lab.rot = T, group.by = "analysis")
 dev.off()
 ```
 Save immune cell workspace 
@@ -311,34 +314,20 @@ save(t.cell.tiss, file=paste(dir,"Data_input/objects/IM04_Tcells_Seurat_object.R
 ```
 
 
-T-cell subset analysis from derLeun et al (2020)
-Unfinished
-```{r}
-t_temp <- read.csv(paste(dir,"gene_lists/T_cell_subset_markers_derLeun.csv", sep=""))
-t_temp$gene <- as.character(t_temp$gene)
-t_list <- split(t_temp$gene, t_temp$subset)
-# Calculate Module scores with Seurat 
-t.cell.tiss <- AddModuleScore(t.cell.tiss, features = t_list, name = names(t_list))
-# Change metadata names cause Seurat seems to append a number that I am not sure how to change at this point 
-colnames(t.cell.tiss@meta.data[(ncol(t.cell.tiss@meta.data)-(length(t_list)-1)):ncol(t.cell.tiss@meta.data)]) <- paste(names(t_list), c(1:7), sep = "")
-names <- colnames(t.cell.tiss@meta.data[(ncol(t.cell.tiss@meta.data)-(length(t_list)-1)):ncol(t.cell.tiss@meta.data)])
-# Plot 
-VlnPlot(t.cell.tiss, features = names)
-# Heatmap 
-DoHeatmap(t.cell.tiss, features = t_temp$gene)
-```
+<!-- T-cell subset analysis from derLeun et al (2020) -->
+<!-- Unfinished -->
+<!-- ```{r} -->
+<!-- t_temp <- read.csv(paste(dir,"gene_lists/T_cell_subset_markers_derLeun.csv", sep="")) -->
+<!-- t_temp$gene <- as.character(t_temp$gene) -->
+<!-- t_list <- split(t_temp$gene, t_temp$subset) -->
+<!-- # Calculate Module scores with Seurat  -->
+<!-- t.cell.tiss <- AddModuleScore(t.cell.tiss, features = t_list, name = names(t_list)) -->
+<!-- # Change metadata names cause Seurat seems to append a number that I am not sure how to change at this point  -->
+<!-- colnames(t.cell.tiss@meta.data[(ncol(t.cell.tiss@meta.data)-(length(t_list)-1)):ncol(t.cell.tiss@meta.data)]) <- paste(names(t_list), c(1:7), sep = "") -->
+<!-- names <- colnames(t.cell.tiss@meta.data[(ncol(t.cell.tiss@meta.data)-(length(t_list)-1)):ncol(t.cell.tiss@meta.data)]) -->
+<!-- # Plot  -->
+<!-- VlnPlot(t.cell.tiss, features = names) -->
+<!-- # Heatmap  -->
+<!-- DoHeatmap(t.cell.tiss, features = t_temp$gene) -->
+<!-- ``` -->
 
-
-Plot custom genes 
-```{r}
-# Violin
-genes <- c("IFNG", "GZMK", "FCGR3A", "KIR2DL3", "KIR2DL4", "IL7R", "CCR7")
-a <- VlnPlot(t.cell.tiss,features = genes)
-# 
-FeatureScatter(t.cell.tiss, feature1 = "FCGR3A", feature2 = "KIR2DL3", group.by = "analysis")
-FeatureScatter(t.cell.tiss, feature1 = "FCGR3A", feature2 = "KIR2DL4", group.by = "analysis")
-
-genes <- c("FCGR3A")
-a <- VlnPlot(t.cell.tiss,features = genes,group.by = "analysis")
-a
-```
