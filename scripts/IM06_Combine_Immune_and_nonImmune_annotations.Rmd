@@ -41,9 +41,31 @@ Save immune cell workspace
 save(tiss_subset, file=paste(dir,"Data_input/objects/IM06_ALL_cells_Immune_AND_nonImmune_annotations.RData", sep=""))
 ```
 
+Table of Cell types per sample 
+```{r}
+tab.S1.all <- as.data.frame(table(tiss_subset@meta.data$sample_name, tiss_subset@meta.data$Final_annotation))
+tab.S1.all <- spread(tab.S1.all, Var2, Freq)
+#Write table 
+write.table(tab.S1.all, file = paste(dir,"data_out/IM06/Table_of_ALL_cell_types_by_sample.csv", sep=""))
+```
 
-
-
+# Combine the table above with tab.S1 
+```{r}
+tab.S1 <- read.table(file = paste(dir,"data_out/IM04/Table_of_immune_cell_types_by_sample_IM04.csv", sep=""))
+# Add new columns 
+tab.S1.all$Sum_Immune <- NA
+tab.S1.all$Fractional <- NA
+tab.S1.all$Macrophage_analysis <- NA
+tab.S1.all$Tcell_analysis <- NA
+# Populate columns 
+for(i in 1:nrow(tab.S1.all)){
+  a <- which(tab.S1$Var1==tab.S1.all$Var1[i])
+  tab.S1.all$Sum_Immune[i] <- tab.S1$Sum_Immune[a]
+  tab.S1.all$Fractional[i] <- tab.S1$Fractional[a]
+  tab.S1.all$Macrophage_analysis[i] <- tab.S1$Macrophage_analysis[a] 
+  tab.S1.all$Tcell_analysis[i] <- tab.S1$Tcell_analysis[a]
+}
+```
 
 
 
