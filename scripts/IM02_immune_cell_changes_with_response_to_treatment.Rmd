@@ -93,6 +93,32 @@ p1
 ```
 
 
+Export table of all samples broken down by cell type 
+```{r}
+library(tidyr)
+tab.S1 <- as.data.frame(table(tiss_immune@meta.data$sample_name, tiss_immune@meta.data$immune_subtype_annotation))
+tab.S1 <- spread(tab.S1, Var2, Freq)
+# Add Sum column 
+tab.S1$"Sum_Immune" <- rowSums(tab.S1[,-1])
+# Add a column and annotate samples used in the fractional analysis 
+samples <- unique(metadata$sample_name)
+tab.S1$"Fractional" <- NA
+for(i in 1:nrow(tab.S1)){
+  a <- which(samples==as.character(tab.S1$Var1[i]))
+  if(length(a) != 0) {tab.S1$Fractional[i] <- 1}
+}
+write.table(tab.S1, file = paste(dir,"data_out/IM02/Table_of_immune_cell_types_by_sample_IM02.csv", sep=""))
+```
+
+
+```{r}
+write.table()
+paste(dir,"plot_out/IM02/Table_of_samples_used_in_IM02.csv", sep="")
+
+as.data.frame(table(metadata$sample_name))
+```
+
+
 Significance between fractions 
 Chi-square Test of Independence  
 ```{r}

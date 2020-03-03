@@ -13,7 +13,7 @@ load(file=paste(dir,"Data_input/objects/S03_Immune_Seurat_object_nodups.RData", 
 #tiss_immune
 load(file=paste(dir,"Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep=""))
 #tiss_nonimmune_epi
-load(file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
+load(file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset_annotated.RData", sep=""))
 #tiss_subset
 ```
 
@@ -22,16 +22,18 @@ Add annnotations from #tiss_immune and #tiss_nonimmune_epi to #tiss_subset and s
 #Combine cell names and annotations from the two objects 
 ```{r}
 meta.temp <- rbind(as.data.frame(cbind(row.names(tiss_immune@meta.data), as.character(tiss_immune@meta.data$immune_subtype_annotation))), 
-      as.data.frame(cbind(row.names(tiss_nonimmune_epi@meta.data), as.character(tiss_nonimmune_epi@meta.data$epi_anno_final))))  
+      as.data.frame(cbind(row.names(tiss_nonimmune_epi@meta.data), as.character(tiss_nonimmune_epi@meta.data$epi_anno_final)))) 
 ```
 
 #Add annotations to tiss_subset
 ```{r}
-tiss_subset@meta.data$"Final_annotation" <- NA
+tiss_subset@meta.data$"Final_annotation" <- tiss_subset@meta.data$general_annotation1
 for(i in 1:nrow(tiss_subset@meta.data)){
   a <- which(meta.temp$V1==row.names(tiss_subset@meta.data)[i])
   if(length(a) !=0) {tiss_subset@meta.data$Final_annotation[i] <- as.character(meta.temp$V2[a])}
 }
+table(tiss_subset@meta.data$Final_annotation)
+sum(table(tiss_subset@meta.data$Final_annotation))
 ```
 
 Save immune cell workspace 
@@ -40,16 +42,24 @@ save(tiss_subset, file=paste(dir,"Data_input/objects/IM06_ALL_cells_Immune_AND_n
 ```
 
 
+
+
+
+
+
 Ngenes per cell type 
 ```{r}
-tiss_subset@meta.data$biopsy_type <- gsub(x = tiss_subset@meta.data$biopsy_type, pattern = "core", replacement = "Core")
-tiss_subset@meta.data$biopsy_type <- gsub(x = tiss_subset@meta.data$biopsy_type, pattern = "resection", replacement = "Resection")
-# 
-Idents(object = tiss_subset) <- tiss_subset@meta.data$biopsy_type
+# Set Ident 
+Idents(object = tiss_subset) <- tiss_subset@meta.data$Final_annotation
 VlnPlot(object = tiss_subset, features = "nFeature_RNA", sort = T, log = T) + theme(legend.position="bottom") + 
   scale_y_continuous(breaks=seq(1000,10000,1000))
-mean.N.genes <- aggregate(tiss_subset@meta.data$nFeature_RNA, list(tiss_subset@meta.data$biopsy_type), mean)
-# 
+# Calculate mean detected genes per cell type 
+mean.N.genes <- aggregate(tiss_subset@meta.data$nFeature_RNA, list(tiss_subset@meta.data$Final_annotation), mean)
+# Sort Ngenes 
+mean.N.genes <- mean.N.genes[order(mean.N.genes$x, decreasing = T),]
+# Reorder factor 
+mean.N.genes$Group.1 <- factor(mean.N.genes$Group.1, levels = mean.N.genes$Group.1)
+# Plot Ngene average per cell type 
 ggplot(data=mean.N.genes, aes(x=Group.1, y=x)) +
   geom_bar(stat="identity") + 
   scale_y_continuous(breaks=seq(0,6000,1000)) + 

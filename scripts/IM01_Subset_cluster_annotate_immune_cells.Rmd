@@ -294,6 +294,13 @@ tiss_immune@meta.data$biopsy_site <- gsub("lung", "Lung", tiss_immune@meta.data$
 table(tiss_immune@meta.data$biopsy_site)
 ```
 
+Export table of all samples broken down by cell type 
+```{r}
+write.table(table(tiss_immune@meta.data$sample_name, tiss_immune@meta.data$immune_subtype_annotation), file = paste(dir,"data_out/IM01/Table_of_immune_cell_types_by_sample.csv", sep=""))
+```
+
+
+
 Save immune cell workspace 
 ```{r}
 save(tiss_immune, file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))

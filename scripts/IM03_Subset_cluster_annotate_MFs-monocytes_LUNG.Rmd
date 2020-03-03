@@ -49,6 +49,21 @@ balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
+Update sample table with cells used in this analysis 
+```{r}
+tab.S1 <- read.table(paste(dir,"data_out/IM02/Table_of_immune_cell_types_by_sample_IM02.csv", sep=""))
+# Add a column and annotate samples used in IM03
+samples <- unique(mf.cell.tiss@meta.data$sample_name)
+tab.S1$"Macrophage_analysis" <- NA
+for(i in 1:nrow(tab.S1)){
+  a <- which(samples==as.character(tab.S1$Var1[i]))
+  if(length(a) != 0) {tab.S1$Macrophage_analysis[i] <- 1}
+}
+write.table(tab.S1, file = paste(dir,"data_out/IM03/Table_of_immune_cell_types_by_sample_IM03.csv", sep=""))
+```
+
+
+
 Unsupervised clustering of Myeloid cells
 
 Find variable genes, Normalize and scale
