@@ -262,7 +262,7 @@ require(tidyverse)
 t.cell.markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 t.cell.markers %>% group_by(cluster) %>% top_n(20, avg_logFC) -> top20
 t.cell.markers %>% group_by(cluster) %>% top_n(50, avg_logFC) -> top50
-a <- DoHeatmap(t.cell.tiss, features = top20$gene, raster = F)
+a <- DoHeatmap(t.cell.tiss, features = top20$gene, raster = F) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 ggsave(filename = paste(dir, "plot_out/IM04/Markers_of_Tcell_clusters_heatmap.pdf",sep=""),plot = a,width = 10,height = 15)
 ```
 
