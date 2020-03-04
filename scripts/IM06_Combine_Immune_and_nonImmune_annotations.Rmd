@@ -65,8 +65,8 @@ for(i in 1:nrow(tab.S1.all)){
   tab.S1.all$Macrophage_analysis[i] <- tab.S1$Macrophage_analysis[a] 
   tab.S1.all$Tcell_analysis[i] <- tab.S1$Tcell_analysis[a]
 }
+write.table(tab.S1.all, file = paste(dir,"data_out/IM06/Table_of_ALL_cell_types_by_sample_plus_immune_info.csv", sep=""))
 ```
-
 
 
 Ngenes per cell type 
