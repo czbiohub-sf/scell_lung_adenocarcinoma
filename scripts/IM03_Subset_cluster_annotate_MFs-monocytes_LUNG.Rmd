@@ -49,6 +49,14 @@ balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
+Sample name vs analysis 
+```{r}
+tab.1 <- table(mf.cell.tiss@meta.data$analysis, mf.cell.tiss@meta.data$sample_name)
+balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+# table(mf.cell.tiss@meta.data$sample_name, mf.cell.tiss@meta.data$analysis)
+
 Update sample table with cells used in this analysis 
 ```{r}
 tab.S1 <- read.table(paste(dir,"data_out/IM02/Table_of_immune_cell_types_by_sample_IM02.csv", sep=""))

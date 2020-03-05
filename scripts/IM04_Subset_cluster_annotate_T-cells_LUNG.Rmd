@@ -48,6 +48,13 @@ balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
             label = T, show.margins = F)
 ```
 
+Sample name vs analysis 
+```{r}
+tab.1 <- table(t.cell.tiss@meta.data$analysis, t.cell.tiss@meta.data$sample_name)
+balloonplot(tab.1, main ="Response vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
 Update sample table with cells used in this analysis 
 This chunk uses the output of IM03. Make sure that it has been generated 
 ```{r}
