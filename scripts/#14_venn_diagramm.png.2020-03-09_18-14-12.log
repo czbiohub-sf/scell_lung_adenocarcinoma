@@ -1,0 +1,12 @@
+INFO [2020-03-09 18:14:12] $x
+INFO [2020-03-09 18:14:12] list(mf.cell.markers$gene, mf.cell.markers.mast$gene)
+INFO [2020-03-09 18:14:12] 
+INFO [2020-03-09 18:14:12] $category.names
+INFO [2020-03-09 18:14:12] c("Set 1", "Set 2 ")
+INFO [2020-03-09 18:14:12] 
+INFO [2020-03-09 18:14:12] $filename
+INFO [2020-03-09 18:14:12] [1] "#14_venn_diagramm.png"
+INFO [2020-03-09 18:14:12] 
+INFO [2020-03-09 18:14:12] $output
+INFO [2020-03-09 18:14:12] [1] TRUE
+INFO [2020-03-09 18:14:12] 

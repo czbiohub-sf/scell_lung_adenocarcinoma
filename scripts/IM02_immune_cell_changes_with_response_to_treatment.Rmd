@@ -317,6 +317,3 @@ dev.off()
 # 
 corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F)
 ```
-
-
-Create type&site category and perform DE between T and MFs across all organs with more than XX number of cells 
