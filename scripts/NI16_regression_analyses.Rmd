@@ -1,0 +1,116 @@
+---
+title: "NI16"
+purpose: regression analysis
+output: html_document
+---
+
+
+Load workspace 
+```{r}
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset_annotated.RData", sep=""))
+```
+
+Export sample metadata and create summary table 
+```{r}
+metadata <- tiss_subset@meta.data
+meta.small <- metadata %>%
+   filter(analysis == "grouped_pd") %>%
+   select(sample_name, line_of_therapy, treatment) %>%
+   distinct()
+```
+
+Import Gene expression of ALL signature genes per sample 
+```{r}
+sig.genes <- read.csv(paste(dir,"Data_input/csv_files/sample_geneonly.csv", sep=""))
+# Remove signature mean score 
+sig.genes <- sig.genes[,-grep("_", colnames(sig.genes))]
+# Row names 
+rownames(sig.genes) <- sig.genes$X
+# Remove sample names 
+sig.genes <- sig.genes[,-which(colnames(sig.genes)=="X")]
+```
+# Subset metadata to samples included in the table 
+```{r}
+meta.small <- meta.small[meta.small$sample_name %in%  row.names(sig.genes) ,] 
+# Order data 
+sig.genes <- sig.genes[meta.small$sample_name,]
+meta.small
+```
+
+Regression 
+
+Libraries 
+```{r setup, include = F}
+library(dplyr)
+library(onehot)
+library(pscl)
+```
+Import list of genes per sinature 
+
+```{r}
+genes.per.sig <- read.csv(paste(dir,"Data_input/csv_files/sig_key.csv", sep=""), header=F)
+```
+
+Regress to line of therapy (mod1)
+```{r}
+# generate dependent variable 
+res.train <- as.factor(meta.small$line_of_therapy)
+# Iterate regression for each feature 
+list.reg.mod1 <- list()
+sigs <- as.character(unique(genes.per.sig$V2))
+for(i in 1:length(sigs)){
+   genes <- as.character(genes.per.sig$V1[as.character(genes.per.sig$V2) == sigs[i] ] )
+   pred.train <- sig.genes[,genes]
+   df <- cbind(as.data.frame(res.train),pred.train)
+   mod1 <- glm(res.train ~ ., family=binomial(link='logit'),data=df)   
+   list.reg.mod1[[i]] <- mod1
+}
+names(list.reg.mod1) <- sigs
+# train model
+lapply(list.reg.mod1, summary)
+```
+
+Regress to TKI (mod2)
+```{r}
+# generate dependent variable 
+res.train <- as.factor(meta.small$treatment)
+# Iterate regression for each feature 
+list.reg.mod2 <- list()
+sigs <- as.character(unique(genes.per.sig$V2))
+for(i in 1:length(sigs)){
+   genes <- as.character(genes.per.sig$V1[as.character(genes.per.sig$V2) == sigs[i] ] )
+   pred.train <- sig.genes[,genes]
+   df <- cbind(as.data.frame(res.train),pred.train)
+   mod2 <- glm(res.train ~ ., family=binomial(link='logit'),data=df)   
+   list.reg.mod2[[i]] <- mod2
+}
+names(list.reg.mod2) <- sigs
+# train model
+lapply(list.reg.mod2, summary)
+```
+
+```{r}
+# calculate McFadden's pseudo R2 (ref: https://www.r-bloggers.com/evaluating-logistic-regression-models/)
+## A measure of model accuracy very roughly analogous to variance explained (R2) in least squares regression.
+lapply(list.reg.mod2, pR2)
+```
+
+Fishers test 
+```{r}
+metadata <- tiss_subset@meta.data
+meta.small.2 <- metadata %>%
+   select(line_of_therapy, treatment, analysis, driver_mutation, gender, 
+          race, smokingHx, histolgy, driver_gene,stage.at.dx,pathlogy_review, 
+          biopsy_type, biopsy_site, primary_or_metastaic,
+          treatment_history) %>%
+   distinct()
+# Multiple Fishers tests 
+l1 <- lapply(meta.small.2, fisher.test, y = meta.small.2$analysis)
+df1 <- (as.data.frame(unlist(lapply(l1, function(x) x$p.value)))*ncol(meta.small.2))
+colnames(df1) <- "p.value"
+# Correct for multiple testing 
+df1$p.value <- df1$p.value*ncol(meta.small.2)
+df1
+```
