@@ -282,3 +282,10 @@ save(tiss_immune, file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.R
 save(tiss_nonimmune, file=paste(dir,"Data_input/objects/S03_Nonimmune_Seurat_object.RData", sep=""))
 ```
 
+
+```{r}
+load(file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
+```
+
+
+

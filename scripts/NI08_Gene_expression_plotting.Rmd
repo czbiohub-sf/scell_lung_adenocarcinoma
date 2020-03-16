@@ -18,6 +18,7 @@ library(reshape)
 library(gridExtra)
 library(ggrepel)
 library(ggExtra)
+library(pheatmap)
 ```
 
 Read in tumor object
@@ -48,7 +49,7 @@ AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "A
 
 # make a heatmap
 pdf(file = paste(dir, "plot_out/NI08/AT2_Sig_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, features = AT2_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
+DoHeatmap(tiss_subset_tumor2, features = AT2_genes, raster = FALSE) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
 # Fetch Data for AT2 Sig in Tumor Cells
@@ -217,7 +218,7 @@ Plasminogen_test1 <- pairwise.wilcox.test(x = Plasminogen$SERPINE1, g = Plasmino
 Plasminogen_test1 <- as.data.frame(Plasminogen_test1$p.value)
 
 pdf(file = paste(dir, "plot_out/NI08/Plasminogen_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, features = Plasminogen_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
+DoHeatmap(tiss_subset_tumor2, features = Plasminogen_genes, raster = FALSE) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
 Plasminogen_act_vln <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_activating_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("Plasminogen Activation") + ggtitle("Plasminogen Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 4.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 5) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 4) +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
@@ -230,11 +231,11 @@ ggsave(Plasminogen_SERPINE1, filename = paste(dir, "plot_out/NI08/Plasminogen_SE
 
 Kynurenine Pathway
 ```{r}
-Kynurenine_genes <- c('IDO1', 'KYNU')
+Kynurenine_genes <- c('IDO1', 'KYNU', 'QPRT')
 
 Kynurenine <- FetchData(tiss_subset_tumor2, c(Kynurenine_genes, 'analysis','patient_id','sample_name','biopsy_site'))
 
-Kynurenine$Kynurenine_mean <- rowMeans(Kynurenine[c("IDO1", "KYNU")], na.rm=TRUE)
+Kynurenine$Kynurenine_mean <- rowMeans(Kynurenine[c("IDO1", "KYNU","QPRT")], na.rm=TRUE)
 
 Kynurenine$cell_name <- rownames(Kynurenine)
 
@@ -242,7 +243,7 @@ Kynurenine_test <- pairwise.wilcox.test(x = Kynurenine$Kynurenine_mean, g = Kynu
 Kynurenine_test <- as.data.frame(Kynurenine_test$p.value)
 
 pdf(file = paste(dir, "plot_out/NI08/Kynurenine_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, features = Kynurenine_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
+DoHeatmap(tiss_subset_tumor2, features = Kynurenine_genes, raster = FALSE) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
 Kynurenine_act_vln <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("Kynurenine Activation") + ggtitle("Kynurenine Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 3.5) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 4) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 3) +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
@@ -264,7 +265,7 @@ GJBs_test <- pairwise.wilcox.test(x = GJBs$GJBs_mean, g = GJBs$analysis)
 GJBs_test <- as.data.frame(GJBs_test$p.value)
 
 pdf(file = paste(dir, "plot_out/NI08/GJBs_heatmap.pdf", sep = ""))
-DoHeatmap(tiss_subset_tumor2, features = GJBs_genes) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
+DoHeatmap(tiss_subset_tumor2, features = GJBs_genes, raster = FALSE) + scale_fill_gradientn(colors = rev(RColorBrewer::brewer.pal(n = 10, name = "RdBu")))
 dev.off()
 
 GJBs_box <- ggplot(GJBs, aes(x = analysis, y = GJBs_mean, fill = analysis)) + geom_boxplot() + xlab("Group") + ylab("GJBs Activation") + ggtitle("GJBs Activation") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE, y_position = 2.2) + geom_signif(comparisons = list(c("grouped_pd", "naive")), map_signif_level=TRUE, y_position = 2.7) + geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 1.7) +   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd")) + theme(legend.position = "none")
@@ -307,11 +308,56 @@ ggsave(m3, filename = paste(dir,"plot_out/NI08/PLAUvsSERPINE1.pdf", sep = ""))
 ggsave(m4, filename = paste(dir,"plot_out/NI08/IDO1vsKYNU.pdf", sep = ""))
 ```
 
-```{r}
-IGFBP2 <- FetchData(object = tiss_subset_tumor2, vars = c("IGFBP2", "HOPX", "SFTPD", "analysis"))
 
-ggplot(data = IGFBP2, aes(x = analysis, y = IGFBP2)) + geom_boxplot()
-ggplot(data = IGFBP2, aes(x = HOPX, y = IGFBP2)) + geom_point()
+Scores by Sample
+
+AT2
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+Kynurenine_genes <- c('IDO1', 'KYNU','QPRT')
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+pull_data <- FetchData(tiss_subset_tumor2, c(AT2_genes, Plasminogen_genes, Kynurenine_genes, GJB_genes, 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+pull_data$AT2_diff_mean <- rowMeans(pull_data[c(AT2_genes)], na.rm=TRUE)
+pull_data$Plasminogen_activating_mean <- rowMeans(pull_data[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
+pull_data$Kynurenine_diff_mean <- rowMeans(pull_data[c(Kynurenine_genes)], na.rm=TRUE)
+pull_data$GJB_diff_mean <- rowMeans(pull_data[c(GJB_genes)], na.rm=TRUE)
 ```
 
+Average scores by sample rather than cell
+```{r}
+sam <- pull_data[,c("sample_name", "AT2_diff_mean", "Plasminogen_activating_mean", "SERPINE1", "Kynurenine_diff_mean", "GJB_diff_mean")]
+sam1 <- aggregate(AT2_diff_mean ~ sample_name, sam, mean)
+sam2 <- aggregate(Plasminogen_activating_mean ~ sample_name, sam, mean)
+sam3 <- aggregate(SERPINE1 ~ sample_name, sam, mean)
+sam4 <- aggregate(Kynurenine_diff_mean ~ sample_name, sam, mean)
+sam5 <- aggregate(GJB_diff_mean ~ sample_name, sam, mean)
+sam6 <- cbind(sam1, sam2, sam3, sam4, sam5)
+colnames(sam6)
+sam7 <- sam6[, -c(3,5,7,9)]
+rownames(sam7) <- sam7$sample_name
+sam7$sample_name <- NULL
 
+# sort
+sample_meta_sorted <- sample_meta_unique %>% arrange(desc(analysis))
+sample.ordered <- sample_meta_sorted$sample_name
+sam7 <- sam7[c(sample.ordered), ]
+colnames(sam7) <- c("AT2", "Plasminogen", "SERPINE1", "Kynurenine", "GJB")
+```
+
+Add annotation column
+```{r}
+sample_meta_unique <- unique(pull_data[,c("analysis", "sample_name", "patient_id", "biopsy_site", "driver_gene")])
+anno_col <- sample_meta_unique[,c("sample_name", "analysis")]
+rownames(anno_col) <- anno_col$sample_name
+anno_col <- anno_col[c(sample.ordered), ]
+anno_col$sample_name <- NULL
+```
+
+```{r}
+pdf(file = paste(dir, "plot_out/NI08/cancer_cell_score_xsample1.pdf", sep = ""))
+pheatmap(mat = sam7, cluster_cols = FALSE, cluster_rows = T, scale = "column", color = colorRampPalette(rev(brewer.pal(n = 11, name ="RdBu")))(100), annotation_row = anno_col, show_rownames = T)
+dev.off()
+```

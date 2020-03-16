@@ -438,7 +438,9 @@ ggplot(cc_analysis, aes(x = analysis, y = average_cc, fill = analysis)) + geom_b
   geom_signif(comparisons = list(c("grouped_pr", "naive")), map_signif_level=TRUE, y_position = 1.5) +
   scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
 
+pdf(file = paste(dir,"plot_out/NI04/cc_dotplot.pdf", sep=""))
 DotPlot(object = tiss_subset_tumor2, features = cc_genes) + coord_flip()
+dev.off()
 ```
 
 
