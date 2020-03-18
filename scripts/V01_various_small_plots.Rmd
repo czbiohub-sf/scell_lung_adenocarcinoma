@@ -1,0 +1,35 @@
+---
+title: "Various small tasks"
+output: html_document
+---
+
+Load and plot Patient time on treatment 
+
+```{r}
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+pat.TOT <- read.csv(file=paste(dir,"Data_input/csv_files/Patient_time_on_treatment.csv", sep=""))
+# Remove TN samples (no ToT)
+pat.TOT <- pat.TOT[-which(pat.TOT$Treatement.Response == "TN"),]
+# Subset and plot PD 
+pat.temp <- pat.TOT[which(pat.TOT$Treatement.Response == "PD"),]
+pat.temp <- pat.temp[order(pat.temp$Treatment.start.to.tissue.acquisition..days., decreasing = F),]
+pat.temp$Sample.Name <- factor(pat.temp$Sample.Name, levels = pat.temp$Sample.Name)
+# Plot 
+p1 <- ggplot( pat.temp, aes( x = Sample.Name, y = Treatment.start.to.tissue.acquisition..days. ) ) + 
+      geom_bar( stat = "identity" ) + 
+      xlab("Sample name") + ylab("Time on Treatment") + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# Subset and plot RD
+pat.temp <- pat.TOT[which(pat.TOT$Treatement.Response == "RD"),]
+pat.temp <- pat.temp[order(pat.temp$Treatment.start.to.tissue.acquisition..days., decreasing = F),]
+pat.temp$Sample.Name <- factor(pat.temp$Sample.Name, levels = pat.temp$Sample.Name)
+# Plot 
+p2 <- ggplot( pat.temp, aes( x = Sample.Name, y = Treatment.start.to.tissue.acquisition..days. ) ) + 
+      geom_bar( stat = "identity" ) + 
+      xlab("Sample name") + ylab("Time on Treatment") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+# Plot together 
+p.all  <- grid.arrange(p1, p2, ncol=1)
+ggsave(filename = paste(dir, "plot_out/V01/Patient_ToT_barplots.pdf",sep=""), plot = p.all, width = 110,height = 90, units = "mm")
+p.all 
+```

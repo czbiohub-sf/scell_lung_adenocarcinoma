@@ -17,9 +17,10 @@ require(GGally)
 
 Load immune workspace
 ```{r}
-#rm(list=ls())
-dir <- "~/Downloads/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object.RData", sep=""))
+# rm(list=ls())
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))
 ```
 
 # Subset metadata 
@@ -92,6 +93,32 @@ p1
 ```
 
 
+Export table of all samples broken down by cell type 
+```{r}
+library(tidyr)
+tab.S1 <- as.data.frame(table(tiss_immune@meta.data$sample_name, tiss_immune@meta.data$immune_subtype_annotation))
+tab.S1 <- spread(tab.S1, Var2, Freq)
+# Add Sum column 
+tab.S1$"Sum_Immune" <- rowSums(tab.S1[,-1])
+# Add a column and annotate samples used in the fractional analysis 
+samples <- unique(metadata$sample_name)
+tab.S1$"Fractional" <- NA
+for(i in 1:nrow(tab.S1)){
+  a <- which(samples==as.character(tab.S1$Var1[i]))
+  if(length(a) != 0) {tab.S1$Fractional[i] <- 1}
+}
+write.table(tab.S1, file = paste(dir,"data_out/IM02/Table_of_immune_cell_types_by_sample_IM02.csv", sep=""))
+```
+
+
+```{r}
+write.table()
+paste(dir,"plot_out/IM02/Table_of_samples_used_in_IM02.csv", sep="")
+
+as.data.frame(table(metadata$sample_name))
+```
+
+
 Significance between fractions 
 Chi-square Test of Independence  
 ```{r}
@@ -102,6 +129,7 @@ for(i in 1:ncol(count.mat)){
   test <- chisq.test(count.mat[,i])
   p.mat[i,1] <- test$p.value*ncol(count.mat)
 }
+0.01- as.data.frame(p.mat)
 ```
 
 Changes of specific cell populations across clinical fields 
@@ -180,55 +208,112 @@ p.all
 
 Save immune cell workspace 
 ```{r}
-save(tiss_immune, file=paste(dir,"Data_input/objects/IM02_Immune_Seurat_object.RData", sep=""))
+save(tiss_immune, file=paste(dir,"Data_input/objects/IM01_Immune_Seurat_object_nodups.RData", sep=""))
 ```
 
-Calculate the fractions per patient 
+
+
+
+Correlation of immune cell fractions between different driver genes 
+All vs All correlation plots 
 ```{r}
-require(reshape2)
-require(ggpubr)
-# 
-metadata <- tiss_immune@meta.data
-# Keep only cells from tissues that are not brain or pleura 
-metadata <- metadata[-which(metadata$biopsy_site=="Brain" | metadata$biopsy_site=="Pleura"),]
-# Convert to factor with logical order 
-metadata$analysis <- factor(metadata$analysis, levels = c("naive", "grouped_pr", "grouped_pd"))
+library(ggrepel)
 # Create table and keep selected cell types 
-meta.temp <- metadata[,c("immune_subtype_annotation", "analysis", "sample_name")]
-# Unique samples and cell types
-samples <- unique(meta.temp$sample_name)
-cells <- unique(meta.temp$immune_subtype_annotation)
-# Make table to store fractions per patient 
-tab.pats <- as.data.frame(matrix(nrow=length(samples), ncol=length(cells)+2))
-colnames(tab.pats) <- c(cells, "group", "total_cells")
-row.names(tab.pats) <- samples
-# Calculate fractions for each sample  
-for(i in 1:length(samples)){
-  rows <- which(meta.temp$sample_name==samples[i])  
-  tab.temp <- table(meta.temp[rows,"immune_subtype_annotation"])/sum(table(meta.temp[rows,"immune_subtype_annotation"]))
-    for(j in 1:ncol(tab.pats)){
-      a <- which(names(tab.temp)==colnames(tab.pats)[j])
-      if(length(a) !=0) {tab.pats[i,j] <-  tab.temp[a]} else {tab.pats[i,j] <- 0}
-    }
-  tab.pats[i,"group"] <- as.character(unique(meta.temp$analysis[rows]))
-  tab.pats[i,"total_cells"] <- sum(table(meta.temp[rows,"immune_subtype_annotation"]))
-}
-# Consider patients with more 50 cells 
-tab.pats.filtered <- tab.pats[which(tab.pats$total_cells > 50),]
-tab.pats.filtered$sample <- row.names(tab.pats.filtered)
-tab.pats.filtered <- tab.pats.filtered[,-which(colnames(tab.pats.filtered)=="total_cells")]
-tab.pats.filtered <- melt(tab.pats.filtered)
-tab.pats.filtered$group <- factor(tab.pats.filtered$group, levels = c("naive", "grouped_pr", "grouped_pd"))
-# Make boxplots and add wilcoxon test p.values between groups
-my_comparisons <- list( c("naive", "grouped_pr"), c("grouped_pr", "grouped_pd"), c("grouped_pd", "naive") )
-bp <- ggplot(tab.pats.filtered, aes(x = group, y = value)) +
-    geom_boxplot(size = .75, aes(fill=group), outlier.colour=NA) +
-    facet_grid(. ~ variable) + 
-    theme_bw() + 
-    theme(axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5), legend.position = "none") + 
-    geom_jitter(shape=16, position=position_jitter(0.2)) + 
-    stat_compare_means(comparisons = my_comparisons, method = "wilcox.test")
-ggsave(filename = paste(dir,"plot_out/IM02/Immune_cell_population_fractions_per_patient.pdf", sep=""), plot = bp,width = 11, height = 8)
+metadata <- tiss_immune@meta.data
+meta.temp <- metadata[,c("immune_subtype_annotation", "driver_gene")]
+# Create table for PD and PR
+tab.1 <- as.data.frame.array(prop.table(table(meta.temp$immune_subtype_annotation, meta.temp$driver_gene), margin = 2))
+# Correlation matrix 
+cor.v <- as.matrix(cor(tab.1))
+# Plot 
+require(corrplot)
+pdf(paste(dir,"plot_out/IM02/All_immune_population_correlations_across_driver_genes.pdf", sep=""), width = 5, height = 5)
+corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F, mar=c(2,2,2,2))
+dev.off()
+# 
+corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F)
+```
+
+Table of Biopsy site vs analysis 
+```{r}
+tab.1 <- table(tiss_immune@meta.data$driver_gene, tiss_immune@meta.data$biopsy_site)
+balloonplot(tab.1, main ="Driver gene vs Biopsy site", xlab ="", ylab="",
+            label = T, show.margins = F)
+```
+
+```{r}
+library(ggrepel)
+# Create table and keep selected cell types 
+metadata <- tiss_immune@meta.data
+meta.temp <- metadata[,c("immune_subtype_annotation", "driver_gene")]
+# Create table for PD and PR
+tab.1 <- as.data.frame.array(prop.table(table(meta.temp$immune_subtype_annotation, meta.temp$driver_gene), margin = 2))
+tab.1$cell.type <- row.names(tab.1)
+# Plot correlations 
+# Label limits 
+x_limits <- c(0.2, 0.5)
+# ALK vs EGFR 
+cor.v <- cor(tab.1$ALK, tab.1$EGFR)
+p.1 <-  ggplot(tab.1, aes(x=ALK, y=EGFR, label = cell.type)) +
+        geom_point(position = position_jitter()) + 
+        geom_label_repel(nudge_y = 0.15,direction = "y",hjust= 1,segment.size = 0.1, 
+                         label.size = 0, xlim = x_limits) + 
+        geom_abline(intercept = 0, slope = 1,linetype = "dashed", color="gray80") + 
+        annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
+        xlim(0,0.5) + ylim(0,0.5)
+# BRAF vs EGFR 
+cor.v <- cor(tab.1$BRAF, tab.1$EGFR)
+p.2 <-  ggplot(tab.1, aes(x=BRAF, y=EGFR, label = cell.type)) +
+        geom_point(position = position_jitter()) + 
+        geom_label_repel(nudge_y = 0.15,direction = "y",hjust= 1,segment.size = 0.1, 
+                         label.size = 0, xlim = x_limits) + 
+        geom_abline(intercept = 0, slope = 1,linetype = "dashed", color="gray80") + 
+        annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
+        xlim(0,0.5) + ylim(0,0.5)
+# BRAF vs ALK
+cor.v <- cor(tab.1$BRAF, tab.1$ALK)
+p.3 <-  ggplot(tab.1, aes(x=BRAF, y=ALK, label = cell.type)) +
+        geom_point(position = position_jitter()) + 
+        geom_label_repel(nudge_y = 0.15,direction = "y",hjust= 1,segment.size = 0.1, 
+                         label.size = 0, xlim = x_limits) + 
+        geom_abline(intercept = 0, slope = 1,linetype = "dashed", color="gray80") + 
+        annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
+        xlim(0,0.5) + ylim(0,0.5)
+# KRAS vs EGFR 
+cor.v <- cor(tab.1$KRAS, tab.1$EGFR)
+p.4 <-  ggplot(tab.1, aes(x=KRAS, y=EGFR, label = cell.type)) +
+        geom_point(position = position_jitter()) + 
+        geom_label_repel(nudge_y = 0.15,direction = "y",hjust= 1,segment.size = 0.1, 
+                         label.size = 0, xlim = x_limits) + 
+        geom_abline(intercept = 0, slope = 1,linetype = "dashed", color="gray80") + 
+        annotate("text", x = 0.05, y = 0.4, label=paste("cor=",round(cor.v,3))) + 
+        xlim(0,0.5) + ylim(0,0.5)
+
+# Plot all together
+p.all <- grid.arrange(p.1,p.2,p.3,p.4,ncol=2)
+# Save 
+ggsave(filename = paste(dir,"plot_out/IM02/Immune_cell_population_fractions_pairwise_Driver_genes.pdf", sep=""), plot = p.all, width = 12, height = 12)
+p.all
 ```
 
 
+
+Correlation of immune cell fractions between different biopsy sites 
+All vs All correlation plots 
+```{r}
+library(ggrepel)
+# Create table and keep selected cell types 
+metadata <- tiss_immune@meta.data
+meta.temp <- metadata[,c("immune_subtype_annotation", "biopsy_site")]
+# Create table for PD and PR
+tab.1 <- as.data.frame.array(prop.table(table(meta.temp$immune_subtype_annotation, meta.temp$biopsy_site), margin = 2))
+# Correlation matrix 
+cor.v <- as.matrix(cor(tab.1))
+# Plot 
+require(corrplot)
+pdf(paste(dir,"plot_out/IM02/All_immune_population_correlations_across_biopsy_sites.pdf", sep=""), width = 5, height = 5)
+corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F, mar=c(2,2,2,2))
+dev.off()
+# 
+corrplot(cor.v, method = "number", main="Immune annotation correlations", type="lower", diag=F)
+```

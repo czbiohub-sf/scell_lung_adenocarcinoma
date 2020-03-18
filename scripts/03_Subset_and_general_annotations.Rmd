@@ -89,7 +89,7 @@ tiss_subset <- FindClusters(object = tiss_subset, verbose = T, resolution = 0.5)
 Run and project TSNEs
 ```{r}
 tiss_subset <- RunTSNE(tiss_subset, dims = 1:20)
-DimPlot(tiss_subset, reduction = "tsne")
+DimPlot(tiss_subset, reduction = "tsne", label = T)
 ```
 
 
@@ -123,25 +123,37 @@ pdf(paste(dir,"plot_out/S03/main_tSNE.pdf", sep=""),10,10)
 DimPlot(tiss_subset, reduction = "tsne", label = T)
 dev.off()
 ```
+Find markers for each cluster
+```{r}
+tiss.markers <- FindAllMarkers(object = tiss_subset, only.pos = TRUE, min.pct = 0.25, thresh.use = 0.25, 
+                                      do.print=T, max.cells.per.ident = 500)
+```
+
+Write differential gene table
+```{r}
+write.table(tiss.markers, file=paste(dir,"data_out/S03/All_cells_DE_genes_among_Seurat_clusters.csv", sep=""))
+```
+
+
+Display the top markers you computed above.
+```{r}
+require(tidyverse)
+require(dplyr)
+tiss.markers %>% group_by(cluster) %>% top_n(10, avg_logFC)
+```
+
+
 
 Plot genes of interest and save 
 ```{r}
 # Specify genes  
-genes_to_check = c("PTPRC","CD3G","CD3E", "CD79A", "BLNK", "CD68", "CSF1R", "MARCO", "CD207", "EPCAM")
+genes_to_check = c("PTPRC","EPCAM","CD3G","CD3E", "CD79A", "BLNK","MS4A1", "CD68", "CSF1R", "MARCO", "CD207", "PMEL", "ALB", "C1QB", "CLDN5", "FCGR3B", "COL1A1")
 # All on Dotplot 
 p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
 ggsave(paste(dir,"plot_out/S03/dotplot_of_gene_markers.pdf", sep=""), p, width = 10, height = 10)
 p
 ```
-Plot genes of interest on dotplot  
-```{r}
-# Specify genes  
-genes_to_check = c("PTPRC","EPCAM")
-# All on Dotplot 
-p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
-ggsave(paste(dir,"plot_out/S03/dotplot_of_PTPRC_EPCAM.pdf", sep=""), p, width = 10, height = 10)
-p
-```
+
 Annotate Immune vs Nonimmune clusters
 At this point we dont care for a more detailed annotation as we will annotate immune and non-immune separately later
 ```{r}
@@ -150,11 +162,7 @@ tiss_subset@meta.data$main_seurat_cluster <- tiss_subset@meta.data$SmartSeq2_snn
 # Change the column of the resolution if you ended up using a different one than 0.5 
 cluster.ids <- sort(as.numeric(unique(as.character(tiss_subset@meta.data$SmartSeq2_snn_res.0.5))))
 # Manually check and ananotate each cluster to immmune and non-immune   
-immune_annotation <- c("immune","immune","immune","immune","immune",
-                       "non-immune","immune","non-immune","non-immune","immune",
-                       "non-immune","immune","non-immune","immune","non-immune",
-                       "non-immune","non-immune","immune","immune","non-immune",
-                       "immune")
+immune_annotation <- c("immune","non-immune","immune","immune","immune","non-immune","immune","non-immune","non-immune","immune","non-immune","immune","non-immune","immune","non-immune","non-immune","non-immune","immune","immune","non-immune","non-immune")
 # immune_annotation <- c("0","1","2","3","4",
 #                        "5","6","7","8","9",
 #                        "10","11","12","13","14",
@@ -204,5 +212,4 @@ save(tiss_subset, file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filt
 save(tiss_immune, file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
 save(tiss_nonimmune, file=paste(dir,"Data_input/objects/S03_Nonimmune_Seurat_object.RData", sep=""))
 ```
-
 

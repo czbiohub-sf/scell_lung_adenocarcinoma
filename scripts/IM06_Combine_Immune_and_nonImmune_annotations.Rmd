@@ -1,0 +1,89 @@
+---
+title: "IM06"
+author: "Spyros"
+date: "19/9/2018"
+output: html_document
+---
+
+```{r}
+# rm(list=ls())
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/S03_Immune_Seurat_object_nodups.RData", sep=""))
+#tiss_immune
+load(file=paste(dir,"Data_input/objects/NI05_all_epithelial_annotated_normal_and_tumor.RData", sep=""))
+#tiss_nonimmune_epi
+load(file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset_annotated.RData", sep=""))
+#tiss_subset
+```
+
+Add annnotations from #tiss_immune and #tiss_nonimmune_epi to #tiss_subset and save #tiss_subset
+
+#Combine cell names and annotations from the two objects 
+```{r}
+meta.temp <- rbind(as.data.frame(cbind(row.names(tiss_immune@meta.data), as.character(tiss_immune@meta.data$immune_subtype_annotation))), 
+      as.data.frame(cbind(row.names(tiss_nonimmune_epi@meta.data), as.character(tiss_nonimmune_epi@meta.data$epi_anno_final)))) 
+```
+
+#Add annotations to tiss_subset
+```{r}
+tiss_subset@meta.data$"Final_annotation" <- tiss_subset@meta.data$general_annotation1
+for(i in 1:nrow(tiss_subset@meta.data)){
+  a <- which(meta.temp$V1==row.names(tiss_subset@meta.data)[i])
+  if(length(a) !=0) {tiss_subset@meta.data$Final_annotation[i] <- as.character(meta.temp$V2[a])}
+}
+table(tiss_subset@meta.data$Final_annotation)
+sum(table(tiss_subset@meta.data$Final_annotation))
+```
+
+Save immune cell workspace 
+```{r}
+save(tiss_subset, file=paste(dir,"Data_input/objects/IM06_ALL_cells_Immune_AND_nonImmune_annotations.RData", sep=""))
+```
+
+Table of Cell types per sample 
+```{r}
+tab.S1.all <- as.data.frame(table(tiss_subset@meta.data$sample_name, tiss_subset@meta.data$Final_annotation))
+tab.S1.all <- spread(tab.S1.all, Var2, Freq)
+#Write table 
+write.table(tab.S1.all, file = paste(dir,"data_out/IM06/Table_of_ALL_cell_types_by_sample.csv", sep=""))
+```
+
+# Combine the table above with tab.S1 
+```{r}
+tab.S1 <- read.table(file = paste(dir,"data_out/IM04/Table_of_immune_cell_types_by_sample_IM04.csv", sep=""))
+# Add new columns 
+tab.S1.all$Sum_Immune <- NA
+tab.S1.all$Fractional <- NA
+tab.S1.all$Macrophage_analysis <- NA
+tab.S1.all$Tcell_analysis <- NA
+# Populate columns 
+for(i in 1:nrow(tab.S1.all)){
+  a <- which(tab.S1$Var1==tab.S1.all$Var1[i])
+  tab.S1.all$Sum_Immune[i] <- tab.S1$Sum_Immune[a]
+  tab.S1.all$Fractional[i] <- tab.S1$Fractional[a]
+  tab.S1.all$Macrophage_analysis[i] <- tab.S1$Macrophage_analysis[a] 
+  tab.S1.all$Tcell_analysis[i] <- tab.S1$Tcell_analysis[a]
+}
+write.table(tab.S1.all, file = paste(dir,"data_out/IM06/Table_of_ALL_cell_types_by_sample_plus_immune_info.csv", sep=""))
+```
+
+
+Ngenes per cell type 
+```{r}
+# Set Ident 
+Idents(object = tiss_subset) <- tiss_subset@meta.data$Final_annotation
+VlnPlot(object = tiss_subset, features = "nFeature_RNA", sort = T, log = T) + theme(legend.position="bottom") + 
+  scale_y_continuous(breaks=seq(1000,10000,1000))
+# Calculate mean detected genes per cell type 
+mean.N.genes <- aggregate(tiss_subset@meta.data$nFeature_RNA, list(tiss_subset@meta.data$Final_annotation), mean)
+# Sort Ngenes 
+mean.N.genes <- mean.N.genes[order(mean.N.genes$x, decreasing = T),]
+# Reorder factor 
+mean.N.genes$Group.1 <- factor(mean.N.genes$Group.1, levels = mean.N.genes$Group.1)
+# Plot Ngene average per cell type 
+ggplot(data=mean.N.genes, aes(x=Group.1, y=x)) +
+  geom_bar(stat="identity") + 
+  scale_y_continuous(breaks=seq(0,6000,1000)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("Average Ngenes detected")
+```
