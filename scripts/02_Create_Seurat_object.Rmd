@@ -3,6 +3,10 @@ title: "02_Create_Seurat_object"
 output: html_document
 ---
 
+load libraries
+```{r}
+require(Seurat)
+```
 
 Load RData object 
 ```{r}
@@ -23,8 +27,7 @@ dim(raw.data)
 
 Create the Seurat object with all the data (unfiltered)
 ```{r}
-require(Seurat)
-main_tiss <- CreateSeuratObject(counts = raw.data, assay = "SmartSeq2")
+main_tiss <- CreateSeuratObject(counts = raw.data)
 # add rownames to metadta 
 row.names(metadata) <- metadata$cell_id
 # add metadata to Seurat object 
@@ -42,15 +45,15 @@ save(main_tiss, file=paste(dir,"Data_input/objects/S02_Main_Seurat_object_prefil
 
 Calculate percent ribosomal genes and add to metadata
 ```{r}
-ribo.genes <- grep(pattern = "^RP[SL][[:digit:]]", x = rownames(x = main_tiss@assays$SmartSeq2@data), value = TRUE)
-percent.ribo <- Matrix::colSums(main_tiss@assays$SmartSeq2@counts[ribo.genes, ])/Matrix::colSums(main_tiss@assays$SmartSeq2@data)
+ribo.genes <- grep(pattern = "^RP[SL][[:digit:]]", x = rownames(x = main_tiss@assays$RNA@data), value = TRUE)
+percent.ribo <- Matrix::colSums(main_tiss@assays$RNA@counts[ribo.genes, ])/Matrix::colSums(main_tiss@assays$RNA@data)
 main_tiss <- AddMetaData(object = main_tiss, metadata = percent.ribo, col.name = "percent.ribo")
 main_tiss
 ```
 
 Filter cells so that remaining cells have nGenes >= 500 and nReads >= 50000
 ```{r}
-main_tiss_filtered <- subset(x=main_tiss, subset = nCount_SmartSeq2 > 50000 & nFeature_SmartSeq2 > 500)
+main_tiss_filtered <- subset(x=main_tiss, subset = nCount_RNA > 50000 & nFeature_RNA > 500)
 main_tiss_filtered
 ```
 

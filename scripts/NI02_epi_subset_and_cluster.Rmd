@@ -11,59 +11,78 @@ require(corrplot)
 library(clustree)
 library(ggplot2)
 library(ggridges)
-library(ggsignif)
 ```
 
 Clear environment and load filtered Seurat object 
 ```{r}
-# rm(list=ls())
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
+rm(list=ls())
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 load(file=paste(dir,"Data_input/objects/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
 ```
 
 Subset Seurat object to Only Epithelial Cells
 ```{r}
-Epi_cells <- filter(tiss_nonimmune@meta.data, nonimmune_general_annotation == "Epithelial")
+Epi_cells <- filter(tiss_nonimmune@meta.data, nonimmune_general_annotation == "epithelial")
 cells.use <- Epi_cells$cell_id
 length(cells.use)
-tiss_nonimmune_epi <- SubsetData(tiss_nonimmune, cells.use = cells.use)
+tiss_nonimmune_epi <- subset(tiss_nonimmune, cells = cells.use)
+```
+
+Normalize data
+```{r}
+tiss_nonimmune_epi <- NormalizeData(object = tiss_nonimmune_epi)
 ```
 
 Find variable genes
 ```{r}
-tiss_nonimmune_epi <- FindVariableGenes(object = tiss_nonimmune_epi, do.plot = TRUE, x.high.cutoff = Inf, y.cutoff = 0.5)
+tiss_nonimmune_epi <- FindVariableFeatures(object = tiss_nonimmune_epi)
+```
+
+Scale data
+```{r}
+tiss_nonimmune_epi <- ScaleData(object = tiss_nonimmune_epi)
 ```
 
 Perform PCA
 ```{r}
-tiss_nonimmune_epi <- RunPCA(object = tiss_nonimmune_epi, do.print = FALSE)
-tiss_nonimmune_epi <- ProjectPCA(object = tiss_nonimmune_epi, do.print = FALSE)
+tiss_nonimmune_epi <- RunPCA(object = tiss_nonimmune_epi)
+```
+
+PCA plot of 1st two PCs
+```{r}
+DimPlot(tiss_nonimmune_epi, reduction = 'pca')
 ```
 
 Visualize top genes in principal components
 ```{r}
-PCHeatmap(object = tiss_nonimmune_epi, pc.use = 1:6, cells.use = 100, do.balanced = TRUE, label.columns = FALSE, num.genes = 10)
+DimHeatmap(tiss_nonimmune_epi, dims = 1:10, cells = 100, balanced = TRUE)
 ```
 
 Perform correlation of PCs and metadata fields
 ```{r}
-head(tiss_nonimmune_epi@meta.data)
-pca.obj <- tiss_nonimmune_epi@dr$pca
+pca.obj <- tiss_nonimmune_epi@reductions$pca
 pc.coords <- pca.obj@cell.embeddings
-df1 <- tiss_nonimmune_epi@meta.data[,c("nGene","nReads","percent.ribo")]
+df1 <- tiss_nonimmune_epi@meta.data[,c("nFeature_RNA","nCount_RNA","percent.ribo")]
 df2 <- pc.coords[,c(1:10)]
 cordf12 <- cor(df1,df2)
 # Make a correlation plot
 corrplot(cordf12, method = "number", main="Correlation of PCs and metadata")
 ```
+
 Also visaulize PC variance
 ```{r}
-PCElbowPlot(object = tiss_nonimmune_epi)
+ElbowPlot(object = tiss_nonimmune_epi, ndims = 40)
 ```
 
 Choose the number of principal components to use.
 ```{r}
-n.pcs = 20
+n.pcs = 30
+```
+
+Find Neighbors
+```{r}
+tiss_nonimmune_epi <- FindNeighbors(object = tiss_nonimmune_epi, dims = 1:n.pcs, verbose = T)
 ```
 
 Check clustering stability at given resolution (Clustree)
@@ -72,9 +91,7 @@ Check clustering stability at given resolution (Clustree)
 res.used <- seq(0.1,1,by=0.2)
 # Loop over and perform clustering of different resolutions 
 for(i in res.used){
-        tiss_nonimmune_epi <- FindClusters(object = tiss_nonimmune_epi, reduction.type = "pca", dims.use = 1:n.pcs, 
-        resolution = i, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
-        }
+        tiss_nonimmune_epi <- FindClusters(object = tiss_nonimmune_epi, verbose = T, resolution = res.used)}
 # Make plot 
 clus.tree.out <- clustree(tiss_nonimmune_epi) +
     theme(legend.position = "bottom") + 
@@ -88,25 +105,25 @@ clus.tree.out
 
 Set resolution and perform clustering
 ```{r}
-res.used <- .9
-tiss_nonimmune_epi <- FindClusters(object = tiss_nonimmune_epi, reduction.type = "pca", dims.use = 1:n.pcs, resolution = res.used, print.output = 0, save.SNN = TRUE, k.param = 10, force.recalc = T)
+res.used <- .7
+tiss_nonimmune_epi <- FindClusters(object = tiss_nonimmune_epi, verbose = T, resolution = res.used)
 ```
 
 Perform  tSNE
 ```{r}
-tiss_nonimmune_epi <- RunTSNE(object = tiss_nonimmune_epi, dims.use = 1:n.pcs, seed.use = 10, perplexity=30)
+tiss_nonimmune_epi <- RunTSNE(object = tiss_nonimmune_epi, dims.use = 1:n.pcs, seed.use = 10)
 ```
 
 Visualize TSNE colroed by cluster
 ```{r}
 pdf(paste(dir,"plot_out/NI02/epi_all_tSNE.pdf", sep=""),10,10)
-TSNEPlot(object = tiss_nonimmune_epi, do.label = T)
+DimPlot(tiss_nonimmune_epi, reduction = "tsne", label = FALSE, group.by = "seurat_clusters")
 dev.off()
 ```
 
 Set Metadata Column for Cluster IDs
 ```{r}
-tiss_nonimmune_epi@meta.data$epi_seurat_cluster <- tiss_nonimmune_epi@meta.data$res.0.9
+tiss_nonimmune_epi@meta.data$epi_seurat_cluster <- tiss_nonimmune_epi@meta.data$seurat_clusters
 ```
 
 
