@@ -57,6 +57,13 @@ https://drive.google.com/drive/folders/1nONsp9VuhmPzuDvMet0i8x26eV9r5lkT?usp=sha
 
 **_NI13_get_ercc_substitution_rate.py_**: python script for calculating per-base substitution rates in ERCC standards, for a large group of scRNA-seq bam files. 
 
+**_NI14_qpcr_analysis.Rmd_**: R code to plot qPCR analysis for cancer cells.
+
+**_NI15_multiplex_IF_analysis.Rmd_**: R code to plot Immune IF analysis.
+
+**_NI16_cancercell_EGFR_ALK.Rmd_**: Imports .RData object generated from NI04. In this script we investigate the expression of five gene expression signatures found within the subsets of EGFR and ALK samples. 
+
+**_NI17_cancercell_PDsigs.Rmd_**: Imports .RData object generated from NI04. In this script we investigate the expression of five gene expression signatures, and the comprising genes, found within the samples of PD treatment timepoint samples. 
 
 ## Cerebra
 
