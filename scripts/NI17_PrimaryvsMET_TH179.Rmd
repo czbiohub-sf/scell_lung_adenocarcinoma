@@ -451,4 +451,8 @@ GJB_p
 # ggsave(GJB_p, filename = paste(dir,"plot_out/NI17/GJB_metonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
 ```
 
+```{r}
+table(tiss_subset_tumor2$sample_name, tiss_subset_tumor2$analysis)
+table(tiss_subset_tumor2$analysis, tiss_subset_tumor2@meta.data$treatment_history)
+```
 

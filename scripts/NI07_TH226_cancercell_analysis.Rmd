@@ -30,10 +30,26 @@ Idents(TH226_samples) <- "sample_name"
 unique(TH226_samples@active.ident)
 ```
 
+MAST DE
+```{r}
+# MAST DE
+TH226_samples$sample_name_numeric <- as.factor(TH226_samples$sample_name)
+TH226_samples$sample_name_numeric <- as.numeric(TH226_samples$sample_name_numeric)
+
+# calculate the pairwise comparision of naive vs pr
+TH226_TNvsPER <- FindMarkers(object = TH226_samples, ident.1 = "LT_S52", ident.2 = "LT_S57", test.use = "MAST", latent.vars = 'sample_name_numeric')
+
+# calculate the pairwise comparision of naive vs pd
+TH226_TNvsPD <- FindMarkers(object = TH226_samples, ident.1 = "LT_S52", ident.2 = "LT_S82", test.use = "MAST", latent.vars = 'sample_name_numeric')
+
+# calculate the pairwise comparision of pr vs pd
+TH226_PERvsPD <- FindMarkers(object = TH226_samples, ident.1 = "LT_S57", ident.2 = "LT_S82", test.use = "MAST", latent.vars = 'sample_name_numeric')
+```
+
+
+
 TH226 TN vs PER
 ```{r}
-# compare naive cells (n = 15) to pr cells (n = 194)
-TH226_TNvsPER <- FindMarkers(object = TH226_samples, ident.1 = "LT_S52", ident.2 = "LT_S57")
 TH226_TNvsPER$gene <- rownames(TH226_TNvsPER)
 TH226_TNvsPER.1 <- TH226_TNvsPER
 TH226_TNvsPER.1 <- filter(TH226_TNvsPER.1, avg_logFC < 0)
@@ -47,25 +63,10 @@ TH226_TNvsPER.2 <- TH226_TNvsPER.1[order(TH226_TNvsPER.1$avg_logFC, decreasing =
 
 # save sorted gene lists
 write.csv(x = TH226_TNvsPER.1, file = paste(dir, "data_out/NI07/TH226_tn_v_pr_analysis.csv", sep = ""))
-
-# # create volcano plot
-# TH226volc <- ggplot(TH226_TNvsPER.1, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-#     geom_point(aes(col=sig)) + #add points colored by significance
-#     scale_color_manual(values=c("black", "red")) + 
-#     ggtitle("TH226 TN vs PER") 
-# 
-# TH226_TNvsPER_plot <- TH226volc + geom_text_repel(data=head(TH226_TNvsPER.1, 6), aes(label=gene), point.padding = 1, box.padding = .3) +
-#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-#   theme(legend.title = element_blank(), legend.position = "top") + 
-#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-# 
-# ggsave(TH226_TNvsPER_plot, filename = paste(dir, "plot_out/NI07/TH226_TNvPER_volcanoplot.pdf", sep = ""))
 ```
 
 TH226 TN vs PD
 ```{r}
-# compare naive cells (n = 15) to pd cells (n = 13)
-TH226_TNvsPD <- FindMarkers(object = TH226_samples, ident.1 = "LT_S52", ident.2 = "LT_S82")
 TH226_TNvsPD$gene <- rownames(TH226_TNvsPD)
 TH226_TNvsPD.1 <- TH226_TNvsPD
 TH226_TNvsPD.1 <- filter(TH226_TNvsPD.1, avg_logFC <= 0)
@@ -78,27 +79,11 @@ TH226_TNvsPD.1 <- mutate_TH226_TNvsPD # sorted by pval_adjust
 TH226_TNvsPD.2 <- TH226_TNvsPD.1[order(TH226_TNvsPD.1$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
 # save sorted gene lists
 write.csv(x = TH226_TNvsPD.1, file = paste(dir, "data_out/NI07/TH226_tn_v_pd_analysis.csv", sep = ""))
-
-# # create volcano plot
-# TH226volc <- ggplot(TH226_TNvsPD.1, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-#     geom_point(aes(col=sig)) + #add points colored by significance
-#     scale_color_manual(values=c("black", "red")) + 
-#     ggtitle("TH226 TN vs PD") 
-# 
-# TH226_TNvsPD_plot <- TH226volc + geom_text_repel(data=head(TH226_TNvsPD.1, 10), aes(label=gene), point.padding = 1, box.padding = .3) +
-#   geom_text_repel(data=head(TH226_TNvsPD.2, 10), aes(label=gene), point.padding = 1, box.padding = .3)
-#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-#   theme(legend.title = element_blank(), legend.position = "top") + 
-#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-# 
-# ggsave(TH226_TNvsPD_plot, filename = paste(dir, "plot_out/NI07/TH226_TNvPD_volcanoplot.pdf", sep = ""))
 ```
 
 
 TH226 PER vs PD Plot PR
 ```{r}
-# compare pr cells (n = 187) to pd cells (n = 13)
-TH226_PERvsPD <- FindMarkers(object = TH226_samples, ident.1 = "LT_S57", ident.2 = "LT_S82")
 TH226_PERvsPD$gene <- rownames(TH226_PERvsPD)
 #Will have different colors depending on significance
 TH226_PERvsPD.1 <- TH226_PERvsPD
@@ -106,55 +91,11 @@ mutate_TH226_PERvsPD <- mutate(TH226_PERvsPD.1, sig = ifelse(TH226_PERvsPD.1$p_v
 rownames(mutate_TH226_PERvsPD) <- mutate_TH226_PERvsPD$gene
 TH226_PERvsPD.1 <- mutate_TH226_PERvsPD # sorted by pval_adjust
 
-TH226_PERvsPD.1_sig_per <- filter(TH226_PERvsPD.1, avg_logFC > 0 & sig == "p_val_adj<0.05") #52 genes
-TH226_PERvsPD.1_sig_pd <- filter(TH226_PERvsPD.1, avg_logFC < 0 & sig == "p_val_adj<0.05") #323 genes
+TH226_PERvsPD.1_sig_per <- filter(TH226_PERvsPD.1, avg_logFC > 0 & sig == "p_val_adj<0.05") #84 genes
+TH226_PERvsPD.1_sig_pd <- filter(TH226_PERvsPD.1, avg_logFC < 0 & sig == "p_val_adj<0.05") #193 genes
 
 # save sorted gene lists
 write.csv(x = TH226_PERvsPD.1, file = paste(dir, "data_out/NI07/TH226_per_v_pd.csv", sep = ""))
-```
-
-TH226 PER vs PD Plot (PR)
-```{r}
-# # sort PER VS PD list for PER only
-# TH226_PERvsPD.1_pronly <- filter(TH226_PERvsPD.1, avg_logFC > 0)
-# 
-# TH226_PERvsPD.1_pronly.1 <- TH226_PERvsPD.1_pronly[order(TH226_PERvsPD.1_pronly$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
-# 
-# # create volcano plot
-# volc <- ggplot(TH226_PERvsPD.1_pronly, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-#     geom_point(aes(col=sig)) + #add points colored by significance
-#     scale_color_manual(values=c("black", "red")) + 
-#     ggtitle("TH226 PER vs PD (PER)") 
-# 
-# TH226_PERvsPD_plot_per <- volc + geom_text_repel(data=head(TH226_PERvsPD.1_pronly.1, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
-#   geom_text_repel(data=head(TH226_PERvsPD.1_pronly.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
-#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-#   theme(legend.title = element_blank(), legend.position = "top") + 
-#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-# ggsave(TH226_PERvsPD_plot_per, filename = paste(dir, "plot_out/NI07/TH226_PERvPD_PERonly_volcanoplot.pdf", sep = ""))
-```
-
-
-TH226 PER vs PD Plot (PD)
-```{r}
-# # sort PER VS PD list for PER only
-# TH226_PERvsPD.1_pdonly <- filter(TH226_PERvsPD.1, avg_logFC < 0)
-# TH226_PERvsPD.1_pdonly$avg_logFC <- TH226_PERvsPD.1_pdonly$avg_logFC * -1
-# 
-# TH226_PERvsPD.1_pdonly.1 <- TH226_PERvsPD.1_pdonly[order(TH226_PERvsPD.1_pdonly$avg_logFC, decreasing = TRUE), ] # sorted by avglogFC
-# 
-# # create volcano plot
-# volc <- ggplot(TH226_PERvsPD.1_pdonly, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-#     geom_point(aes(col=sig)) + #add points colored by significance
-#     scale_color_manual(values=c("black", "red")) + 
-#     ggtitle("TH226 PER vs PD (PD)") 
-# 
-# TH226_PERvsPD_plot_pd <- volc + geom_text_repel(data=head(TH226_PERvsPD.1_pdonly, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
-#   geom_text_repel(data=head(TH226_PERvsPD.1_pdonly.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
-#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-#   theme(legend.title = element_blank(), legend.position = "top") + 
-#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-# ggsave(TH226_PERvsPD_plot_pd, filename = paste(dir, "plot_out/NI07/TH226_PERvPD_PDonly_volcanoplot.pdf", sep = ""))
 ```
 
 Plasminogen Pathway

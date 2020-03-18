@@ -98,7 +98,7 @@ head(luad_tcga1_AlveolarSig)
 # Use only quantile 1 and 4
 # luad_tcga1_AlveolarSig <- filter(luad_tcga1_AlveolarSig, Alveolar_quartile.1 == "1" | Alveolar_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Alveolar_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Alveolar_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
     xlab = "Years",
@@ -109,7 +109,11 @@ survminer::ggsurvplot(
     conf.int = FALSE,
     legend = c(0.8, 0.8),
     palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
-dev.off()
+# dev.off()
+
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Alveolar_quartile.1, data = luad_tcga1_AlveolarSig)
+
+surv_pvalue(fit)
 
 # summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
 #         times = 2)
@@ -129,16 +133,17 @@ dev.off()
 
 ```{r}
 # Fit survival data using the Kaplan-Meier method
-# surv_object <- Surv(time = luad_tcga1_AlveolarSig$OS.time, event = luad_tcga1_AlveolarSig$OS)
-# surv_object
-# 
-# luad_tcga1_AlveolarSig$Alveolar_quartile <- factor(luad_tcga1_AlveolarSig$Alveolar_quartile)
-# 
-# 
-# # Fit a Cox proportional hazards model
-# fit.coxph <- coxph(surv_object ~ Alveolar_quartile, 
-#                    data = luad_tcga1_AlveolarSig)
-# ggforest(fit.coxph, data = luad_tcga1_AlveolarSig)
+surv_object <- Surv(time = Alveolar_quartile$OS.time, event = Alveolar_quartile$OS)
+surv_object
+
+luad_tcga1_AlveolarSig$Kynurenine_quartile.1 <- factor(luad_tcga1_AlveolarSig$Kynurenine_quartile.1)
+
+# Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Alveolar_quartile,
+                   data = luad_tcga1_AlveolarSig, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_AlveolarSig)
+
+summary(fit.coxph)
 ```
 
 ```{r}
@@ -170,7 +175,7 @@ luad_tcga1_Kynurenine <- left_join(tcga_meta, TCGA_Kynurenine_mean_f, by = "bcr_
 # Use only quantile 1 and 4
 # luad_tcga1_Kynurenine <- filter(luad_tcga1_Kynurenine, Kynurenine_quartile.1 == "1" | Kynurenine_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Kynurenine_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Kynurenine_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
     xlab = "Years",
@@ -180,8 +185,11 @@ survminer::ggsurvplot(
     pval = TRUE,
     legend = c(0.8, 0.8),
     palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
-dev.off()
+# dev.off()
 
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Kynurenine_quartile.1, data = luad_tcga1_Kynurenine)
+
+surv_pvalue(fit)
 
 # summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), times = 3)
 
@@ -200,16 +208,18 @@ dev.off()
 
 ```{r}
 # Fit survival data using the Kaplan-Meier method
-# surv_object <- Surv(time = luad_tcga1_Kynurenine$OS.time, event = luad_tcga1_Kynurenine$OS)
-# surv_object
-# 
-# luad_tcga1_Kynurenine$Kynurenine_quartile.1 <- factor(luad_tcga1_Kynurenine$Kynurenine_quartile.1)
-# 
+surv_object <- Surv(time = luad_tcga1_Kynurenine$OS.time, event = luad_tcga1_Kynurenine$OS)
+surv_object
+
+luad_tcga1_Kynurenine$Kynurenine_quartile.1 <- factor(luad_tcga1_Kynurenine$Kynurenine_quartile.1)
+
 # 
 # # Fit a Cox proportional hazards model
-# fit.coxph <- coxph(surv_object ~ Kynurenine_quartile.1, 
-#                    data = luad_tcga1_Kynurenine)
-# ggforest(fit.coxph, data = luad_tcga1_Kynurenine)
+fit.coxph <- coxph(surv_object ~ Kynurenine_quartile.1,
+                   data = luad_tcga1_Kynurenine, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_Kynurenine)
+
+summary(fit.coxph)
 ```
 
 
@@ -243,7 +253,7 @@ luad_tcga1_Plasminogen <- left_join(tcga_meta, TCGA_Plasminogen_mean_f, by = "bc
 # Use only quantile 1 and 4
 # luad_tcga1_Plasminogen <- filter(luad_tcga1_Plasminogen, Plasminogen_quartile.1 == "1" | Plasminogen_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Plasminogen_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Plasminogen_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen),
     xlab = "Years",
@@ -253,7 +263,11 @@ survminer::ggsurvplot(
     pval = TRUE,
     legend = c(0.8, 0.8),
     palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
-dev.off()
+# dev.off()
+
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen)
+
+surv_pvalue(fit)
 
 # summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), censored = T)
 # 
@@ -269,6 +283,23 @@ dev.off()
 # summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
 #         times = 3)
 ```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_Plasminogen$OS.time, event = luad_tcga1_Plasminogen$OS)
+surv_object
+
+luad_tcga1_Plasminogen$Plasminogen_quartile.1 <- factor(luad_tcga1_Plasminogen$Plasminogen_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Plasminogen_quartile.1,
+                   data = luad_tcga1_Plasminogen, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_Plasminogen)
+
+summary(fit.coxph)
+```
+
 
 ```{r}
 Serpine_sig <-  luad_tcga1["SERPINE1", ]
@@ -298,7 +329,7 @@ luad_tcga1_Serpine <- left_join(tcga_meta, TCGA_Serpine_sig_f, by = "bcr_patient
 # Use only quantile 1 and 4
 # luad_tcga1_Serpine <- filter(luad_tcga1_Serpine, SERPINE1_quartile.1 == "1" | SERPINE1_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/SERPINE1_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/SERPINE1_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
     xlab = "Years",
@@ -308,7 +339,11 @@ survminer::ggsurvplot(
     pval = TRUE,
     legend = c(0.8, 0.8),
     palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
-dev.off()
+# dev.off()
+
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ SERPINE1_quartile.1, data = luad_tcga1_Serpine)
+
+surv_pvalue(fit)
 
 # summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
 #         times = 3)
@@ -324,6 +359,22 @@ dev.off()
 # 
 # summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
 #         times = 3)
+```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_Serpine$OS.time, event = luad_tcga1_Serpine$OS)
+surv_object
+
+luad_tcga1_Serpine$SERPINE1_quartile.1 <- factor(luad_tcga1_Serpine$SERPINE1_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ SERPINE1_quartile.1,
+                   data = luad_tcga1_Serpine, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_Serpine)
+
+summary(fit.coxph)
 ```
 
 ```{r}
@@ -355,7 +406,7 @@ luad_tcga1_GapJunction <- left_join(tcga_meta, TCGA_GapJunction_mean_f, by = "bc
 # Use only quantile 1 and 4
 # luad_tcga1_GapJunction <- filter(luad_tcga1_GapJunction, GapJunction_quartile.1 == "1" | GapJunction_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/GapJunction_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/GapJunction_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction),
     xlab = "Years",
@@ -366,7 +417,11 @@ survminer::ggsurvplot(
     pval = TRUE,
     legend = c(0.8, 0.8),
     palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
-dev.off()
+# dev.off()
+
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction)
+
+surv_pvalue(fit)
 
 # summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
 #         times = 3)
@@ -383,7 +438,25 @@ dev.off()
 # 
 # summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
 #         times = 3)
+summary(survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction))
 ```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_GapJunction$OS.time, event = luad_tcga1_GapJunction$OS)
+surv_object
+
+luad_tcga1_GapJunction$GapJunction_quartile.1 <- factor(luad_tcga1_GapJunction$GapJunction_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ GapJunction_quartile.1,
+                   data = luad_tcga1_GapJunction, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_GapJunction)
+
+summary(fit.coxph)
+```
+
 
 ```{r}
 colnames(CIBERSORT_tcga)
@@ -415,7 +488,7 @@ luad_tcga1_Macrophages <- left_join(tcga_meta, TCGA_Macrophages_f, by = "bcr_pat
 # Use only quantile 1 and 4
 # luad_tcga1_Macrophages <- filter(luad_tcga1_Macrophages, Macrophages_quartile.1 == "1" | Macrophages_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Macrophage_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Macrophage_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages),
     xlab = "Years",
@@ -426,7 +499,11 @@ survminer::ggsurvplot(
     pval = TRUE,
     legend = c(0.8, 0.8),
     palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
-dev.off()
+# dev.off()
+
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages)
+
+surv_pvalue(fit)
 
 # summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
 #         times = 3)
@@ -443,6 +520,22 @@ dev.off()
 # 
 # summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
 #         times = 3)
+```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_Macrophages$OS.time, event = luad_tcga1_Macrophages$OS)
+surv_object
+
+luad_tcga1_Macrophages$Macrophages_quartile.1 <- factor(luad_tcga1_Macrophages$Macrophages_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Macrophages_quartile.1,
+                   data = luad_tcga1_Macrophages, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_Macrophages)
+
+summary(fit.coxph)
 ```
 
 ```{r}
@@ -468,7 +561,7 @@ luad_tcga1_t_cells <- left_join(tcga_meta, TCGA_t_cells_f, by = "bcr_patient_bar
 # Use only quantile 1 and 4
 # luad_tcga1_t_cells <- filter(luad_tcga1_t_cells, t_cells_quartile.1 == "1" | t_cells_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Tcell_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Tcell_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ t_cells_quartile.1, data = luad_tcga1_t_cells), 
     xlab = "Years",
@@ -479,7 +572,11 @@ survminer::ggsurvplot(
     pval = TRUE,
     legend = c(0.8, 0.8),
     palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
-dev.off()
+# dev.off()
+
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ t_cells_quartile.1, data = luad_tcga1_t_cells)
+
+surv_pvalue(fit)
 
 # summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  t_cells_quartile.1, data = luad_tcga1_t_cells), 
 #         times = 3)
@@ -497,5 +594,19 @@ dev.off()
 # summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  t_cells_quartile.1, data = luad_tcga1_t_cells), 
 #         times = 3)
 ```
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_t_cells$OS.time, event = luad_tcga1_t_cells$OS)
+surv_object
 
+luad_tcga1_t_cells$t_cells_quartile.1 <- factor(luad_tcga1_t_cells$t_cells_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ t_cells_quartile.1,
+                   data = luad_tcga1_t_cells, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_t_cells)
+
+summary(fit.coxph)
+```
 

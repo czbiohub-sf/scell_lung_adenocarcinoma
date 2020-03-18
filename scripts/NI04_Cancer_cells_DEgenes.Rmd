@@ -177,16 +177,33 @@ tiss_subset_tumor2 <- SetIdent(tiss_subset_tumor2, value = tiss_subset_tumor2@me
 unique(tiss_subset_tumor2@active.ident) # check current ident
 ```
 
-Calculate the pairwise comparisons between treatment groups of naive vs pr
+MAST DE
 ```{r}
+# MAST DE
+tiss_subset_tumor2$sample_name_numeric <- as.factor(tiss_subset_tumor2$sample_name)
+tiss_subset_tumor2$sample_name_numeric <- as.numeric(tiss_subset_tumor2$sample_name_numeric)
+
 # calculate the pairwise comparision of naive vs pr
-naive_v_pr <- FindMarkers(object = tiss_subset_tumor2, ident.1 = "naive", ident.2 = "grouped_pr")
+naive_v_pr <- FindMarkers(object = tiss_subset_tumor2, ident.1 = "naive", ident.2 = "grouped_pr", test.use = "MAST", latent.vars = 'sample_name_numeric')
 
 # calculate the pairwise comparision of naive vs pd
-naive_v_pd <- FindMarkers(object = tiss_subset_tumor2, ident.1 = "naive", ident.2 = "grouped_pd")
+naive_v_pd <- FindMarkers(object = tiss_subset_tumor2, ident.1 = "naive", ident.2 = "grouped_pd", test.use = "MAST", latent.vars = 'sample_name_numeric')
 
 # calculate the pairwise comparision of pr vs pd
-pr_v_pd <- FindMarkers(object = tiss_subset_tumor2, ident.1 = "grouped_pr", ident.2 = "grouped_pd")
+pr_v_pd <- FindMarkers(object = tiss_subset_tumor2, ident.1 = "grouped_pr", ident.2 = "grouped_pd", test.use = "MAST", latent.vars = 'sample_name_numeric')
+
+# write results
+write.csv2(naive_v_pd, file = paste(dir, 'data_out/NI04/naive_v_pd.csv', sep = ""))
+write.csv2(naive_v_pr,file = paste(dir, 'data_out/NI04/naive_v_pr.csv', sep = ""))
+write.csv2(pr_v_pd, file = paste(dir, 'data_out/NI04/pr_v_pd.csv', sep = ""))
+```
+
+Load files
+```{r}
+# naive_v_pr <- read.csv(file= paste(dir,"data_out/NI04/naive_v_pr.csv", sep=""), row.names = 1)
+# naive_v_pd <- read.csv(file= paste(dir,"data_out/NI04/naive_v_pd.csv", sep=""), row.names = 1)
+# pr_v_pd <- read.csv(file= paste(dir,"data_out/NI04/pr_v_pd.csv", sep=""), row.names = 1)
+# load(file= paste(dir,"/Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
 ```
 
 To avoid patient specific effects, filter the DE list to exclude genes explained by a few patients
@@ -253,7 +270,7 @@ for(i in 1:nrow(pr_v_pd.1)){
 # save all outputs
 write.csv(naive_v_pr.1, file = paste(dir, "data_out/NI04/naive_v_pr1.csv", sep = ""))
 write.csv(naive_v_pd.1, file = paste(dir, "data_out/NI04/naive_v_pd1.csv", sep = ""))
-write.csv(pr_v_pd.1, file = paste(dir, "data_out/NI04/pr_v_pd.csv", sep = ""))
+write.csv(pr_v_pd.1, file = paste(dir, "data_out/NI04/pr_v_pd1.csv", sep = ""))
 ```
 
 Naive vs PR plotting
@@ -261,7 +278,7 @@ Naive vs PR plotting
 naive_v_pr.2 <- naive_v_pr.1
 naive_v_pr.2$gene <- rownames(naive_v_pr.2)
 naive_v_pr.2 <- filter(naive_v_pr.2, avg_logFC <= 0)
-rownames(naive_v_pr.2) <- naive_v_pr.2$gene
+
 # change avglogFC to positive number
 naive_v_pr.2$avg_logFC <- naive_v_pr.2$avg_logFC * -1 # flip direction of axis (TN on left, PER on right)
 hist(naive_v_pr.2$`naive n.nonzero.pts`) # set threshold for 3 or more patients
@@ -278,22 +295,22 @@ input_naive_pr.1 <- input_naive_pr[order(input_naive_pr$avg_logFC, decreasing = 
 # save sorted gene lists
 write.csv(x = input_naive_pr.1, file = paste(dir, "data_out/NI04/naive_v_pr1_filtered.csv", sep = ""))
 
-# plot
-volc = ggplot(input_naive_pr, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("Naive vs PR") 
+# # plot
+# volc = ggplot(input_naive_pr, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("Naive vs PR") 
+# 
+# naive_vs_pr_volc.1 <- volc + geom_text_repel(data=head(input_naive_pr.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   geom_text_repel(data=head(input_naive_pr, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# 
+# # save volcano plot
+# ggsave(naive_vs_pr_volc.1, filename = paste(dir,"plot_out/NI04/naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
-naive_vs_pr_volc.1 <- volc + geom_text_repel(data=head(input_naive_pr.1, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
-  geom_text_repel(data=head(input_naive_pr, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-
-# save volcano plot
-ggsave(naive_vs_pr_volc.1, filename = paste(dir,"plot_out/NI04/naive_vs_pr_volcanoplot.pdf", sep=""), width = 15, height = 15)
-
-table(input_naive_pr.1$sig) # find number of genes that are sig for PER compared to TN (645)
+table(input_naive_pr.1$sig) # find number of genes that are sig for PER compared to TN (629)
 ```
 
 
@@ -321,22 +338,22 @@ input_naive_pd.1 <- input_naive_pd[order(input_naive_pd$avg_logFC, decreasing = 
 # save sorted gene lists
 write.csv(x = input_naive_pd.1, file = paste(dir, "data_out/NI04/naive_v_pd1_filtered.csv", sep = ""))
 
-# create volcano plot
-volc = ggplot(input_naive_pd, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("Naive vs PD") 
+# # create volcano plot
+# volc = ggplot(input_naive_pd, aes(avg_logFC, -log10(p_val_adj))) + #volcanoplot with avg_logFC versus p_val_adj
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("Naive vs PD") 
+# 
+# naive_vs_pd_volc.1 <- volc + geom_text_repel(data=head(input_naive_pd.1, 40), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   geom_text_repel(data=head(input_naive_pd, 40), aes(label=gene), point.padding = 1, box.padding = .3)
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# 
+# # save volcano plot
+# ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI04/naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
 
-naive_vs_pd_volc.1 <- volc + geom_text_repel(data=head(input_naive_pd.1, 40), aes(label=gene), point.padding = 1, box.padding = .3) +
-  geom_text_repel(data=head(input_naive_pd, 40), aes(label=gene), point.padding = 1, box.padding = .3)
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-
-# save volcano plot
-ggsave(naive_vs_pd_volc.1, filename = paste(dir,"plot_out/NI04/naive_vs_pd_volcanoplot.pdf", sep=""), width = 15, height = 15)
-
-table(input_naive_pd.1$sig) # find number of genes that are sig for PD compared to TN (989)
+table(input_naive_pd.1$sig) # find number of genes that are sig for PD compared to TN (901)
 ```
 
 PER vs PD
@@ -382,39 +399,35 @@ pd.1$avg_logFC <- pd.1$avg_logFC * -1
 pd$avg_logFC <- pd$avg_logFC * -1
 
 # plot PER
-PR_only_volc = ggplot(input_pr_pd_PR, aes(avg_logFC, -log10(p_val_adj))) +
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("PER vs PD") 
-
-PR_only_volc.1 <- PR_only_volc + geom_text_repel(data=head(pr.1, 25), aes(label=gene), point.padding = 1, box.padding = .3) +
-  geom_text_repel(data=head(pr, 25), aes(label=gene), point.padding = 1, box.padding = .3) +
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
-
-# plot PD
-PD_only_volc = ggplot(input_pr_pd_PD, aes(avg_logFC, -log10(p_val_adj))) +
-    geom_point(aes(col=sig)) + #add points colored by significance
-    scale_color_manual(values=c("black", "red")) + 
-    ggtitle("PD vs PER") 
-
-PD_only_volc.1 <- PD_only_volc + geom_text_repel(data=head(pd.1, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
-  geom_text_repel(data=head(pd, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
-  labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
-  theme(legend.title = element_blank(), legend.position = "top") + 
-  scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# PR_only_volc = ggplot(input_pr_pd_PR, aes(avg_logFC, -log10(p_val_adj))) +
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("PER vs PD") 
+# 
+# PR_only_volc.1 <- PR_only_volc + geom_text_repel(data=head(pr.1, 25), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   geom_text_repel(data=head(pr, 25), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
+# 
+# # plot PD
+# PD_only_volc = ggplot(input_pr_pd_PD, aes(avg_logFC, -log10(p_val_adj))) +
+#     geom_point(aes(col=sig)) + #add points colored by significance
+#     scale_color_manual(values=c("black", "red")) + 
+#     ggtitle("PD vs PER") 
+# 
+# PD_only_volc.1 <- PD_only_volc + geom_text_repel(data=head(pd.1, 50), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   geom_text_repel(data=head(pd, 20), aes(label=gene), point.padding = 1, box.padding = .3) +
+#   labs(y = expression(-log[10]*" "*"adjusted pvalue"), x = "avg log fold change") + 
+#   theme(legend.title = element_blank(), legend.position = "top") + 
+#   scale_fill_discrete(labels = c("Not Sig", "adjusted pval < 0.05"))
 
 # save volcano plots
-ggsave(PR_only_volc.1, filename = paste(dir,"plot_out/NI04/pr_vs_pd_pronly_volcanoplot.pdf", sep=""), width = 15, height = 15, units = "in")
-ggsave(PD_only_volc.1, filename = paste(dir,"plot_out/NI04/pr_vs_pd_pdonly_volcanoplot.pdf", sep=""), width = 15, height = 15, units = "in")
+# ggsave(PR_only_volc.1, filename = paste(dir,"plot_out/NI04/pr_vs_pd_pronly_volcanoplot.pdf", sep=""), width = 15, height = 15, units = "in")
+# ggsave(PD_only_volc.1, filename = paste(dir,"plot_out/NI04/pr_vs_pd_pdonly_volcanoplot.pdf", sep=""), width = 15, height = 15, units = "in")
 
-table(input_pr_pd_PR$sig) # find number of genes that are sig for PER compared to PD (857)
-table(input_pr_pd_PD$sig) # find number of genes that are sig for PD compared to PER (1050)
-```
-
-```{r}
-save(tiss_subset_tumor2, file= paste(dir,"/Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
+table(input_pr_pd_PR$sig) # find number of genes that are sig for PER compared to PD (1121)
+table(input_pr_pd_PD$sig) # find number of genes that are sig for PD compared to PER (1062)
 ```
 
 Cell-cycle genes
@@ -443,6 +456,7 @@ DotPlot(object = tiss_subset_tumor2, features = cc_genes) + coord_flip()
 dev.off()
 ```
 
-
-
+```{r}
+save(tiss_subset_tumor2, file= paste(dir,"/Data_input/objects/NI04_tumor_seurat_object.RData", sep=""))
+```
 

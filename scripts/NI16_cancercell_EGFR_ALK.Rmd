@@ -110,6 +110,8 @@ ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI16/Kynurenine_p.pdf", sep 
 ggsave(GJB_p, filename = paste(dir,"plot_out/NI16/GJB_p.pdf", sep = ""))
 ```
 
+
+
 ALK ONLY ANALYSIS
 ```{r}
 cells.use <- filter(tiss_subset_tumor2@meta.data, driver_gene == 'ALK')
@@ -194,11 +196,11 @@ GJB_p
 
 save all
 ```{r}
-ggsave(AT2_p, filename = paste(dir,"plot_out/NI16/AT2_p_ALK.pdf", sep = ""))
-ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI16/Plasminogen_act_ALK.pdf", sep = ""))
-ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI16/SERPINE1_ALK.pdf", sep = ""))
-ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI16/Kynurenine_p_ALK.pdf", sep = ""))
-ggsave(GJB_p, filename = paste(dir,"plot_out/NI16/GJB_p_ALK.pdf", sep = ""))
+ggsave(AT2_p, filename = paste(dir,"plot_out/NI16/AT2_p_ALK.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI16/Plasminogen_act_ALK.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI16/SERPINE1_ALK.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI16/Kynurenine_p_ALK.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(GJB_p, filename = paste(dir,"plot_out/NI16/GJB_p_ALK.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
 ```
 
 EGFR ONLY ANALYSIS
@@ -278,11 +280,11 @@ GJB_p
 
 save all
 ```{r}
-ggsave(AT2_p, filename = paste(dir,"plot_out/NI16/AT2_p_EGFR.pdf", sep = ""))
-ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI16/Plasminogen_act_EGFR.pdf", sep = ""))
-ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI16/SERPINE1_EGFR.pdf", sep = ""))
-ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI16/Kynurenine_p_EGFR.pdf", sep = ""))
-ggsave(GJB_p, filename = paste(dir,"plot_out/NI16/GJB_p_EGFR.pdf", sep = ""))
+ggsave(AT2_p, filename = paste(dir,"plot_out/NI16/AT2_p_EGFR.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI16/Plasminogen_act_EGFR.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI16/SERPINE1_EGFR.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI16/Kynurenine_p_EGFR.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(GJB_p, filename = paste(dir,"plot_out/NI16/GJB_p_EGFR.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
 ```
 
 
