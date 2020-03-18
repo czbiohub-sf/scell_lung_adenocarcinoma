@@ -16,8 +16,9 @@ library(REdaS)
 Load RData object 
 ```{r}
 rm(list=ls())
-# panel_83 <- read.csv("~/Downloads/train_panel83.csv")
-panel_83 <- read.csv("~/Downloads/panel83b_AZ.csv", row.names = 1)
+
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+panel_83 <- read.csv(file = paste(dir, "Data_input/csv_files/panel83b_AZ.csv", sep = ""))
 head(panel_83)
 table(panel_83$Image, panel_83$Slide)
 panel_83$Slide <- paste(panel_83$Subject.ID, panel_83$Encounter, panel_83$Block, sep = "_")
