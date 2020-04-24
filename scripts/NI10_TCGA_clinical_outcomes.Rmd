@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "TCGA Survival Analysis"
 output: html_notebook
 ---
 
@@ -12,7 +12,8 @@ library(tidyverse)
 
 Read in TCGA data
 ```{r}
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
+# rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
 luad_tcga <- read.csv(file = paste(dir, "Data_input/TCGA/tcga_luad_counts.csv", sep = ""))
 tcga_meta <- read.csv(file = paste(dir, "Data_input/TCGA/tcga_luad_metadata.csv", sep = ""), row.names = 1)
 CIBERSORT_tcga <- read.csv(file = paste(dir, "Data_input/TCGA/CIBERSORT_TCGA.csv", sep = ""))
@@ -82,7 +83,7 @@ TCGA_Alveolar_mean$bcr_patient_barcode <- rownames(TCGA_Alveolar_mean)
 ```{r}
 TCGA_Alveolar_mean_f <- TCGA_Alveolar_mean
 TCGA_Alveolar_mean_f$Alveolar_quartile.1 <- TCGA_Alveolar_mean_f$Alveolar_quartile
-TCGA_Alveolar_mean_f$Alveolar_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Alveolar_mean_f$Alveolar_quartile.1)
+# TCGA_Alveolar_mean_f$Alveolar_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Alveolar_mean_f$Alveolar_quartile.1)
 table(TCGA_Alveolar_mean_f$Alveolar_quartile.1)
 ```
 
@@ -95,9 +96,9 @@ head(luad_tcga1_AlveolarSig)
 # luad_tcga1_AlveolarSig <- filter(luad_tcga1_AlveolarSig, ajcc_pathologic_tumor_stage == "Stage IIIA" | ajcc_pathologic_tumor_stage == "Stage IIIB" | ajcc_pathologic_tumor_stage == "Stage IV")
 
 # Use only quantile 1 and 4
-luad_tcga1_AlveolarSig <- filter(luad_tcga1_AlveolarSig, Alveolar_quartile.1 == "1" | Alveolar_quartile.1 == "4")
+# luad_tcga1_AlveolarSig <- filter(luad_tcga1_AlveolarSig, Alveolar_quartile.1 == "1" | Alveolar_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Alveolar_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Alveolar_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
     xlab = "Years",
@@ -105,38 +106,44 @@ survminer::ggsurvplot(
     legend.title = "Alveolar Expression Signature",
     censor = TRUE,
     pval = TRUE,
-    palette = c("#330066", "#CCCC00"),
-    conf.int = FALSE)
-dev.off()
+    conf.int = FALSE,
+    legend = c(0.8, 0.8),
+    palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
+# dev.off()
 
-summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
-        times = 2)
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Alveolar_quartile.1, data = luad_tcga1_AlveolarSig)
 
-survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
-    xlab = "Years",
-    ylab = "Progression free interval probability",
-    legend.title = "Alveolar Expression Signature",
-    censor = TRUE,
-    pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
+surv_pvalue(fit)
 
-summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
-        times = 2)
+# summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
+#         times = 2)
+# 
+# survminer::ggsurvplot(
+#     fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
+#     xlab = "Years",
+#     ylab = "Progression free interval probability",
+#     legend.title = "Alveolar Expression Signature",
+#     censor = TRUE,
+#     pval = TRUE,
+#     palette = c("#330066", "#CCCC00"))
+# 
+# summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Alveolar_quartile.1, data = luad_tcga1_AlveolarSig), 
+#         times = 2)
 ```
 
 ```{r}
 # Fit survival data using the Kaplan-Meier method
-surv_object <- Surv(time = luad_tcga1_AlveolarSig$OS.time, event = luad_tcga1_AlveolarSig$OS)
+surv_object <- Surv(time = Alveolar_quartile$OS.time, event = Alveolar_quartile$OS)
 surv_object
 
-luad_tcga1_AlveolarSig$Alveolar_quartile <- factor(luad_tcga1_AlveolarSig$Alveolar_quartile)
-
+luad_tcga1_AlveolarSig$Kynurenine_quartile.1 <- factor(luad_tcga1_AlveolarSig$Kynurenine_quartile.1)
 
 # Fit a Cox proportional hazards model
-fit.coxph <- coxph(surv_object ~ Alveolar_quartile, 
-                   data = luad_tcga1_AlveolarSig)
+fit.coxph <- coxph(surv_object ~ Alveolar_quartile,
+                   data = luad_tcga1_AlveolarSig, ties = 'exact')
 ggforest(fit.coxph, data = luad_tcga1_AlveolarSig)
+
+summary(fit.coxph)
 ```
 
 ```{r}
@@ -154,7 +161,7 @@ TCGA_Kynurenine_mean$bcr_patient_barcode <- rownames(TCGA_Kynurenine_mean)
 ```{r}
 TCGA_Kynurenine_mean_f <- TCGA_Kynurenine_mean
 TCGA_Kynurenine_mean_f$Kynurenine_quartile.1 <- TCGA_Kynurenine_mean_f$Kynurenine_quartile
-TCGA_Kynurenine_mean_f$Kynurenine_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Kynurenine_mean_f$Kynurenine_quartile.1)
+# TCGA_Kynurenine_mean_f$Kynurenine_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Kynurenine_mean_f$Kynurenine_quartile.1)
 table(TCGA_Kynurenine_mean_f$Kynurenine_quartile.1)
 ```
 
@@ -166,9 +173,9 @@ luad_tcga1_Kynurenine <- left_join(tcga_meta, TCGA_Kynurenine_mean_f, by = "bcr_
 # table(luad_tcga1_Kynurenine$ajcc_pathologic_tumor_stage)
 
 # Use only quantile 1 and 4
-luad_tcga1_Kynurenine <- filter(luad_tcga1_Kynurenine, Kynurenine_quartile.1 == "1" | Kynurenine_quartile.1 == "4")
+# luad_tcga1_Kynurenine <- filter(luad_tcga1_Kynurenine, Kynurenine_quartile.1 == "1" | Kynurenine_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Kynurenine_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Kynurenine_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
     xlab = "Years",
@@ -176,23 +183,27 @@ survminer::ggsurvplot(
     legend.title = "Kynurenine Expression Quartiles",
     censor = TRUE,
     pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
-dev.off()
+    legend = c(0.8, 0.8),
+    palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
+# dev.off()
 
-summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
-        times = 3)
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Kynurenine_quartile.1, data = luad_tcga1_Kynurenine)
 
-survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
-    xlab = "Years",
-    ylab = "Progression free interval probability",
-    legend.title = "Kynurenine Expression Quartiles",
-    censor = TRUE,
-    pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
+surv_pvalue(fit)
 
-summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
-        times = 3)
+# summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), times = 3)
+
+# survminer::ggsurvplot(
+#     fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
+#     xlab = "Years",
+#     ylab = "Progression free interval probability",
+#     legend.title = "Kynurenine Expression Quartiles",
+#     censor = TRUE,
+#     pval = TRUE,
+#     palette = c("#330066", "#CCCC00"))
+
+# summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Kynurenine_quartile.1, data = luad_tcga1_Kynurenine), 
+#         times = 3)
 ```
 
 ```{r}
@@ -202,11 +213,13 @@ surv_object
 
 luad_tcga1_Kynurenine$Kynurenine_quartile.1 <- factor(luad_tcga1_Kynurenine$Kynurenine_quartile.1)
 
-
-# Fit a Cox proportional hazards model
-fit.coxph <- coxph(surv_object ~ Kynurenine_quartile.1, 
-                   data = luad_tcga1_Kynurenine)
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Kynurenine_quartile.1,
+                   data = luad_tcga1_Kynurenine, ties = 'exact')
 ggforest(fit.coxph, data = luad_tcga1_Kynurenine)
+
+summary(fit.coxph)
 ```
 
 
@@ -226,7 +239,7 @@ TCGA_Plasminogen_mean$bcr_patient_barcode <- rownames(TCGA_Plasminogen_mean)
 ```{r}
 TCGA_Plasminogen_mean_f <- TCGA_Plasminogen_mean
 TCGA_Plasminogen_mean_f$Plasminogen_quartile.1 <- TCGA_Plasminogen_mean_f$Plasminogen_quartile
-TCGA_Plasminogen_mean_f$Plasminogen_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Plasminogen_mean_f$Plasminogen_quartile.1)
+# TCGA_Plasminogen_mean_f$Plasminogen_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Plasminogen_mean_f$Plasminogen_quartile.1)
 table(TCGA_Plasminogen_mean_f$Plasminogen_quartile.1)
 ```
 
@@ -238,34 +251,55 @@ luad_tcga1_Plasminogen <- left_join(tcga_meta, TCGA_Plasminogen_mean_f, by = "bc
 # table(luad_tcga1_Plasminogen$ajcc_pathologic_tumor_stage)
 
 # Use only quantile 1 and 4
-luad_tcga1_Plasminogen <- filter(luad_tcga1_Plasminogen, Plasminogen_quartile.1 == "1" | Plasminogen_quartile.1 == "4")
+# luad_tcga1_Plasminogen <- filter(luad_tcga1_Plasminogen, Plasminogen_quartile.1 == "1" | Plasminogen_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Plasminogen_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Plasminogen_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen),
     xlab = "Years",
     ylab = "Overall survival probability",
     legend.title = "Plasminogen Expression Quartiles",
     censor = TRUE,
     pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
-dev.off()
+    legend = c(0.8, 0.8),
+    palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
+# dev.off()
 
-summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
-        times = 3)
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen)
 
-survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
-    xlab = "Years",
-    ylab = "Progression free interval probability",
-    legend.title = "Plasminogen Expression Quartiles",
-    censor = TRUE,
-    pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
+surv_pvalue(fit)
 
-summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
-        times = 3)
+# summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), censored = T)
+# 
+# survminer::ggsurvplot(
+#     fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
+#     xlab = "Years",
+#     ylab = "Progression free interval probability",
+#     legend.title = "Plasminogen Expression Quartiles",
+#     censor = TRUE,
+#     pval = TRUE,
+#     palette = c("#330066", "#CCCC00"))
+# 
+# summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Plasminogen_quartile.1, data = luad_tcga1_Plasminogen), 
+#         times = 3)
 ```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_Plasminogen$OS.time, event = luad_tcga1_Plasminogen$OS)
+surv_object
+
+luad_tcga1_Plasminogen$Plasminogen_quartile.1 <- factor(luad_tcga1_Plasminogen$Plasminogen_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Plasminogen_quartile.1,
+                   data = luad_tcga1_Plasminogen, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_Plasminogen)
+
+summary(fit.coxph)
+```
+
 
 ```{r}
 Serpine_sig <-  luad_tcga1["SERPINE1", ]
@@ -280,7 +314,7 @@ TCGA_Serpine_sig$bcr_patient_barcode <- rownames(TCGA_Serpine_sig)
 ```{r}
 TCGA_Serpine_sig_f <- TCGA_Serpine_sig
 TCGA_Serpine_sig_f$SERPINE1_quartile.1 <- TCGA_Serpine_sig_f$SERPINE1_quartile
-TCGA_Serpine_sig_f$SERPINE1_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Serpine_sig_f$SERPINE1_quartile.1)
+# TCGA_Serpine_sig_f$SERPINE1_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Serpine_sig_f$SERPINE1_quartile.1)
 table(TCGA_Serpine_sig_f$SERPINE1_quartile.1)
 ```
 
@@ -293,9 +327,9 @@ luad_tcga1_Serpine <- left_join(tcga_meta, TCGA_Serpine_sig_f, by = "bcr_patient
 # table(luad_tcga1_Serpine$ajcc_pathologic_tumor_stage)
 
 # Use only quantile 1 and 4
-luad_tcga1_Serpine <- filter(luad_tcga1_Serpine, SERPINE1_quartile.1 == "1" | SERPINE1_quartile.1 == "4")
+# luad_tcga1_Serpine <- filter(luad_tcga1_Serpine, SERPINE1_quartile.1 == "1" | SERPINE1_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/SERPINE1_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/SERPINE1_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
     xlab = "Years",
@@ -303,27 +337,48 @@ survminer::ggsurvplot(
     legend.title = "SERPINE1 Expression Quartiles",
     censor = TRUE,
     pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
-dev.off()
+    legend = c(0.8, 0.8),
+    palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
+# dev.off()
 
-summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
-        times = 3)
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ SERPINE1_quartile.1, data = luad_tcga1_Serpine)
 
-survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
-    xlab = "Years",
-    ylab = "Progression free interval probability",
-    legend.title = "SERPINE1 Expression Quartiles",
-    censor = TRUE,
-    pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
+surv_pvalue(fit)
 
-summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
-        times = 3)
+# summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
+#         times = 3)
+# 
+# survminer::ggsurvplot(
+#     fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
+#     xlab = "Years",
+#     ylab = "Progression free interval probability",
+#     legend.title = "SERPINE1 Expression Quartiles",
+#     censor = TRUE,
+#     pval = TRUE,
+#     palette = c("#330066", "#CCCC00"))
+# 
+# summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  SERPINE1_quartile.1, data = luad_tcga1_Serpine), 
+#         times = 3)
 ```
 
 ```{r}
-GapJunction_sig <- c('GJB3', 'GJB2', 'GJB4','GJB5')
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_Serpine$OS.time, event = luad_tcga1_Serpine$OS)
+surv_object
+
+luad_tcga1_Serpine$SERPINE1_quartile.1 <- factor(luad_tcga1_Serpine$SERPINE1_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ SERPINE1_quartile.1,
+                   data = luad_tcga1_Serpine, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_Serpine)
+
+summary(fit.coxph)
+```
+
+```{r}
+GapJunction_sig <- c('GJB3', 'GJB2','GJB5')
 TCGA_GapJunction <- luad_tcga1[GapJunction_sig, ]
 head(TCGA_GapJunction)
 TCGA_GapJunction_mean <- as.data.frame(colMeans(TCGA_GapJunction))
@@ -337,7 +392,7 @@ TCGA_GapJunction_mean$bcr_patient_barcode <- rownames(TCGA_GapJunction_mean)
 ```{r}
 TCGA_GapJunction_mean_f <- TCGA_GapJunction_mean
 TCGA_GapJunction_mean_f$GapJunction_quartile.1 <- TCGA_GapJunction_mean_f$GapJunction_quartile
-TCGA_GapJunction_mean_f$GapJunction_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_GapJunction_mean_f$GapJunction_quartile.1)
+# TCGA_GapJunction_mean_f$GapJunction_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_GapJunction_mean_f$GapJunction_quartile.1)
 table(TCGA_GapJunction_mean_f$GapJunction_quartile.1)
 ```
 
@@ -349,36 +404,59 @@ luad_tcga1_GapJunction <- left_join(tcga_meta, TCGA_GapJunction_mean_f, by = "bc
 # table(luad_tcga1_GapJunction$ajcc_pathologic_tumor_stage)
 
 # Use only quantile 1 and 4
-luad_tcga1_GapJunction <- filter(luad_tcga1_GapJunction, GapJunction_quartile.1 == "1" | GapJunction_quartile.1 == "4")
+# luad_tcga1_GapJunction <- filter(luad_tcga1_GapJunction, GapJunction_quartile.1 == "1" | GapJunction_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/GapJunction_Sig_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/GapJunction_Sig_OS.pdf", sep = ""))
 survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction),
     xlab = "Years",
     ylab = "Overall survival probability",
     legend.title = "Gap Junciton Expression Quartile",
     censor = TRUE,
     conf.int = FALSE,
     pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
-dev.off()
+    legend = c(0.8, 0.8),
+    palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
+# dev.off()
 
-summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
-        times = 3)
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction)
 
-survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
-    xlab = "Years",
-    ylab = "Progression free interval probability",
-    legend.title = "Gap Junciton Expression Quartile",
-    censor = TRUE,
-    conf.int = FALSE,
-    pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
+surv_pvalue(fit)
 
-summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
-        times = 3)
+# summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
+#         times = 3)
+# 
+# survminer::ggsurvplot(
+#     fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
+#     xlab = "Years",
+#     ylab = "Progression free interval probability",
+#     legend.title = "Gap Junciton Expression Quartile",
+#     censor = TRUE,
+#     conf.int = FALSE,
+#     pval = TRUE,
+#     palette = c("#330066", "#CCCC00"))
+# 
+# summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  GapJunction_quartile.1, data = luad_tcga1_GapJunction), 
+#         times = 3)
+summary(survival::survfit(survival::Surv((OS.time/365), OS) ~ GapJunction_quartile.1, data = luad_tcga1_GapJunction))
 ```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_GapJunction$OS.time, event = luad_tcga1_GapJunction$OS)
+surv_object
+
+luad_tcga1_GapJunction$GapJunction_quartile.1 <- factor(luad_tcga1_GapJunction$GapJunction_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ GapJunction_quartile.1,
+                   data = luad_tcga1_GapJunction, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_GapJunction)
+
+summary(fit.coxph)
+```
+
 
 ```{r}
 colnames(CIBERSORT_tcga)
@@ -397,7 +475,7 @@ TCGA_Macrophages$bcr_patient_barcode <- rownames(TCGA_Macrophages)
 
 TCGA_Macrophages_f <- TCGA_Macrophages
 TCGA_Macrophages_f$Macrophages_quartile.1 <- TCGA_Macrophages_f$Macrophages_quartile
-TCGA_Macrophages_f$Macrophages_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Macrophages_f$Macrophages_quartile.1)
+# TCGA_Macrophages_f$Macrophages_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_Macrophages_f$Macrophages_quartile.1)
 table(TCGA_Macrophages_f$Macrophages_quartile.1)
 TCGA_Macrophages_f$bcr_patient_barcode <- TCGA_Macrophages$Input.Sample
 
@@ -408,35 +486,56 @@ luad_tcga1_Macrophages <- left_join(tcga_meta, TCGA_Macrophages_f, by = "bcr_pat
 # table(luad_tcga1_Macrophages$ajcc_pathologic_tumor_stage)
 
 # Use only quantile 1 and 4
-luad_tcga1_Macrophages <- filter(luad_tcga1_Macrophages, Macrophages_quartile.1 == "1" | Macrophages_quartile.1 == "4")
+# luad_tcga1_Macrophages <- filter(luad_tcga1_Macrophages, Macrophages_quartile.1 == "1" | Macrophages_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Macrophage_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Macrophage_OS.pdf", sep = ""))
 survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
+    fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages),
     xlab = "Years",
     ylab = "Overall survival probability",
     legend.title = "Macrophage Population Quartile",
     censor = TRUE,
     conf.int = FALSE,
     pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
-dev.off()
+    legend = c(0.8, 0.8),
+    palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
+# dev.off()
 
-summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
-        times = 3)
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages)
 
-survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
-    xlab = "Years",
-    ylab = "Progression free interval probability",
-    legend.title = "Macrophage Population Quartile",
-    censor = TRUE,
-    conf.int = FALSE,
-    pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
+surv_pvalue(fit)
 
-summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
-        times = 3)
+# summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
+#         times = 3)
+# 
+# survminer::ggsurvplot(
+#     fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
+#     xlab = "Years",
+#     ylab = "Progression free interval probability",
+#     legend.title = "Macrophage Population Quartile",
+#     censor = TRUE,
+#     conf.int = FALSE,
+#     pval = TRUE,
+#     palette = c("#330066", "#CCCC00"))
+# 
+# summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  Macrophages_quartile.1, data = luad_tcga1_Macrophages), 
+#         times = 3)
+```
+
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_Macrophages$OS.time, event = luad_tcga1_Macrophages$OS)
+surv_object
+
+luad_tcga1_Macrophages$Macrophages_quartile.1 <- factor(luad_tcga1_Macrophages$Macrophages_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ Macrophages_quartile.1,
+                   data = luad_tcga1_Macrophages, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_Macrophages)
+
+summary(fit.coxph)
 ```
 
 ```{r}
@@ -449,7 +548,7 @@ TCGA_t_cells$bcr_patient_barcode <- rownames(TCGA_t_cells)
 
 TCGA_t_cells_f <- TCGA_t_cells
 TCGA_t_cells_f$t_cells_quartile.1 <- TCGA_t_cells_f$t_cells_quartile
-TCGA_t_cells_f$t_cells_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_t_cells_f$t_cells_quartile.1)
+# TCGA_t_cells_f$t_cells_quartile.1 <- gsub(pattern = "3", replacement = "2", x = TCGA_t_cells_f$t_cells_quartile.1)
 table(TCGA_t_cells_f$t_cells_quartile.1)
 TCGA_t_cells_f$bcr_patient_barcode <- TCGA_t_cells$Input.Sample
 
@@ -460,9 +559,9 @@ luad_tcga1_t_cells <- left_join(tcga_meta, TCGA_t_cells_f, by = "bcr_patient_bar
 # table(luad_tcga1_t_cells$ajcc_pathologic_tumor_stage)
 
 # Use only quantile 1 and 4
-luad_tcga1_t_cells <- filter(luad_tcga1_t_cells, t_cells_quartile.1 == "1" | t_cells_quartile.1 == "4")
+# luad_tcga1_t_cells <- filter(luad_tcga1_t_cells, t_cells_quartile.1 == "1" | t_cells_quartile.1 == "4")
 
-pdf(file = paste(dir, "plot_out/NI10/Tcell_OS.pdf", sep = ""))
+# pdf(file = paste(dir, "plot_out/NI10/Tcell_OS.pdf", sep = ""))
 survminer::ggsurvplot(
     fit = survival::survfit(survival::Surv((OS.time/365), OS) ~ t_cells_quartile.1, data = luad_tcga1_t_cells), 
     xlab = "Years",
@@ -471,23 +570,43 @@ survminer::ggsurvplot(
     censor = TRUE,
     conf.int = FALSE,
     pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
-dev.off()
+    legend = c(0.8, 0.8),
+    palette = rev(RColorBrewer::brewer.pal(n = 4, name = "RdBu")))
+# dev.off()
 
-summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  t_cells_quartile.1, data = luad_tcga1_t_cells), 
-        times = 3)
+fit <- survival::survfit(survival::Surv((OS.time/365), OS) ~ t_cells_quartile.1, data = luad_tcga1_t_cells)
 
-survminer::ggsurvplot(
-    fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ t_cells_quartile.1, data = luad_tcga1_t_cells), 
-    xlab = "Years",
-    ylab = "Progression free interval probability",
-    legend.title = "Tcell Population Quartile",
-    censor = TRUE,
-    conf.int = FALSE,
-    pval = TRUE,
-    palette = c("#330066", "#CCCC00"))
+surv_pvalue(fit)
 
-summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  t_cells_quartile.1, data = luad_tcga1_t_cells), 
-        times = 3)
+# summary(survival::survfit(survival::Surv((OS.time/365), OS) ~  t_cells_quartile.1, data = luad_tcga1_t_cells), 
+#         times = 3)
+# 
+# survminer::ggsurvplot(
+#     fit = survival::survfit(survival::Surv((PFI.time/365), PFI) ~ t_cells_quartile.1, data = luad_tcga1_t_cells), 
+#     xlab = "Years",
+#     ylab = "Progression free interval probability",
+#     legend.title = "Tcell Population Quartile",
+#     censor = TRUE,
+#     conf.int = FALSE,
+#     pval = TRUE,
+#     palette = c("#330066", "#CCCC00"))
+# 
+# summary(survival::survfit(survival::Surv((PFI.time/365), PFI) ~  t_cells_quartile.1, data = luad_tcga1_t_cells), 
+#         times = 3)
+```
+```{r}
+# Fit survival data using the Kaplan-Meier method
+surv_object <- Surv(time = luad_tcga1_t_cells$OS.time, event = luad_tcga1_t_cells$OS)
+surv_object
+
+luad_tcga1_t_cells$t_cells_quartile.1 <- factor(luad_tcga1_t_cells$t_cells_quartile.1)
+
+# 
+# # Fit a Cox proportional hazards model
+fit.coxph <- coxph(surv_object ~ t_cells_quartile.1,
+                   data = luad_tcga1_t_cells, ties = 'exact')
+ggforest(fit.coxph, data = luad_tcga1_t_cells)
+
+summary(fit.coxph)
 ```
 

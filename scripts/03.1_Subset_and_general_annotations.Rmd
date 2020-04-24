@@ -1,0 +1,291 @@
+---
+title: "03.1_Subset_and_general_annotations"
+output: html_document
+---
+
+Libraries
+```{r}
+library(Seurat)
+library(devtools)
+library(clustree)
+library(tidyverse)
+library(gridExtra)
+library(ggridges)
+library(ggplot2)
+library(ggExtra)
+library(clustree)
+library(DoubletFinder)
+```
+
+Clear environment and load filtered Seurat object 
+```{r}
+rm(list=ls())
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/S03_Merged_main_filtered_with_neo_osi.RData", sep=""))
+```
+
+Drop any samples with 10 or less cells
+```{r}
+main_tiss_filtered1@meta.data$sample_name <- as.character(main_tiss_filtered1@meta.data$sample_name)
+sample_name <- as.character(main_tiss_filtered1@meta.data$sample_name)
+# Make table 
+tab.1 <- table(main_tiss_filtered1@meta.data$sample_name) 
+# Which samples have less than 10 cells 
+samples.keep <- names(which(tab.1 > 10))
+metadata_keep <- filter(main_tiss_filtered1@meta.data, sample_name %in% samples.keep)
+# Subset Seurat object 
+tiss_subset <- subset(main_tiss_filtered1, cells=as.character(metadata_keep$cell_id))
+tiss_subset
+```
+
+Check sample and patient counts
+```{r}
+table(tiss_subset@meta.data$sample_name)
+table(tiss_subset@meta.data$patient_id)
+```
+
+Save Tiss Subset
+```{r}
+save(tiss_subset, file=paste(dir,"Data_input/objects/S03_subset_preprocessed.RData", sep=""))
+# load(file="~/scell_lung_adenocarcinoma/Data_input/objects/S03_subset_preprocessed.RData")
+```
+
+Normalize and scale the data
+```{r}
+tiss_subset <- NormalizeData(object = tiss_subset, scale.factor = 1e6)
+tiss_subset <- ScaleData(object = tiss_subset)
+```
+
+Find variable genes
+```{r}
+tiss_subset <- FindVariableFeatures(object = tiss_subset)
+```
+
+Perform PCA
+```{r}
+tiss_subset <- RunPCA(object = tiss_subset, do.print = FALSE)
+```
+
+Visualize variance along each component
+```{r}
+ElbowPlot(tiss_subset)
+```
+
+Visualize first two PCs
+```{r}
+DimPlot(tiss_subset, reduction = 'pca')
+```
+
+Visualize top genes and their loadings 
+```{r}
+VizDimLoadings(tiss_subset, dims = 1:5, reduction = "pca", nfeatures = 10)
+```
+
+Visualize top genes in principal components
+```{r}
+DimHeatmap(tiss_subset, dims = 1:10, cells = 100, balanced = TRUE)
+```
+
+Set nPCs from above visualizations
+```{r}
+n.pcs <- 20
+```
+
+Construct Neighbor graph 
+```{r}
+tiss_subset <- FindNeighbors(object = tiss_subset, dims = 1:20, verbose = T)
+```
+
+Check clustering stability at given resolution
+```{r}
+# Set different resolutions
+res.used <- seq(0.1,1,by=0.2)
+# Loop over and perform clustering of different resolutions
+for(i in res.used){
+        tiss_subset <- FindClusters(object = tiss_subset, reduction.type = "pca", dims.use = 1:n.pcs,
+        resolution = i, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+        }
+# rename best response column to best_reaction as to not confuse clustree with res
+colnames(tiss_subset@meta.data)
+colnames(tiss_subset@meta.data)[colnames(tiss_subset@meta.data) == 'best_response_status'] <- 'best_rxn_status'
+# Make plot
+clus.tree.out <- clustree(tiss_subset) +
+    theme(legend.position = "bottom") +
+    scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+# Plot
+clus.tree.out
+```
+
+Find Clusters 
+```{r}
+tiss_subset <- FindClusters(object = tiss_subset, verbose = T, resolution = 0.5)
+```
+
+Run and project TSNEs
+```{r}
+tiss_subset <- RunTSNE(tiss_subset, dims = 1:20)
+DimPlot(tiss_subset, reduction = "tsne", label = TRUE)
+```
+
+Find Doublets, pK Identification (no ground-truth)
+```{r}
+sweep.res.tiss_subset <- paramSweep_v3(tiss_subset, PCs = 1:20, sct = FALSE)
+sweep.stats_tiss_subset <- summarizeSweep(sweep.res.tiss_subset, GT = FALSE)
+bcmvn_tiss_subset <- find.pK(sweep.stats_tiss_subset)
+```
+
+Homotypic Doublet Proportion Estimate
+```{r}
+homotypic.prop <- modelHomotypic(tiss_subset$seurat_clusters)
+nExp_poi <- round(0.01*length(tiss_subset@meta.data$cell_id))  ## Assuming 1% doublet formation rate for SmartSeq2
+nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
+```
+
+Run DoubletFinder using nExp_poi.adj
+```{r}
+tiss_subset <- doubletFinder_v3(tiss_subset, PCs = 1:10, pN = 0.25, pK = 0.09, nExp = nExp_poi.adj, sct = FALSE)
+```
+
+Check Doublet outputs
+```{r}
+hist(tiss_subset@meta.data$pANN_0.25_0.09_218)
+table(tiss_subset@meta.data$DF.classifications_0.25_0.09_218)
+table(tiss_subset@meta.data$DF.classifications_0.25_0.09_218, tiss_subset1@meta.data$immune_annotation)
+DimPlot(tiss_subset, reduction = "tsne", group.by = "DF.classifications_0.25_0.09_218")
+VlnPlot(tiss_subset, features = "nFeature_RNA", group.by = "DF.classifications_0.25_0.09_218")
+```
+
+Remove doublets (estimated at 1%)
+```{r}
+singlet_cells <- row.names(tiss_subset@meta.data)[which(tiss_subset@meta.data$DF.classifications_0.25_0.09_218=='Singlet')]
+length(singlet_cells)
+# Subset only the singlet cells
+tiss_subset <-subset(tiss_subset, cells = singlet_cells)
+```
+
+Construct Neighbor graph 
+```{r}
+tiss_subset <- FindNeighbors(object = tiss_subset, dims = 1:20, verbose = T)
+```
+
+Check clustering stability at given resolution
+```{r}
+# Set different resolutions
+res.used <- seq(0.1,1,by=0.2)
+# Loop over and perform clustering of different resolutions
+for(i in res.used){
+        tiss_subset <- FindClusters(object = tiss_subset, reduction.type = "pca", dims.use = 1:n.pcs,
+        resolution = i, print.output = 0, save.SNN = TRUE, k.param = 30, force.recalc = T)
+        }
+# rename best response column to best_reaction as to not confuse clustree with res
+colnames(tiss_subset@meta.data)
+colnames(tiss_subset@meta.data)[colnames(tiss_subset@meta.data) == 'best_response_status'] <- 'best_rxn_status'
+# Make plot
+clus.tree.out <- clustree(tiss_subset) +
+    theme(legend.position = "bottom") +
+    scale_color_brewer(palette = "Set1") +
+    scale_edge_color_continuous(low = "grey80", high = "red")
+# Plot
+clus.tree.out
+```
+
+Find Clusters 
+```{r}
+tiss_subset <- FindClusters(object = tiss_subset, verbose = T, resolution = 0.5)
+```
+
+Visualize TSNE colored by cluster
+```{r}
+pdf(paste(dir,"plot_out/S03/main_tSNE_nodups.pdf", sep=""),10,10)
+DimPlot(tiss_subset, reduction = "tsne", label = T)
+DimPlot(tiss_subset, reduction = "tsne", label = T)
+dev.off()
+```
+
+Plot genes of interest and save 
+```{r}
+# Specify genes  
+genes_to_check = c("PTPRC","CD3G","CD3E", "CD79A", "BLNK", "CD68", "CSF1R", "MARCO", "CD207", "FCGR2B", "EPCAM","MYLK","THY1","CD34","PMEL")
+# All on Dotplot 
+p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
+ggsave(paste(dir,"plot_out/S03/dotplot_of_gene_markers.pdf", sep=""), p, width = 10, height = 10)
+p
+```
+Plot genes of interest on dotplot  
+```{r}
+# Specify genes  
+genes_to_check = c("PTPRC","EPCAM")
+# All on Dotplot 
+p <- DotPlot(tiss_subset, features = genes_to_check) + coord_flip()
+ggsave(paste(dir,"plot_out/S03/dotplot_of_PTPRC_EPCAM.pdf", sep=""), p, width = 10, height = 10)
+p
+```
+
+Annotate Immune vs Nonimmune clusters
+At this point we dont care for a more detailed annotation as we will annotate immune and non-immune separately later
+```{r}
+#add column 'main_seurat_cluster' to store cluster ids from this step.
+tiss_subset@meta.data$main_seurat_cluster <- tiss_subset@meta.data$seurat_clusters
+# Change the column of the resolution if you ended up using a different one than 0.5 
+cluster.ids <- sort(as.numeric(unique(as.character(tiss_subset@meta.data$RNA_snn_res.0.5))))
+# Manually check and ananotate each cluster to immmune and non-immune   
+immune_annotation <- c("immune","non-immune","immune","immune","immune","non-immune",
+                       "immune","non-immune","non-immune","immune", "non-immune",
+                       "non-immune","immune","immune","immune","non-immune",
+                       "non-immune","immune","non-immune","non-immune","immune",
+                       "immune","non-immune","non-immune","non-immune","immune")
+# Add annotation to the Seurat object 
+tiss_subset@meta.data$immune_annotation <- tiss_subset@meta.data$seurat_clusters 
+tiss_subset@meta.data$immune_annotation <- plyr::mapvalues(x = tiss_subset@meta.data$immune_annotation, from = cluster.ids, to = immune_annotation)
+# Make a table 
+table(tiss_subset@meta.data$immune_annotation)
+table(tiss_subset@meta.data$immune_annotation, tiss_subset@meta.data$main_seurat_cluster)
+```
+
+Make and save relevant plots 
+```{r}
+# TSNE plot 
+p <- TSNEPlot(object = tiss_subset, do.label = FALSE, group.by = 'immune_annotation')
+ggsave(paste(dir,"plot_out/S03/main_tSNE_immune_annotation.pdf", sep=""), p, width = 10, height = 10)
+# Annotation count 
+p <- ggplot(tiss_subset@meta.data, aes(immune_annotation)) + geom_bar() + 
+  coord_flip() + theme(legend.position = "bottom") + xlab("annotation") +
+  ylab("count")
+ggsave(paste(dir,"plot_out/S03/annotation_count.pdf", sep=""), p, width = 10, height = 10)
+# Reads vs Genes 
+p <- ggplot(tiss_subset@meta.data, aes(x = nFeature_RNA, y = nCount_RNA)) + geom_point() + theme_bw() + scale_y_log10()
+ggsave(paste(dir,"plot_out/S03/reads_vs_genes.pdf", sep=""), p, width = 10, height = 10)
+```
+
+Generate immune and nonimmune cell lists
+```{r}
+# Immune dataset 
+cells.use.immune <- row.names(tiss_subset@meta.data)[which(tiss_subset@meta.data$immune_annotation=='immune')]
+length(cells.use.immune)
+tiss_immune <- subset(tiss_subset, cells=cells.use.immune)
+immune_cells <- rownames(tiss_immune@meta.data)
+write.csv(immune_cells, file = paste(dir,"data_out/S03/immune_cells.csv", sep=""))
+# Non-immune dataset
+cells.use.nonimmune <- row.names(tiss_subset@meta.data)[which(tiss_subset@meta.data$immune_annotation=='non-immune')]
+length(cells.use.nonimmune)
+tiss_nonimmune <-subset(tiss_subset, cells=cells.use.nonimmune)
+nonimmune_cells <- rownames(tiss_nonimmune@meta.data)
+write.csv(nonimmune_cells, file = paste(dir,"data_out/S03/nonimmune_cells.csv", sep=""))
+```
+
+Save Processed Subset Seurat Object
+```{r}
+save(tiss_subset, file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
+save(tiss_immune, file=paste(dir,"Data_input/objects/S03_Immuune_Seurat_object.RData", sep=""))
+save(tiss_nonimmune, file=paste(dir,"Data_input/objects/S03_Nonimmune_Seurat_object.RData", sep=""))
+```
+
+
+```{r}
+load(file=paste(dir,"Data_input/objects/S03_Main_Seurat_object_filtered_and_subset.RData", sep=""))
+```
+
+
+

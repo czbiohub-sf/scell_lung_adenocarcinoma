@@ -13,7 +13,9 @@ library(pcr)
 
 Read in raw qpcr data
 ```{r}
-test1 <- read.csv("~/Desktop/PC9_qpcr_190918_1.csv")
+# rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+test1 <- read.csv(file = paste(dir, "Data_input/csv_files/PC9_qpcr_190918_1.csv", sep = ""))
 #test1.1 <- test1[,-1]
 ```
 

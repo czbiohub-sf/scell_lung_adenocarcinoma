@@ -8,15 +8,15 @@ Install inferCNV. Instructions at https://github.com/broadinstitute/inferCNV/wik
 # install GMD
 # packageurl <- "https://cran.r-project.org/src/contrib/Archive/GMD/GMD_0.3.3.tar.gz"
 # install.packages(packageurl, repos=NULL, type="source")
-
 # NGHCM
 # devtools::install_github("bmbroom/tsvio")
 # devtools::install_github("bmbroom/NGCHMR", ref="stable")
-
-# Install inferCNV from within R using devtools
+# Install inferCNV from within R using BioConductor
+if (!requireNamespace("BiocManager", quietly = TRUE))
+     install.packages("BiocManager")
+BiocManager::install("infercnv")
+install.packages("nlme")
 library(devtools)
-# install_github("broadinstitute/inferCNV")
-# install.packages("phylogram")
 library(phylogram)
 library(gridExtra)
 library(grid)
@@ -25,33 +25,35 @@ require(ggthemes)
 library(tidyverse)
 library(Seurat)
 library(miscTools)
+library(dendextend)
+library(ggthemes)
 ```
 
 ```{r}
 # rm(list=ls())
-dir <- "/myVolume/scell_lung_adenocarcinoma/"
-load(file=paste(dir,"Data_input/objects/NI02_Epi_Seurat_object_annotated.RData", sep=""))
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file=paste(dir,"Data_input/objects/NI02_Epi_Seurat_object_clustered.RData", sep=""))
 load(file=paste(dir,"Data_input/objects/NI01_Nonimmune_Seurat_object_annotated.RData", sep=""))
 ```
 
 Create and save a Raw Counts Table
 ```{r}
-temp <- as.matrix(tiss_nonimmune@raw.data)
+temp <- as.matrix(tiss_nonimmune@assays$RNA@counts)
 write.table(x = temp, file =  paste(dir, "Data_input/objects/NI03_CNV_data_out_all_cells_raw_counts_largefile.txt", sep = ""), quote = F,sep = '\t')
 rm(temp)
 ```
 
-
 Create slim cell annotation file (malignant vs non-malignant) from Seurat object 
 ```{r}
 # Epithelial cells 
-temp.1 <- tiss_nonimmune_epi@meta.data[tiss_nonimmune_epi@meta.data$nonimmune_general_annotation %in% "Epithelial", c("nonimmune_general_annotation","epi_seurat_cluster")] 
+temp.1 <- tiss_nonimmune_epi@meta.data[tiss_nonimmune_epi@meta.data$nonimmune_general_annotation %in% "epithelial", c("nonimmune_general_annotation","epi_seurat_cluster")] 
 temp.1 <- cbind(as.data.frame(row.names(temp.1)), as.data.frame(do.call("paste",temp.1)))
 colnames(temp.1) <- c("V1","V2")
 # Endothelial cells and fibroblasts
-temp.2 <- tiss_nonimmune@meta.data[tiss_nonimmune@meta.data$nonimmune_general_annotation %in% "Endothelial", c("cell_id","nonimmune_general_annotation")]
+temp.2 <- tiss_nonimmune@meta.data[tiss_nonimmune@meta.data$nonimmune_general_annotation %in% "endothelial", c("cell_id","nonimmune_general_annotation")]
 colnames(temp.2) <- c("V1","V2")
-temp.3 <- tiss_nonimmune@meta.data[tiss_nonimmune@meta.data$nonimmune_general_annotation %in% "Fibroblast", c("cell_id","nonimmune_general_annotation")]
+temp.3 <- tiss_nonimmune@meta.data[tiss_nonimmune@meta.data$nonimmune_general_annotation %in% "fibroblast", c("cell_id","nonimmune_general_annotation")]
 colnames(temp.3) <- c("V1","V2")
 # Keep a total of 500 cells from both 
 temp.2 <- temp.2[sample(nrow(temp.2), size = 800),]
@@ -59,121 +61,47 @@ temp.3<- temp.3[sample(nrow(temp.3), size = 800),]
 
 # Convert some of the fibroblasts and endos to spikeins for the clustering 
 temp.2$V2 <- paste(as.character(temp.2$V2), "_normal", sep="")
-temp.2$V2[sample(which(temp.2$V2=="Endothelial_normal"),300)] <- "Endothelial"
+temp.2$V2[sample(which(temp.2$V2=="endothelial_normal"),300)] <- "endothelial"
 temp.3$V2 <- paste(as.character(temp.3$V2), "_normal", sep="")
-temp.3$V2[sample(which(temp.3$V2=="Fibroblast_normal"),300)] <- "Fibroblast"
+temp.3$V2[sample(which(temp.3$V2=="fibroblast_normal"),300)] <- "fibroblast"
 # Combine 
 inferCNV.annotation <- rbind(temp.1, temp.2, temp.3)
 rm("temp.1", "temp.2", "temp.3")
 # Write table
 write.table(inferCNV.annotation, file = paste(dir,"Data_input/objects/NI03_CNV_cell_metadata_shuffle_largefile.txt", sep=""),row.names = F, col.names = F, quote=F, sep="\t")
+
+table(inferCNV.annotation$V2)
 ```
 
-Import gene location table 
+Save all inferCNV files and run inferCNV in previous version of R
+
+read in annotation data
 ```{r}
-inferCNV.genes <- read.table(file = paste(dir,"Data_input/objects/NI03_CNV_hg19_genes_ordered_correct_noXY.txt", sep = ""))
-head(inferCNV.genes)
+inferCNV.annotation.malignant <- read.csv(file = paste(dir, "data_out/NI03/results/inferCNV_annotation.csv", sep = ""), row.names = 1)
 ```
 
-Create the infercnv object
-```{r}
-infercnv_obj = infercnv::CreateInfercnvObject(raw_counts_matrix = paste(dir, "Data_input/objects/NI03_CNV_data_out_all_cells_raw_counts_largefile.txt", sep = ""), annotations_file = paste(dir, "Data_input/objects/NI03_CNV_cell_metadata_shuffle_largefile.txt", sep = ""), delim="\t", gene_order_file = paste(dir, "Data_input/objects/NI03_CNV_hg19_genes_ordered_correct_noXY.txt", sep = ""), ref_group_names = c("Endothelial_normal", "Fibroblast_normal"))
-```
 
-Save infercnv Object
-```{r}
-save(infercnv_obj, file = paste(dir, "Data_input/objects/NI03_infercnv_obj.RData", sep = ""))
-# load(file = paste(dir, "Data_input/objects/objects/NI03_infercnv_obj.RData", sep = ""))
-```
-
-Perform infercnv operations to reveal cnv signal
-```{r}
-# Make sure that chrmosomes are ordered correctly 
-slot(infercnv_obj, "gene_order")[,"chr"] <- factor(slot(infercnv_obj, "gene_order")[,"chr"], levels = c("chr1", "chr2","chr3","chr4", "chr5", "chr6","chr7", "chr8", "chr9","chr10", "chr11", "chr12","chr13", "chr14", "chr15","chr16", "chr17", "chr18","chr19", "chr20", "chr21","chr22"))
-# Run infer CNV
-infercnv_all = infercnv::run(infercnv_obj,
-                             cutoff=1,  # use 1 for smart-seq, 0.1 for 10x-genomics
-                             out_dir="/myVolume/scell_lung_adenocarcinoma/plot_out/NI03/",  # dir is auto-created for storing outputs
-                             cluster_by_groups=F,   # cluster
-                             include.spike=T, hclust_method="ward.D2", plot_steps=F)
-```
-
-Parse inferCNV dendrograms. For that we will be using the inferCNV calculated on all cells and not by group 
-```{r}
-#  Import inferCNV dendrogram
-infercnv.dend <- read.dendrogram(file = paste(dir, "plot_out/NI03/infercnv.observations_dendrogram.txt", sep = ""))
-
-# Cut tree 
-infercnv.labels <- cutree(infercnv.dend, k = 3, order_clusters_as_data = FALSE)
-# infercnv.labels <- cutree(infercnv.dend,h = 500, order_clusters_as_data = FALSE)
-# Color labels
-the_bars <- as.data.frame(tableau_color_pal("Tableau 20")(20)[infercnv.labels])
-colnames(the_bars) <- "inferCNV_tree"
-the_bars$inferCNV_tree <- as.character(the_bars$inferCNV_tree)
-# PLot tree
-# pdf(file = paste(dir, "/plot_out/NI03/NI03_inferCNV_dendrogram_cut.pdf", sep = ""))
-infercnv.dend %>% set("labels",rep("", nobs(infercnv.dend)) )  %>% plot(main="inferCNV dendrogram") %>%
-colored_bars(colors = as.data.frame(the_bars), dend = infercnv.dend, sort_by_labels_order = FALSE, add = T, y_scale=1000, y_shift = 0)
-# dev.off()
-```
-
-Add CNV dendrogram clusters labels to annoation
-```{r}
-# Add labels
-inferCNV.annotation$inferCNV.class <- NA
-for(i in 1:length(infercnv.labels)){
-  inferCNV.annotation[inferCNV.annotation$V1 %in%  names(infercnv.labels)[i],"inferCNV.class"] <- infercnv.labels[i]
-}
-# Remove normal cells 
-inferCNV.annotation.malignant <- inferCNV.annotation[-grep("normal", inferCNV.annotation$V2),] 
-
-table(inferCNV.annotation.malignant$V2, inferCNV.annotation.malignant$inferCNV.class)
-```
-
-Classify each cell as tumor or nontumor based on CNV dendrogram cluster
-```{r}
-#replace inferCNV.class 1 as "tumor"
-inferCNV.annotation.malignant$inferCNV.class <- gsub(pattern = 1, replacement = "tumor", x = inferCNV.annotation.malignant$inferCNV.class)
-#replace inferCNV.class 2 as "nontumor"
-inferCNV.annotation.malignant$inferCNV.class <- gsub(pattern = 2, replacement = "nontumor", x = inferCNV.annotation.malignant$inferCNV.class)
-#replace inferCNV.class 3 as "tumor"
-inferCNV.annotation.malignant$inferCNV.class <- gsub(pattern = 3, replacement = "tumor", x = inferCNV.annotation.malignant$inferCNV.class)
-#update colnames of inferCNV.annotation.malignant 
-colnames(inferCNV.annotation.malignant) <- c("cell_id", "Epithelial_cluster", "inferCNV_annotation")
-table(inferCNV.annotation.malignant$inferCNV_annotation)
-# Write updated cell annotation 
-write.table(inferCNV.annotation.malignant, paste(dir, "/data_out/NI03/NI03_inferCNV_final_annotation_per_cell.txt", sep = ""), row.names = F, quote = F)
-```
-
-Update Seurat objects with tumor annotations
 ```{r}
 # Add metadata inferCNV_annotation by cell_id
-tiss_nonimmune_epi@meta.data <- left_join(x = tiss_nonimmune_epi@meta.data, y = inferCNV.annotation.malignant[,c(1,3)], by = "cell_id")
+tiss_nonimmune_epi@meta.data <- left_join(x = tiss_nonimmune_epi@meta.data, y = inferCNV.annotation.malignant, by = "cell_id")
+
 rownames(tiss_nonimmune_epi@meta.data) <- tiss_nonimmune_epi@meta.data$cell_id
+
 #Save Seurat object 
 save(tiss_nonimmune_epi, file = paste(dir, "Data_input/objects/NI03_epithelial_annotated_tumor.RData", sep = ""))
 
-tiss_nonimmune@meta.data <- left_join(x = tiss_nonimmune@meta.data, y = inferCNV.annotation.malignant[,c(1,3)], by = "cell_id")
+tiss_nonimmune@meta.data <- left_join(x = tiss_nonimmune@meta.data, y = inferCNV.annotation.malignant, by = "cell_id")
 rownames(tiss_nonimmune@meta.data) <- tiss_nonimmune@meta.data$cell_id
+
 #Save Seurat object 
 save(tiss_nonimmune, file = paste(dir, "Data_input/objects/NI03_nonimmune_annotated_tumor.RData", sep = ""))
 ```
 
-```{r}
-infercnv.obs_txt <- read.table(file = paste(dir, "plot_out/NI03/infercnv.observations.txt", sep = ""))
-class(infercnv.obs_txt)
-dim(infercnv.obs_txt)
-head(infercnv.obs_txt[1:5,1:5])
-tail(infercnv.obs_txt)
-summary(infercnv.obs_txt$O8_1001000408)
-
-
-# x <- apply(infercnv.obs_txt, MARGIN = 2, FUN = function(x) length(which(infercnv.obs_txt[,x] !=1)))
-```
 
 ```{r}
-cnv_mean <- colMedians(infercnv.obs_txt)
+table(tiss_subset_tumor2@meta.data$patient_id)
+table(tiss_nonimmune_epi@meta.data$patient_id)
+  
 ```
-
 
 

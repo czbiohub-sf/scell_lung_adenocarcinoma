@@ -1,0 +1,218 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+libraries
+```{r}
+library(Seurat)
+```
+
+Read in tumor object
+```{r}
+rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+# dir <- "/myVolume/scell_lung_adenocarcinoma/"
+load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
+```
+
+Re-level object@ident
+```{r}
+my_levels <- c("naive", "grouped_pr", "grouped_pd")
+tiss_subset_tumor2@active.ident <- factor(x = tiss_subset_tumor2@active.ident, levels = my_levels)
+```
+
+Subset PD alone
+```{r}
+pd_only <- filter(tiss_subset_tumor2@meta.data, analysis == "grouped_pd")
+pdonly <- subset(tiss_subset_tumor2, cells = pd_only$cell_id)
+pdonly <- ScaleData(pdonly, features = rownames(pdonly))
+```
+
+Scores by Sample
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+
+pull_data <- FetchData(pdonly, c(AT2_genes, 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+pull_data$AT2_diff_mean <- rowMeans(pull_data[c(AT2_genes)], na.rm=TRUE)
+
+# Average scores by sample rather than cell
+sam <- pull_data[ ,c("sample_name", AT2_genes, "AT2_diff_mean")]
+
+sam1 <- aggregate(SFTPC ~ sample_name, sam, mean)
+sam2 <- aggregate(SFTPB ~ sample_name, sam, mean)
+sam3 <- aggregate(SFTPD ~ sample_name, sam, mean)
+sam4 <- aggregate(PGC ~ sample_name, sam, mean)
+sam5 <- aggregate(CLDN18 ~ sample_name, sam, mean)
+sam6 <- aggregate(AQP4 ~ sample_name, sam, mean)
+sam7 <- aggregate(SCGB3A1 ~ sample_name, sam, mean)
+sam8 <- aggregate(ABCA3 ~ sample_name, sam, mean)
+sam9 <- aggregate(GATA6 ~ sample_name, sam, mean)
+sam10 <- aggregate(`NKX2-1` ~ sample_name, sam, mean)
+sam11 <- aggregate(SFTA3 ~ sample_name, sam, mean)
+sam12 <- aggregate(IGFBP2 ~ sample_name, sam, mean)
+sam13 <- aggregate(HOPX ~ sample_name, sam, mean)
+sam14 <- aggregate(NAPSA ~ sample_name, sam, mean)
+sam15 <- aggregate(FOXA2 ~ sample_name, sam, mean)
+sam16 <- aggregate(AGER ~ sample_name, sam, mean)
+sam17 <- aggregate(LAMP1 ~ sample_name, sam, mean)
+sam18 <- aggregate(AT2_diff_mean ~ sample_name, sam, mean)
+sam19 <- cbind(sam1, sam2, sam3, sam4, sam5, sam6, sam7, sam8, sam9, sam10, sam11, sam12, sam13, sam14, sam15, sam16, sam17, sam18)
+colnames(sam19)
+sam20 <- sam19[, -c(3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35)]
+rownames(sam20) <- sam20$sample_name
+sam20$sample_name <- NULL
+AT2_tab <- sam20
+
+# # sort
+# sample_meta_unique <- unique(pull_data[,c("analysis", "sample_name", "patient_id", "biopsy_site", "driver_gene")])
+# sample_meta_sorted <- sample_meta_unique %>% arrange(desc(analysis))
+# sample.ordered <- sample_meta_sorted$sample_name
+# sam20 <- sam20[c(sample.ordered), ]
+# colnames(sam20) <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1", "Alveolar Score")
+# 
+# # Add annotation column
+# anno_col <- sample_meta_unique[,c("sample_name", "biopsy_site")]
+# rownames(anno_col) <- anno_col$sample_name
+# anno_col <- anno_col[c(sample.ordered), ]
+# anno_col$sample_name <- NULL
+# 
+# pdf(file = "~/PD_sigs/AT2.pdf", width = 14, height = 7)
+# pheatmap(mat = sam20, cluster_cols = FALSE, cluster_rows = T, scale = "column", color = colorRampPalette(rev(brewer.pal(n = 6, name ="RdBu")))(100), show_rownames = T)
+# dev.off()
+```
+
+```{r}
+Kynurenine_genes <- c('IDO1', 'KYNU','QPRT')
+
+pull_data <- FetchData(pdonly, c(Kynurenine_genes, 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+pull_data$Kynurenine_diff_mean <- rowMeans(pull_data[c(Kynurenine_genes)], na.rm=TRUE)
+
+# Average scores by sample rather than cell
+sam <- pull_data[,c("sample_name", "IDO1", "KYNU", "QPRT", "Kynurenine_diff_mean")]
+sam1 <- aggregate(IDO1 ~ sample_name, sam, mean)
+sam2 <- aggregate(KYNU ~ sample_name, sam, mean)
+sam3 <- aggregate(QPRT ~ sample_name, sam, mean)
+sam4 <- aggregate(Kynurenine_diff_mean ~ sample_name, sam, mean)
+sam6 <- cbind(sam1, sam2, sam3, sam4)
+colnames(sam6)
+sam7 <- sam6[, -c(3,5,7)]
+rownames(sam7) <- sam7$sample_name
+sam7$sample_name <- NULL
+
+KYNU_tab  <- sam7
+  
+# # sort
+# sample_meta_unique <- unique(pull_data[,c("analysis", "sample_name", "patient_id", "biopsy_site", "driver_gene")])
+# sample_meta_sorted <- sample_meta_unique %>% arrange(desc(analysis))
+# sample.ordered <- sample_meta_sorted$sample_name
+# sam7 <- sam7[c(sample.ordered), ]
+# colnames(sam7) <- c("IDO1", "KYNU", "QPRT", "Kynurenine Score")
+# 
+# # Add annotation column
+# anno_col <- sample_meta_unique[,c("sample_name", "biopsy_site")]
+# rownames(anno_col) <- anno_col$sample_name
+# anno_col <- anno_col[c(sample.ordered), ]
+# anno_col$sample_name <- NULL
+# 
+# pdf(file = "~/PD_sigs/Kynurenine.pdf", width = 14, height = 7)
+# pheatmap(mat = sam7, cluster_cols = FALSE, cluster_rows = T, scale = "column", color = colorRampPalette(rev(brewer.pal(n = 6, name ="RdBu")))(100), show_rownames = T)
+# dev.off()
+```
+
+
+```{r}
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+
+pull_data <- FetchData(pdonly, c(Plasminogen_genes, 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+pull_data$Plasminogen_diff_mean <- rowMeans(pull_data[c('ANXA2', 'PLAT', 'PLAU', 'PLAUR')], na.rm=TRUE)
+
+# Average scores by sample rather than cell
+sam <- pull_data[,c("sample_name", 'ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1', "Plasminogen_diff_mean")]
+sam1 <- aggregate(ANXA2 ~ sample_name, sam, mean)
+sam2 <- aggregate(PLAT ~ sample_name, sam, mean)
+sam3 <- aggregate(PLAU ~ sample_name, sam, mean)
+sam4 <- aggregate(PLAUR ~ sample_name, sam, mean)
+sam5 <- aggregate(SERPINE1 ~ sample_name, sam, mean)
+sam6 <- aggregate(Plasminogen_diff_mean ~ sample_name, sam, mean)
+sam7 <- cbind(sam1, sam2, sam3, sam4, sam5, sam6)
+colnames(sam7)
+sam8 <- sam7[, -c(3,5,7,9,11)]
+rownames(sam8) <- sam8$sample_name
+sam8$sample_name <- NULL
+
+plasm_tab <- sam8
+
+# # sort
+# sample_meta_unique <- unique(pull_data[,c("analysis", "sample_name", "patient_id", "biopsy_site", "driver_gene")])
+# sample_meta_sorted <- sample_meta_unique %>% arrange(desc(analysis))
+# sample.ordered <- sample_meta_sorted$sample_name
+# sam8 <- sam8[c(sample.ordered), ]
+# colnames(sam8) <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1', "Plasminogen Activating Score")
+# 
+# # Add annotation column
+# anno_col <- sample_meta_unique[,c("sample_name", "biopsy_site")]
+# rownames(anno_col) <- anno_col$sample_name
+# anno_col <- anno_col[c(sample.ordered), ]
+# anno_col$sample_name <- NULL
+# 
+# pdf(file = "~/PD_sigs/Plasminogen.pdf", width = 14, height = 7)
+# pheatmap(mat = sam8, cluster_cols = FALSE, cluster_rows = T, scale = "column", color = colorRampPalette(rev(brewer.pal(n = 6, name ="RdBu")))(100), show_rownames = T)
+# dev.off()
+```
+
+Gap junction
+```{r}
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+pull_data <- FetchData(pdonly, c(GJB_genes, 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+pull_data$GapJunction_diff_mean <- rowMeans(pull_data[c(GJB_genes)], na.rm=TRUE)
+
+# Average scores by sample rather than cell
+sam <- pull_data[,c("sample_name", "GJB3", "GJB2", "GJB5", "GapJunction_diff_mean")]
+sam1 <- aggregate(GJB3 ~ sample_name, sam, mean)
+sam2 <- aggregate(GJB2 ~ sample_name, sam, mean)
+sam3 <- aggregate(GJB5 ~ sample_name, sam, mean)
+sam4 <- aggregate(GapJunction_diff_mean ~ sample_name, sam, mean)
+sam5 <- cbind(sam1, sam2, sam3, sam4)
+colnames(sam5)
+sam6 <- sam5[, -c(3,5,7)]
+rownames(sam6) <- sam6$sample_name
+sam6$sample_name <- NULL
+
+gap_tab <- sam6
+
+# # sort
+# sample_meta_unique <- unique(pull_data[,c("analysis", "sample_name", "patient_id", "biopsy_site", "driver_gene")])
+# sample_meta_sorted <- sample_meta_unique %>% arrange(desc(analysis))
+# sample.ordered <- sample_meta_sorted$sample_name
+# sam7 <- sam6[c(sample.ordered), ]
+# colnames(sam7) <- c("GJB3", "GJB2", "GJB5", "Gap Junction Score")
+# 
+# # Add annotation column
+# anno_col <- sample_meta_unique[,c("sample_name", "biopsy_site")]
+# rownames(anno_col) <- anno_col$sample_name
+# anno_col <- anno_col[c(sample.ordered), ]
+# anno_col$sample_name <- NULL
+# 
+# pdf(file = "~/PD_sigs/GapJunction.pdf", width = 14, height = 7)
+# pheatmap(mat = sam7, cluster_cols = FALSE, cluster_rows = T, scale = "column", color = colorRampPalette(rev(brewer.pal(n = 6, name ="RdBu")))(100), show_rownames = T)
+# dev.off()
+```
+
+```{r}
+pd_sig <- cbind(AT2_tab, KYNU_tab, plasm_tab, gap_tab)
+colnames(pd_sig)
+pd_sig1 <- pd_sig[,-c(18, 22, 28, 32)]
+colnames(pd_sig1)
+
+write.csv(pd_sig, file = "~/PD_sigs/sample_geneonly.csv")
+write.csv(pd_sig1, file = "~/PD_sigs/sample_geneandsigscore.csv")
+```
+
+
+

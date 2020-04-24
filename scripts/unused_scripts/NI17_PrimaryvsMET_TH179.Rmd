@@ -1,0 +1,458 @@
+---
+title: "Primary vs Met TH179"
+output: html_notebook
+---
+
+Read in tumor object
+```{r}
+rm(list=ls())
+dir <- "/home/ubuntu/scell_lung_adenocarcinoma/"
+load(file = paste(dir, "Data_input/objects/NI04_tumor_seurat_object.RData", sep = ""))
+```
+
+```{r}
+table(tiss_subset_tumor2@meta.data$sample_name)
+```
+
+Subset to to patient with both primary and met site 
+```{r}
+cells.use <- filter(tiss_subset_tumor2@meta.data, sample_name == 'LT_S79' | sample_name == 'LT_S80')
+table(cells.use$patient_id, cells.use$biopsy_site)
+table(cells.use$primary_or_metastaic)
+TH179_metprim <- subset(tiss_subset_tumor2, cells = cells.use$cell_id)
+```
+
+AT2
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+
+AT2 <- FetchData(TH179_metprim, c(AT2_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+AT2$AT2_diff_mean <- rowMeans(AT2[c(AT2_genes)], na.rm=TRUE)
+
+# plot
+AT2_p <- ggplot(AT2, aes(x = primary_or_metastaic, y = AT2_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Alveolar Signature") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic", "Primary")) + ylim(0,2.1)
+AT2_p
+# ggsave(AT2_p, filename = paste(dir,"plot_out/NI17/AT2.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+AT2
+```{r}
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+
+Plasminogen <- FetchData(TH179_metprim, c(Plasminogen_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Plasminogen$Plasminogen_activating_mean <- rowMeans(Plasminogen[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
+
+# plot
+Plasminogen_p <- ggplot(Plasminogen, aes(x = primary_or_metastaic, y = Plasminogen_activating_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Plasminogen Signature Expression")  + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE, y_position = 4) +  scale_x_discrete(limits=c("Metastatic", "Primary")) + ylim(0,4.1)
+
+Plasminogen_p1 <- ggplot(Plasminogen, aes(x = primary_or_metastaic, y = SERPINE1, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("SERPINE1 Expression") +  geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE, y_position = 1) + scale_x_discrete(limits=c("Metastatic","Primary")) + ylim(0,1.1)
+Plasminogen_p 
+Plasminogen_p1
+# ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI17/Plasminogen.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+# ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI17/SERPINE1.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+Kynurenine Pathway
+```{r}
+Kynurenine_genes <- c('IDO1', 'KYNU','QPRT')
+
+Kynurenine <- FetchData(TH179_metprim, c(Kynurenine_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Kynurenine$Kynurenine_diff_mean <- rowMeans(Kynurenine[c(Kynurenine_genes)], na.rm=TRUE)
+
+# plot
+Kynurenine_p <- ggplot(Kynurenine, aes(x = primary_or_metastaic, y = Kynurenine_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Kynurenine Signature Expression") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE, y_position = 3) + scale_x_discrete(limits=c("Metastatic", "Primary")) + ylim(0,3.1)
+Kynurenine_p
+# ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI17/Kynurenine.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Gap Junction Signatures
+```{r}
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+GJB <- FetchData(TH179_metprim, c(GJB_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+GJB$GJB_diff_mean <- rowMeans(GJB[c(GJB_genes)], na.rm=TRUE)
+
+# plot
+GJB_p <- ggplot(GJB, aes(x = primary_or_metastaic, y = GJB_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("GJB Signature Expression") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE, y_position = 1) + scale_x_discrete(limits=c("Metastatic","Primary")) + ylim(0,1.1)
+GJB_p
+# ggsave(GJB_p, filename = paste(dir,"plot_out/NI17/GJB.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+```{r}
+TH179_together <- ggarrange(AT2_p, Kynurenine_p, Plasminogen_p, GJB_p, ncol = 4, nrow = 1)
+ggsave(plot = TH179_together, filename = paste(dir,"plot_out/NI17/TH179_together.pdf", sep = ""), width = 200, height = 50, units = "mm")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DE between Prim and Met
+```{r}
+Idents(object = TH179_metprim) <- "primary_or_metastaic"
+table(TH179_metprim@active.ident)
+TH179_metprim_markers <- FindAllMarkers(TH179_metprim)
+TH179_metprim_markers %>% group_by(cluster) %>% top_n(20, avg_logFC)
+
+write.csv(TH179_metprim_markers, file = paste(dir,"data_out/NI17/TH179_metprim_markers.csv", sep = ""))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Primary vs Met with all Samples**
+
+```{r}
+table(tiss_subset_tumor2$primary_or_metastaic, tiss_subset_tumor2$analysis)
+
+cells.use <- filter(tiss_subset_tumor2@meta.data, analysis == 'grouped_pr')
+metprim <- subset(tiss_subset_tumor2, cells = cells.use$cell_id)
+
+table(metprim$primary_or_metastaic, metprim$sample_name)
+
+table(metprim$primary_or_metastaic, metprim$patient_id)
+```
+
+AT2
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+
+AT2 <- FetchData(metprim, c(AT2_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+AT2$AT2_diff_mean <- rowMeans(AT2[c(AT2_genes)], na.rm=TRUE)
+
+# plot
+AT2_p <- ggplot(AT2, aes(x = primary_or_metastaic, y = AT2_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Alveolar Signature") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic", "Primary"))
+AT2_p
+ggsave(AT2_p, filename = paste(dir,"plot_out/NI17/AT2_RD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Plasminogen/SERPINE1
+```{r}
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+
+Plasminogen <- FetchData(metprim, c(Plasminogen_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Plasminogen$Plasminogen_activating_mean <- rowMeans(Plasminogen[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
+
+# plot
+Plasminogen_p <- ggplot(Plasminogen, aes(x = primary_or_metastaic, y = Plasminogen_activating_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Plasminogen Signature Expression")  + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) +  scale_x_discrete(limits=c("Metastatic", "Primary"))
+
+Plasminogen_p1 <- ggplot(Plasminogen, aes(x = primary_or_metastaic, y = SERPINE1, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("SERPINE1 Expression") +  geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic","Primary")) 
+Plasminogen_p 
+Plasminogen_p1
+ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI17/Plasminogen_RD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI17/SERPINE1_RD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+Kynurenine Pathway
+```{r}
+Kynurenine_genes <- c('IDO1', 'KYNU','QPRT')
+
+Kynurenine <- FetchData(metprim, c(Kynurenine_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Kynurenine$Kynurenine_diff_mean <- rowMeans(Kynurenine[c(Kynurenine_genes)], na.rm=TRUE)
+
+# plot
+Kynurenine_p <- ggplot(Kynurenine, aes(x = primary_or_metastaic, y = Kynurenine_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Kynurenine Signature Expression") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic", "Primary"))
+Kynurenine_p
+ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI17/Kynurenine_RD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Gap Junction Signatures
+```{r}
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+GJB <- FetchData(metprim, c(GJB_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+GJB$GJB_diff_mean <- rowMeans(GJB[c(GJB_genes)], na.rm=TRUE)
+
+# plot
+GJB_p <- ggplot(GJB, aes(x = primary_or_metastaic, y = GJB_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("GJB Signature Expression") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic","Primary"))
+GJB_p
+ggsave(GJB_p, filename = paste(dir,"plot_out/NI17/GJB_RD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+table(tiss_subset_tumor2$primary_or_metastaic, tiss_subset_tumor2$analysis) # compare sigs in PD
+
+cells.use <- filter(tiss_subset_tumor2@meta.data, analysis == 'grouped_pd')
+metprim <- subset(tiss_subset_tumor2, cells = cells.use$cell_id)
+
+table(metprim$primary_or_metastaic, metprim$sample_name)
+table(metprim$primary_or_metastaic, metprim$patient_id)
+```
+
+AT2
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+
+AT2 <- FetchData(metprim, c(AT2_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+AT2$AT2_diff_mean <- rowMeans(AT2[c(AT2_genes)], na.rm=TRUE)
+
+# plot
+AT2_p <- ggplot(AT2, aes(x = primary_or_metastaic, y = AT2_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Alveolar Signature") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic", "Primary"))
+AT2_p
+ggsave(AT2_p, filename = paste(dir,"plot_out/NI17/AT2_PD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Plasminogen/SERPINE1
+```{r}
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+
+Plasminogen <- FetchData(metprim, c(Plasminogen_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Plasminogen$Plasminogen_activating_mean <- rowMeans(Plasminogen[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
+
+# plot
+Plasminogen_p <- ggplot(Plasminogen, aes(x = primary_or_metastaic, y = Plasminogen_activating_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Plasminogen Signature Expression")  + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) +  scale_x_discrete(limits=c("Metastatic", "Primary"))
+
+Plasminogen_p1 <- ggplot(Plasminogen, aes(x = primary_or_metastaic, y = SERPINE1, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("SERPINE1 Expression") +  geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic","Primary")) 
+Plasminogen_p 
+Plasminogen_p1
+ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI17/Plasminogen_PD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI17/SERPINE1_PD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+Kynurenine Pathway
+```{r}
+Kynurenine_genes <- c('IDO1', 'KYNU','QPRT')
+
+Kynurenine <- FetchData(metprim, c(Kynurenine_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Kynurenine$Kynurenine_diff_mean <- rowMeans(Kynurenine[c(Kynurenine_genes)], na.rm=TRUE)
+
+# plot
+Kynurenine_p <- ggplot(Kynurenine, aes(x = primary_or_metastaic, y = Kynurenine_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Kynurenine Signature Expression") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic", "Primary"))
+Kynurenine_p
+ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI17/Kynurenine_PD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Gap Junction Signatures
+```{r}
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+GJB <- FetchData(metprim, c(GJB_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+GJB$GJB_diff_mean <- rowMeans(GJB[c(GJB_genes)], na.rm=TRUE)
+
+# plot
+GJB_p <- ggplot(GJB, aes(x = primary_or_metastaic, y = GJB_diff_mean, fill = primary_or_metastaic)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("GJB Signature Expression") + geom_signif(comparisons = list(c("Metastatic", "Primary")), map_signif_level=TRUE) + scale_x_discrete(limits=c("Metastatic","Primary"))
+GJB_p
+ggsave(GJB_p, filename = paste(dir,"plot_out/NI17/GJB_PD.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+table(tiss_subset_tumor2$biopsy_site)
+cells.use <- filter(tiss_subset_tumor2@meta.data, biopsy_site == 'Lung' | biopsy_site == "lung")
+lung_only <- subset(tiss_subset_tumor2, cells = cells.use$cell_id)
+
+table(lung_only$analysis, lung_only$biopsy_site)
+table(lung_only$analysis, lung_only$sample_name)
+table(lung_only$analysis, lung_only$patient_id)
+```
+
+AT2
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+
+AT2 <- FetchData(lung_only, c(AT2_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+AT2$AT2_diff_mean <- rowMeans(AT2[c(AT2_genes)], na.rm=TRUE)
+
+# plot
+AT2_p <- ggplot(AT2, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Alveolar Signature") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+AT2_p
+# ggsave(AT2_p, filename = paste(dir,"plot_out/NI17/AT2_lungonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Plasminogen/SERPINE1
+```{r}
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+
+Plasminogen <- FetchData(lung_only, c(Plasminogen_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Plasminogen$Plasminogen_activating_mean <- rowMeans(Plasminogen[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
+
+# plot
+Plasminogen_p <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_activating_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Plasminogen Signature Expression")  + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+
+Plasminogen_p1 <- ggplot(Plasminogen, aes(x = analysis, y = SERPINE1, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("SERPINE1 Expression") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+Plasminogen_p 
+Plasminogen_p1
+# ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI17/Plasminogen_lungonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+# ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI17/SERPINE1_lungonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+Kynurenine Pathway
+```{r}
+Kynurenine_genes <- c('IDO1', 'KYNU','QPRT')
+
+Kynurenine <- FetchData(lung_only, c(Kynurenine_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Kynurenine$Kynurenine_diff_mean <- rowMeans(Kynurenine[c(Kynurenine_genes)], na.rm=TRUE)
+
+# plot
+Kynurenine_p <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Kynurenine Signature Expression") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+Kynurenine_p
+# ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI17/Kynurenine_lungonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Gap Junction Signatures
+```{r}
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+GJB <- FetchData(lung_only, c(GJB_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+GJB$GJB_diff_mean <- rowMeans(GJB[c(GJB_genes)], na.rm=TRUE)
+
+# plot
+GJB_p <- ggplot(GJB, aes(x = analysis, y = GJB_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("GJB Signature Expression") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+GJB_p
+# ggsave(GJB_p, filename = paste(dir,"plot_out/NI17/GJB_lungonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+
+
+
+
+Met only
+```{r}
+cells.use <- filter(tiss_subset_tumor2@meta.data, biopsy_site != 'Lung')
+cells.use1 <- filter(cells.use, biopsy_site != 'lung')
+met_only <- subset(tiss_subset_tumor2, cells = cells.use1$cell_id)
+
+table(met_only$analysis, met_only$biopsy_site)
+table(met_only$analysis, met_only$sample_name)
+table(met_only$analysis, met_only$patient_id)
+```
+
+AT2
+```{r}
+AT2_genes <- c("SFTPC", "SFTPB", "SFTPD", "PGC", "CLDN18", "AQP4", "SCGB3A1", "ABCA3", "GATA6", "NKX2-1", "SFTA3", "IGFBP2", "HOPX", "NAPSA", "FOXA2", "AGER", "LAMP1")
+
+AT2 <- FetchData(met_only, c(AT2_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+AT2$AT2_diff_mean <- rowMeans(AT2[c(AT2_genes)], na.rm=TRUE)
+
+# plot
+AT2_p <- ggplot(AT2, aes(x = analysis, y = AT2_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Alveolar Signature") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+AT2_p
+# ggsave(AT2_p, filename = paste(dir,"plot_out/NI17/AT2_met.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Plasminogen/SERPINE1
+```{r}
+Plasminogen_genes <- c('ANXA2', 'PLAT', 'PLAU', 'PLAUR', 'SERPINE1')
+
+Plasminogen <- FetchData(met_only, c(Plasminogen_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Plasminogen$Plasminogen_activating_mean <- rowMeans(Plasminogen[c("ANXA2", "PLAT", "PLAU", "PLAUR")], na.rm=TRUE)
+
+# plot
+Plasminogen_p <- ggplot(Plasminogen, aes(x = analysis, y = Plasminogen_activating_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Plasminogen Signature Expression")  + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+
+Plasminogen_p1 <- ggplot(Plasminogen, aes(x = analysis, y = SERPINE1, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("SERPINE1 Expression") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+Plasminogen_p 
+Plasminogen_p1
+# ggsave(Plasminogen_p, filename = paste(dir,"plot_out/NI17/Plasminogen_metonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+# ggsave(Plasminogen_p1, filename = paste(dir,"plot_out/NI17/SERPINE1_metonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+
+Kynurenine Pathway
+```{r}
+Kynurenine_genes <- c('IDO1', 'KYNU','QPRT')
+
+Kynurenine <- FetchData(met_only, c(Kynurenine_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+Kynurenine$Kynurenine_diff_mean <- rowMeans(Kynurenine[c(Kynurenine_genes)], na.rm=TRUE)
+
+# plot
+Kynurenine_p <- ggplot(Kynurenine, aes(x = analysis, y = Kynurenine_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("Kynurenine Signature Expression") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+Kynurenine_p
+# ggsave(Kynurenine_p, filename = paste(dir,"plot_out/NI17/Kynurenine_metonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+Gap Junction Signatures
+```{r}
+GJB_genes <- c('GJB3', 'GJB2','GJB5')
+
+GJB <- FetchData(met_only, c(GJB_genes, 'nFeature_RNA', 'nCount_RNA', 'analysis', 'patient_id', 'sample_name', 'biopsy_site', 'cell_id', 'driver_gene', 'primary_or_metastaic'))
+
+GJB$GJB_diff_mean <- rowMeans(GJB[c(GJB_genes)], na.rm=TRUE)
+
+# plot
+GJB_p <- ggplot(GJB, aes(x = analysis, y = GJB_diff_mean, fill = analysis)) + geom_boxplot() + guides(colour = FALSE, fill = FALSE) + xlab("Group") + ylab("GJB Signature Expression") + geom_signif(comparisons = list(c("grouped_pd", "grouped_pr")), map_signif_level=TRUE) + scale_x_discrete(limits=c("naive", "grouped_pr", "grouped_pd"))
+GJB_p
+# ggsave(GJB_p, filename = paste(dir,"plot_out/NI17/GJB_metonly.pdf", sep = ""), width = 4.77, height = 2.95, units = "in")
+```
+
+```{r}
+table(tiss_subset_tumor2$sample_name, tiss_subset_tumor2$analysis)
+table(tiss_subset_tumor2$analysis, tiss_subset_tumor2@meta.data$treatment_history)
+```
+
