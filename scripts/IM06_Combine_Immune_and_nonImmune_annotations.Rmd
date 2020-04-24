@@ -82,8 +82,9 @@ mean.N.genes <- mean.N.genes[order(mean.N.genes$x, decreasing = T),]
 # Reorder factor 
 mean.N.genes$Group.1 <- factor(mean.N.genes$Group.1, levels = mean.N.genes$Group.1)
 # Plot Ngene average per cell type 
-ggplot(data=mean.N.genes, aes(x=Group.1, y=x)) +
+plot_genes <- ggplot(data=mean.N.genes, aes(x=Group.1, y=x)) +
   geom_bar(stat="identity") + 
   scale_y_continuous(breaks=seq(0,6000,1000)) + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("Average Ngenes detected")
+ggsave(paste(dir,"plot_out/IM01/Immune_cell_counts.pdf", sep=""), width = 90, height = 90, units = "mm")
 ```
