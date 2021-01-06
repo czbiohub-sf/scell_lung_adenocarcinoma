@@ -3,8 +3,7 @@ This is the repository that contains the analysis of the lung adenocarcinoma sin
 ## Getting started
 
 Clone the repo
-Download the Data_input folder from the link below into the repo
-https://drive.google.com/drive/folders/1nONsp9VuhmPzuDvMet0i8x26eV9r5lkT?usp=sharing 
+Download the Data_input folder from the link below into the repo: https://drive.google.com/drive/folders/1sDzO0WOD4rnGC7QfTKwdcQTx3L36PFwX?usp=sharing
 
 ## Scripts
 
